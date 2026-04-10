@@ -1,0 +1,224 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROJ_DIR=$(pwd); PROFILE=\"$PROJ_DIR/.claude/PROJECT_PROFILE.json\"; SKILLS=$(find \"$PROJ_DIR/.claude/skills\" -name 'SKILL.md' 2>/dev/null | wc -l | tr -d ' '); AGENTS=$(find \"$PROJ_DIR/.claude/agents\" -name '*.md' 2>/dev/null | wc -l | tr -d ' '); CMDS=$(find \"$PROJ_DIR/.claude/commands\" -name '*.md' 2>/dev/null | wc -l | tr -d ' '); MCPS=0; if [ -f \"$PROJ_DIR/.claude/settings.json\" ]; then MCPS=$(python3 -c \"import json; s=json.load(open('$PROJ_DIR/.claude/settings.json')); print(len(s.get('mcpServers',{})))\" 2>/dev/null || echo 0); fi; DOMAIN='unknown'; if [ -f \"$PROFILE\" ]; then DOMAIN=$(python3 -c \"import json; p=json.load(open('$PROFILE')); print(p.get('fingerprint',{}).get('domain','unknown').replace('_',' ').title())\" 2>/dev/null || echo unknown); fi; echo ''; echo '\ud83e\udde0 DEVLMER ECOSYSTEM ENGINE v3.1'; echo '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501'; echo \"\ud83d\udcca Project: $(basename $PROJ_DIR) | Domain: $DOMAIN\"; echo \"\u26a1 $SKILLS skills | $CMDS commands | $AGENTS agents | $MCPS MCPs\"; echo ''; echo '\ud83d\udca1 Quick start: /dee-demo (tour) | /dee-status (dashboard) | /dee-doctor (health)'; echo '   Type / to see all available commands'; echo ''"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "EDITED_FILE=\"$CLAUDE_FILE_PATH\"; if echo \"$EDITED_FILE\" | grep -qE '\\.py$'; then python3 -m py_compile \"$EDITED_FILE\" 2>&1 && echo '\u2705 Python syntax OK' || echo '\u274c Python syntax error'; elif echo \"$EDITED_FILE\" | grep -qE '\\.(tsx?|jsx?)$'; then echo '\u26a1 TypeScript file edited \u2014 run build to verify'; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "version": "3.0",
+  "engine": "devlmer-ecosystem-engine",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "datadog": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "datadog-mcp"
+      ],
+      "env": {
+        "DD_API_KEY": "TU_DD_API_KEY_AQUI",
+        "DD_APP_KEY": "TU_DD_APP_KEY_AQUI"
+      }
+    },
+    "discord": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-discord"
+      ],
+      "env": {
+        "DISCORD_BOT_TOKEN": "TU_DISCORD_BOT_TOKEN_AQUI"
+      }
+    },
+    "elasticsearch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-elasticsearch"
+      ],
+      "env": {
+        "ELASTICSEARCH_URL": "TU_ELASTICSEARCH_URL_AQUI"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "TU_GITHUB_PERSONAL_ACCESS_TOKEN_AQUI"
+      }
+    },
+    "google-analytics": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-google-analytics"
+      ],
+      "env": {}
+    },
+    "langchain": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "langchain-mcp"
+      ]
+    },
+    "linear": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-linear"
+      ],
+      "env": {}
+    },
+    "neon": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-neon"
+      ],
+      "env": {}
+    },
+    "pinecone": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@pinecone-database/mcp"
+      ],
+      "env": {
+        "PINECONE_API_KEY": "TU_PINECONE_API_KEY_AQUI"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-playwright"
+      ]
+    },
+    "redis": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-redis"
+      ],
+      "env": {
+        "REDIS_URL": "TU_REDIS_URL_AQUI"
+      }
+    },
+    "resend": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-resend"
+      ],
+      "env": {}
+    },
+    "sendgrid": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "sendgrid-mcp-server"
+      ],
+      "env": {
+        "SENDGRID_API_KEY": "TU_SENDGRID_API_KEY_AQUI"
+      }
+    },
+    "sentry": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "sentry-mcp"
+      ],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "TU_SENTRY_AUTH_TOKEN_AQUI"
+      }
+    },
+    "shopify": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-shopify"
+      ],
+      "env": {}
+    },
+    "slack": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-slack"
+      ],
+      "env": {
+        "SLACK_BOT_TOKEN": "TU_SLACK_BOT_TOKEN_AQUI",
+        "SLACK_TEAM_ID": "TU_SLACK_TEAM_ID_AQUI"
+      }
+    },
+    "stripe": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-stripe"
+      ],
+      "env": {
+        "STRIPE_SECRET_KEY": "TU_STRIPE_SECRET_KEY_AQUI"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supabase-mcp"
+      ],
+      "env": {
+        "SUPABASE_URL": "TU_SUPABASE_URL_AQUI",
+        "SUPABASE_KEY": "TU_SUPABASE_KEY_AQUI"
+      }
+    },
+    "telegram": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-telegram"
+      ],
+      "env": {
+        "TELEGRAM_BOT_TOKEN": "TU_TELEGRAM_BOT_TOKEN_AQUI"
+      }
+    },
+    "whatsapp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-whatsapp"
+      ]
+    }
+  },
+  "enabledPlugins": {
+    "pinecone@claude-plugins-official": true
+  }
+}

@@ -21,3 +21,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Claude settings con API keys — NUNCA subir al repo
+.claude/settings.json
+.claude/settings.local.json
+.claude/mcp-env-setup.sh
