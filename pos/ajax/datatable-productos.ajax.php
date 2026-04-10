@@ -9,111 +9,78 @@ require_once "../modelos/categorias.modelo.php";
 
 class TablaProductos{
 
- 	/*=============================================
- 	 MOSTRAR LA TABLA DE PRODUCTOS
-  	=============================================*/ 
+	/*=============================================
+	MOSTRAR LA TABLA DE PRODUCTOS
+	=============================================*/
 
 	public function mostrarTablaProductos(){
 
-		$item = null;
-    	$valor = null;
-    	$orden = "id";
+		$item  = null;
+		$valor = null;
+		$orden = "id";
 
-  		$productos = ControladorProductos::ctrMostrarProductos($item, $valor, $orden);	
+		$productos = ControladorProductos::ctrMostrarProductos($item, $valor, $orden);
 
-  		if(count($productos) == 0){
+		if(count($productos) == 0){
+			echo '{"data": []}';
+			return;
+		}
 
-  			echo '{"data": []}';
+		$datosJson = '{"data": [';
 
-		  	return;
-  		}
-		
-  		$datosJson = '{
-		  "data": [';
+		for($i = 0; $i < count($productos); $i++){
 
-		  for($i = 0; $i < count($productos); $i++){
+			/*=============================================
+			IMAGEN
+			=============================================*/
+			$imagen = "<img src='".$productos[$i]["imagen"]."' width='40px' class='rounded'>";
 
-		  	/*=============================================
- 	 		TRAEMOS LA IMAGEN
-  			=============================================*/ 
+			/*=============================================
+			CATEGORÍA
+			=============================================*/
+			$item  = "id";
+			$valor = $productos[$i]["id_categoria"];
+			$categorias = ControladorCategorias::ctrMostrarCategorias($item, $valor);
 
-		  	$imagen = "<img src='".$productos[$i]["imagen"]."' width='40px'>";
+			/*=============================================
+			STOCK — badge de color según nivel
+			=============================================*/
+			if($productos[$i]["stock"] <= 10){
+				$stock = "<span class='badge bg-danger fs-6'>".$productos[$i]["stock"]."</span>";
+			}else if($productos[$i]["stock"] > 10 && $productos[$i]["stock"] <= 15){
+				$stock = "<span class='badge bg-warning text-dark fs-6'>".$productos[$i]["stock"]."</span>";
+			}else{
+				$stock = "<span class='badge bg-success fs-6'>".$productos[$i]["stock"]."</span>";
+			}
 
-		  	/*=============================================
- 	 		TRAEMOS LA CATEGORÍA
-  			=============================================*/ 
+			/*=============================================
+			ACCIONES — BS5 (data-bs-toggle / bi icons)
+			=============================================*/
+			if(isset($_GET["perfilOculto"]) && $_GET["perfilOculto"] == "Especial"){
 
-		  	$item = "id";
-		  	$valor = $productos[$i]["id_categoria"];
+				$botones = "<div class='btn-group'>"
+					."<button class='btn btn-sm btn-warning btnEditarProducto' idProducto='".$productos[$i]["id"]."' data-bs-toggle='modal' data-bs-target='#modalEditarProducto'>"
+					."<i class='bi bi-pencil-fill'></i></button></div>";
 
-		  	$categorias = ControladorCategorias::ctrMostrarCategorias($item, $valor);
+			}else{
 
-		  	/*=============================================
- 	 		STOCK
-  			=============================================*/ 
+				$botones = "<div class='btn-group'>"
+					."<button class='btn btn-sm btn-warning btnEditarProducto' idProducto='".$productos[$i]["id"]."' data-bs-toggle='modal' data-bs-target='#modalEditarProducto'>"
+					."<i class='bi bi-pencil-fill'></i></button>"
+					."<button class='btn btn-sm btn-danger btnEliminarProducto' idProducto='".$productos[$i]["id"]."' codigo='".$productos[$i]["codigo"]."' imagen='".$productos[$i]["imagen"]."'>"
+					."<i class='bi bi-trash-fill'></i></button></div>";
 
-  			if($productos[$i]["stock"] <= 10){
+			}
 
-  				$stock = "<button class='btn btn-danger'>".$productos[$i]["stock"]."</button>";
+			$datosJson .= '["'.($i+1).'","'.$imagen.'","'.$productos[$i]["codigo"].'","'.$productos[$i]["descripcion"].'","'.$categorias["categoria"].'","'.$stock.'","'.$productos[$i]["precio_compra"].'","'.$productos[$i]["precio_venta"].'","'.$productos[$i]["fecha"].'","'.$botones.'"],';
+		}
 
-  			}else if($productos[$i]["stock"] > 11 && $productos[$i]["stock"] <= 15){
+		$datosJson  = substr($datosJson, 0, -1);
+		$datosJson .= ']}';
 
-  				$stock = "<button class='btn btn-warning'>".$productos[$i]["stock"]."</button>";
-
-  			}else{
-
-  				$stock = "<button class='btn btn-success'>".$productos[$i]["stock"]."</button>";
-
-  			}
-
-		  	/*=============================================
- 	 		TRAEMOS LAS ACCIONES
-  			=============================================*/ 
-
-  			if(isset($_GET["perfilOculto"]) && $_GET["perfilOculto"] == "Especial"){
-
-  				$botones =  "<div class='btn-group'><button class='btn btn-warning btnEditarProducto' idProducto='".$productos[$i]["id"]."' data-toggle='modal' data-target='#modalEditarProducto'><i class='fa fa-pencil'></i></button></div>"; 
-
-  			}else{
-
-  				 $botones =  "<div class='btn-group'><button class='btn btn-warning btnEditarProducto' idProducto='".$productos[$i]["id"]."' data-toggle='modal' data-target='#modalEditarProducto'><i class='fa fa-pencil'></i></button><button class='btn btn-danger btnEliminarProducto' idProducto='".$productos[$i]["id"]."' codigo='".$productos[$i]["codigo"]."' imagen='".$productos[$i]["imagen"]."'><i class='fa fa-times'></i></button></div>"; 
-
-  			}
-
-		 
-		  	$datosJson .='[
-			      "'.($i+1).'",
-			      "'.$imagen.'",
-			      "'.$productos[$i]["codigo"].'",
-			      "'.$productos[$i]["descripcion"].'",
-			      "'.$categorias["categoria"].'",
-			      "'.$stock.'",
-			      "'.$productos[$i]["precio_compra"].'",
-			      "'.$productos[$i]["precio_venta"].'",
-			      "'.$productos[$i]["fecha"].'",
-			      "'.$botones.'"
-			    ],';
-
-		  }
-
-		  $datosJson = substr($datosJson, 0, -1);
-
-		 $datosJson .=   '] 
-
-		 }';
-		
 		echo $datosJson;
-
-
 	}
-
-
-
 }
 
-/*=============================================
-ACTIVAR TABLA DE PRODUCTOS
-=============================================*/ 
 $activarProductos = new TablaProductos();
-$activarProductos -> mostrarTablaProductos();
-
+$activarProductos->mostrarTablaProductos();
