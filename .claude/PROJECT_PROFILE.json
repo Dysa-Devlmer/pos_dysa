@@ -1,0 +1,317 @@
+{
+  "engine_version": "3.0.0",
+  "fingerprint": {
+    "engine_version": "3.0.0",
+    "project_path": "/Users/devlmer/Dysa-Projects/system_pos",
+    "project_name": "system_pos",
+    "technologies": {
+      "github_actions": 1.0,
+      "astro": 0.67,
+      "expo": 0.5,
+      "anthropic_sdk": 0.5,
+      "mysql": 0.5,
+      "docker": 0.5,
+      "kubernetes": 0.33
+    },
+    "primary_stack": {
+      "frontend": [
+        "astro",
+        "expo"
+      ],
+      "database": [
+        "mysql"
+      ],
+      "infrastructure": [
+        "docker",
+        "kubernetes"
+      ],
+      "ai_ml": [
+        "anthropic_sdk"
+      ],
+      "other": [
+        "github_actions"
+      ]
+    },
+    "tech_count": 7,
+    "domain": "ecommerce",
+    "domain_confidence": 1.0,
+    "secondary_domains": [
+      {
+        "name": "saas",
+        "confidence": 1.0
+      },
+      {
+        "name": "social",
+        "confidence": 1.0
+      },
+      {
+        "name": "crm",
+        "confidence": 1.0
+      },
+      {
+        "name": "chatbot",
+        "confidence": 1.0
+      }
+    ],
+    "is_multi_domain": true,
+    "architecture": {
+      "primary": "fullstack",
+      "all_detected": [
+        {
+          "pattern": "fullstack",
+          "confidence": 1.0
+        },
+        {
+          "pattern": "jamstack",
+          "confidence": 0.6666666666666666
+        },
+        {
+          "pattern": "microservices",
+          "confidence": 0.3333333333333333
+        },
+        {
+          "pattern": "plugin_based",
+          "confidence": 0.3333333333333333
+        }
+      ]
+    },
+    "maturity": {
+      "level": "production",
+      "score": 8,
+      "max_score": 12,
+      "axes": {
+        "testing": true,
+        "ci_cd": true,
+        "containerized": true,
+        "linting": true,
+        "type_safety": true,
+        "monitoring": false,
+        "documentation": true,
+        "env_management": false,
+        "security": true,
+        "api_docs": false,
+        "migrations": false,
+        "i18n": true
+      }
+    },
+    "complexity": {
+      "level": "enterprise",
+      "total_files": 21491,
+      "technologies": 7,
+      "languages": 4,
+      "estimated_loc": 543370
+    },
+    "security": {
+      "has_auth": false,
+      "auth_provider": [],
+      "env_secured": false,
+      "has_env_example": false,
+      "has_security_policy": true,
+      "has_rate_limiting": false,
+      "has_cors": false,
+      "has_helmet": false
+    },
+    "parsed_dependencies": {
+      "npm_packages": [
+        "jquery"
+      ],
+      "python_packages": [
+        "anthropic",
+        "mcp",
+        "sphinx_rtd_theme"
+      ],
+      "docker_services": [
+        "web",
+        "build",
+        "depends_on",
+        "db",
+        "networks",
+        "healthcheck",
+        "phpmyadmin",
+        "volumes",
+        "pos_mysql_data"
+      ],
+      "scripts_available": []
+    },
+    "file_stats": {
+      "js": 10759,
+      "png": 3831,
+      "svg": 2220,
+      "css": 1243,
+      "html": 530,
+      "php": 460,
+      "md": 423,
+      "json": 359,
+      "less": 282,
+      "gif": 189,
+      "z": 168,
+      "scss": 131,
+      "jpg": 107,
+      "txt": 93,
+      "coffee": 66,
+      "py": 58,
+      "hbs": 51,
+      "astro": 43,
+      "yml": 30,
+      "csv": 23
+    },
+    "total_files": 21491,
+    "has_tests": true,
+    "has_ci": true,
+    "has_docker": true,
+    "has_docs": true,
+    "has_env": false,
+    "has_monitoring": false,
+    "has_i18n": true,
+    "has_storybook": false,
+    "has_api_docs": false
+  },
+  "blueprints_matched": [
+    "ecommerce",
+    "saas",
+    "social",
+    "chatbot"
+  ],
+  "is_multi_domain": true,
+  "activated_skills": [
+    "docx",
+    "mcp-builder",
+    "pdf",
+    "web-artifacts-builder",
+    "xlsx",
+    "design:accessibility-review",
+    "design:design-system-management",
+    "design:ux-writing",
+    "finance:financial-statements",
+    "finance:reconciliation",
+    "marketing:campaign-planning",
+    "marketing:content-creation",
+    "marketing:performance-analytics",
+    "marketing:seo-audit",
+    "product-management:feature-spec",
+    "product-management:metrics-tracking",
+    "product-management:roadmap-management",
+    "finance:financial-statements",
+    "legal:compliance",
+    "operations:change-management",
+    "operations:compliance-tracking",
+    "operations:process-optimization",
+    "operations:risk-assessment",
+    "operations:runbook",
+    "operations:vendor-management"
+  ],
+  "installed_mcps": [
+    "stripe",
+    "github",
+    "sentry",
+    "playwright",
+    "context7"
+  ],
+  "recommended_mcps": [
+    "shopify",
+    "algolia",
+    "sendgrid",
+    "cloudinary",
+    "google-analytics",
+    "shippo",
+    "taxjar",
+    "auth0",
+    "posthog",
+    "intercom",
+    "linear",
+    "resend",
+    "upstash",
+    "neon",
+    "firebase",
+    "redis",
+    "elasticsearch",
+    "slack",
+    "datadog",
+    "discord",
+    "telegram",
+    "whatsapp",
+    "langchain",
+    "pinecone",
+    "supabase"
+  ],
+  "plugins": [
+    "frontend-design@claude-plugins-official",
+    "playwright@claude-plugins-official"
+  ],
+  "agents": [
+    {
+      "name": "inventory_agent",
+      "role": "Monitors stock levels, predicts reorder points, alerts on low inventory"
+    },
+    {
+      "name": "pricing_agent",
+      "role": "Dynamic pricing based on demand, competition, and margins"
+    },
+    {
+      "name": "seo_agent",
+      "role": "Optimizes product descriptions, meta tags, and structured data"
+    },
+    {
+      "name": "onboarding_agent",
+      "role": "Guides new tenant setup, configures defaults, tracks activation metrics"
+    },
+    {
+      "name": "churn_agent",
+      "role": "Monitors usage patterns, identifies at-risk accounts, suggests retention actions"
+    },
+    {
+      "name": "billing_agent",
+      "role": "Tracks MRR, generates invoices, handles upgrade/downgrade flows"
+    },
+    {
+      "name": "feed_agent",
+      "role": "Optimize feed algorithms, ranking, personalization, and content quality scoring"
+    },
+    {
+      "name": "moderation_agent",
+      "role": "Detect spam, harassment, abuse, and enforce community guidelines at scale"
+    },
+    {
+      "name": "recommendation_agent",
+      "role": "Generate personalized recommendations for users, content, and communities"
+    },
+    {
+      "name": "notification_agent",
+      "role": "Route notifications smartly to maximize engagement while respecting user preferences"
+    },
+    {
+      "name": "prompt_engineer",
+      "role": "Specialized in crafting system prompts, few-shot examples, and guardrails for chatbot responses"
+    },
+    {
+      "name": "test_agent",
+      "role": "Automated conversation testing — happy paths, edge cases, adversarial inputs, hallucination detection"
+    },
+    {
+      "name": "analytics_agent",
+      "role": "Tracks conversation metrics: resolution rate, CSAT, escalation rate, intent coverage gaps"
+    },
+    {
+      "name": "security_agent",
+      "role": "Prompt injection detection, PII filtering, content moderation rules"
+    }
+  ],
+  "custom_skills_created": [
+    "ecommerce-catalog",
+    "ecommerce-analytics",
+    "saas-metrics",
+    "saas-onboarding",
+    "social-feed-algorithms",
+    "social-moderation-strategy",
+    "social-engagement-metrics",
+    "chatbot-prompt-engineering",
+    "chatbot-testing",
+    "chatbot-analytics"
+  ],
+  "hooks_configured": [
+    "PostToolUse",
+    "SessionStart"
+  ],
+  "last_scan": "2026-04-09T22:38:51.700251+00:00",
+  "ecosystem_version": "3.0.0"
+}

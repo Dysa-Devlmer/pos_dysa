@@ -1,0 +1,85 @@
+services:
+
+  # ────────────────────────────────────────
+  # PHP 8.2 + Apache
+  # URL: http://localhost/pos
+  # ────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pos_web
+    ports:
+      - "80:80"
+    volumes:
+      - ./pos:/var/www/html/pos
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+    restart: unless-stopped
+    networks:
+      - pos_network
+
+  # ────────────────────────────────────────
+  # MySQL 8
+  # Puerto local: 3306
+  # ────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: pos_db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pos
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - pos_mysql_data:/var/lib/mysql
+      - ./pos/pos.sql:/docker-entrypoint-initdb.d/01_pos.sql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_spanish_ci
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - pos_network
+
+  # ────────────────────────────────────────
+  # phpMyAdmin
+  # URL: http://localhost:8080
+  # ────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pos_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pos_network
+
+# ────────────────────────────────────────
+# Volúmenes y redes
+# ────────────────────────────────────────
+volumes:
+  pos_mysql_data:
+    driver: local
+
+networks:
+  pos_network:
+    driver: bridge

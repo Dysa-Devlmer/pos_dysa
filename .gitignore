@@ -1,0 +1,23 @@
+# DEE / Claude
+.claude/mcp-env-setup.sh
+.claude/logs/
+.claude/memory/
+
+# ZIPs del curso (no subir al repo)
+*.zip
+
+# Docker volumes / DB data
+mysql_data/
+*.sql.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP
+*.log
+/pos/uploads/temp/
+
+# IDE
+.vscode/
+.idea/
