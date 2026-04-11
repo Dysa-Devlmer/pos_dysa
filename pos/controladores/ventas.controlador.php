@@ -38,7 +38,7 @@ class ControladorVentas{
 					echo'<script>
 
 				swal({
-					  type: "error",
+					  icon: "error",
 					  title: "La venta no se ha ejecuta si no hay productos",
 					  showConfirmButton: true,
 					  confirmButtonText: "Cerrar"
@@ -218,7 +218,7 @@ class ControladorVentas{
 				localStorage.removeItem("rango");
 
 				swal({
-					  type: "success",
+					  icon: "success",
 					  title: "La venta ha sido guardada correctamente",
 					  showConfirmButton: true,
 					  confirmButtonText: "Cerrar"
@@ -394,7 +394,7 @@ class ControladorVentas{
 				localStorage.removeItem("rango");
 
 				swal({
-					  type: "success",
+					  icon: "success",
 					  title: "La venta ha sido editada correctamente",
 					  showConfirmButton: true,
 					  confirmButtonText: "Cerrar"
@@ -539,7 +539,7 @@ class ControladorVentas{
 				echo'<script>
 
 				swal({
-					  type: "success",
+					  icon: "success",
 					  title: "La venta ha sido borrada correctamente",
 					  showConfirmButton: true,
 					  confirmButtonText: "Cerrar"
@@ -576,7 +576,10 @@ class ControladorVentas{
 	DESCARGAR EXCEL
 	=============================================*/
 
-	public function ctrDescargarReporte(){
+	static public function ctrDescargarReporte(){
+
+		// PHP 8.2: utf8_decode() está deprecado — usamos mb_convert_encoding
+		$enc = fn(string $s): string => mb_convert_encoding($s, 'ISO-8859-1', 'UTF-8');
 
 		if(isset($_GET["reporte"])){
 
@@ -612,7 +615,7 @@ class ControladorVentas{
 			header('Content-Disposition:; filename="'.$Name.'"');
 			header("Content-Transfer-Encoding: binary");
 		
-			echo utf8_decode("<table border='0'> 
+			echo $enc("<table border='0'> 
 
 					<tr> 
 					<td style='font-weight:bold; border:1px solid #eee;'>CÓDIGO</td> 
@@ -632,7 +635,7 @@ class ControladorVentas{
 				$cliente = ControladorClientes::ctrMostrarClientes("id", $item["id_cliente"]);
 				$vendedor = ControladorUsuarios::ctrMostrarUsuarios("id", $item["id_vendedor"]);
 
-			 echo utf8_decode("<tr>
+			 echo $enc("<tr>
 			 			<td style='border:1px solid #eee;'>".$item["codigo"]."</td> 
 			 			<td style='border:1px solid #eee;'>".$cliente["nombre"]."</td>
 			 			<td style='border:1px solid #eee;'>".$vendedor["nombre"]."</td>
@@ -642,18 +645,18 @@ class ControladorVentas{
 
 			 	foreach ($productos as $key => $valueProductos) {
 			 			
-			 			echo utf8_decode($valueProductos["cantidad"]."<br>");
+			 			echo $enc($valueProductos["cantidad"]."<br>");
 			 		}
 
-			 	echo utf8_decode("</td><td style='border:1px solid #eee;'>");	
+			 	echo $enc("</td><td style='border:1px solid #eee;'>");	
 
 		 		foreach ($productos as $key => $valueProductos) {
 			 			
-		 			echo utf8_decode($valueProductos["descripcion"]."<br>");
+		 			echo $enc($valueProductos["descripcion"]."<br>");
 		 		
 		 		}
 
-		 		echo utf8_decode("</td>
+		 		echo $enc("</td>
 					<td style='border:1px solid #eee;'>$ ".number_format($item["impuesto"],2)."</td>
 					<td style='border:1px solid #eee;'>$ ".number_format($item["neto"],2)."</td>	
 					<td style='border:1px solid #eee;'>$ ".number_format($item["total"],2)."</td>

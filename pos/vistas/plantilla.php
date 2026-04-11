@@ -73,6 +73,145 @@
     crossorigin="anonymous" />
 
   <!--=======================================
+  LIBRERIAS JS — Cargadas en <head> para estar
+  disponibles cuando se ejecuten los <script>
+  inline de los modulos (grafico-ventas.php, etc.)
+  ========================================-->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es5.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.2.2/b-3.2.2/b-html5-3.2.2/b-print-3.2.2/fc-5.0.4/fh-4.0.1/r-3.0.4/sc-2.4.3/sb-1.8.2/sp-2.3.3/sl-2.1.0/datatables.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@4.3.0/dist/apexcharts.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.15.10/dist/sweetalert2.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.9/dist/inputmask.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js" crossorigin="anonymous"></script>
+
+  <!--=======================================
+  SHIMS DE COMPATIBILIDAD — Definidos en <head>
+  para que esten disponibles cuando ventas.js y
+  reportes.js se ejecuten en el body.
+  Requieren jQuery y flatpickr ya cargados arriba.
+  ========================================-->
+  <script>
+  /* ─── 1. Flatpickr en español ─────────────────────── */
+  flatpickr.localize(flatpickr.l10ns.es);
+
+  /* ─── 2. SweetAlert2 Toast helper ────────────────── */
+  window.Toast = Swal.mixin({
+    toast: true, position: 'top-end',
+    showConfirmButton: false, timer: 3000, timerProgressBar: true,
+    didOpen: (t) => { t.onmouseenter = Swal.stopTimer; t.onmouseleave = Swal.resumeTimer; }
+  });
+
+  /* ─── 3. SHIM: swal() → SweetAlert2 ──────────────────
+     El curso usa swal({ title, type, text, confirmButtonText })
+     SweetAlert2 usa Swal.fire({ title, icon, text, confirmButtonText })
+     ─────────────────────────────────────────────────── */
+  window.swal = function(opciones, texto, tipo) {
+    if (typeof opciones === 'string') {
+      return Swal.fire({ title: opciones, text: texto, icon: tipo || 'info' });
+    }
+    return Swal.fire({
+      title:              opciones.title,
+      text:               opciones.text,
+      icon:               opciones.type || opciones.icon || 'info',
+      confirmButtonText:  opciones.confirmButtonText  || 'Aceptar',
+      cancelButtonText:   opciones.cancelButtonText   || 'Cancelar',
+      showCancelButton:   opciones.showCancelButton   || false,
+      confirmButtonColor: opciones.confirmButtonColor || '#3085d6',
+      cancelButtonColor:  opciones.cancelButtonColor  || '#d33',
+    });
+  };
+
+  /* ─── 4. SHIM: $.fn.number() → Intl.NumberFormat ───── */
+  $.fn.number = function(format, decimals) {
+    decimals = decimals != null ? decimals : 2;
+    return this.each(function() {
+      var raw = parseFloat($(this).val().toString().replace(/,/g, '')) || 0;
+      if (format) {
+        $(this).val(raw.toLocaleString('en-US', {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals
+        }));
+      }
+    });
+  };
+
+  /* ─── 5. SHIM: moment() → Date nativo ──────────────── */
+  window.moment = function(input) {
+    var d = input instanceof Date ? new Date(input) : (input ? new Date(input) : new Date());
+    var self = {
+      _d: d,
+      format: function(fmt) {
+        var y  = d.getFullYear(),
+            mo = String(d.getMonth()+1).padStart(2,'0'),
+            dd = String(d.getDate()).padStart(2,'0');
+        return fmt
+          .replace('YYYY', y).replace('MM', mo).replace('DD', dd)
+          .replace('YYYY-MM-DD', y+'-'+mo+'-'+dd)
+          .replace('MMMM D, YYYY', d.toLocaleDateString('es', {year:'numeric',month:'long',day:'numeric'}));
+      },
+      subtract: function(n, unit) {
+        var nd = new Date(d);
+        if (unit === 'days')   nd.setDate(nd.getDate() - n);
+        if (unit === 'month' || unit === 'months') nd.setMonth(nd.getMonth() - n);
+        return window.moment(nd);
+      },
+      startOf: function(unit) {
+        var nd = new Date(d);
+        if (unit === 'month') { nd.setDate(1); nd.setHours(0,0,0,0); }
+        return window.moment(nd);
+      },
+      endOf: function(unit) {
+        var nd = new Date(d);
+        if (unit === 'month') nd = new Date(nd.getFullYear(), nd.getMonth()+1, 0);
+        return window.moment(nd);
+      },
+      toDate: function() { return d; },
+      valueOf: function() { return d.getTime(); }
+    };
+    return self;
+  };
+
+  /* ─── 6. SHIM: $.fn.daterangepicker() → Flatpickr ──── */
+  $.fn.daterangepicker = function(opciones, callback) {
+    return this.each(function() {
+      var el = this;
+      var inputId = 'fp_' + Math.random().toString(36).substr(2,6);
+      var fpInput = $('<input type="text" id="'+inputId+'" style="display:none">').insertAfter(el);
+
+      flatpickr(fpInput[0], {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        locale: 'es',
+        onChange: function(selectedDates) {
+          if (selectedDates.length === 2 && typeof callback === 'function') {
+            var start = window.moment(selectedDates[0]);
+            var end   = window.moment(selectedDates[1]);
+            callback(start, end);
+          }
+        }
+      });
+
+      $(el).on('click', function(e) {
+        e.preventDefault();
+        fpInput[0]._flatpickr.open();
+      });
+    });
+  };
+
+  /* ─── 7. Confirmación global ──────────────────────── */
+  window.confirmar = function(mensaje, callback) {
+    Swal.fire({
+      title: '¿Estás seguro?', text: mensaje, icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, continuar', cancelButtonText: 'Cancelar'
+    }).then((r) => { if (r.isConfirmed) callback(); });
+  };
+  </script>
+
+  <!--=======================================
   ESTILOS PERSONALIZADOS
   ========================================-->
   <style>
@@ -234,54 +373,15 @@
 
 
 <!--=======================================
-JQUERY
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-OVERLAY SCROLLBARS (requerido por AdminLTE 4)
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es5.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-ADMINLTE 4 (local)
+ADMINLTE 4 (local) — al final del body porque
+depende del DOM estar completamente construido
 ========================================-->
 <script src="vistas/adminlte/js/adminlte.min.js"></script>
 
 <!--=======================================
-DATATABLES 2 + BOOTSTRAP 5 + EXTENSIONES
-========================================-->
-<script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.2.2/b-3.2.2/b-html5-3.2.2/b-print-3.2.2/fc-5.0.4/fh-4.0.1/r-3.0.4/sc-2.4.3/sb-1.8.2/sp-2.3.3/sl-2.1.0/datatables.min.js"
-  crossorigin="anonymous"></script>
-
-<!--=======================================
-APEXCHARTS
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/apexcharts@4.3.0/dist/apexcharts.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-SWEETALERT 2
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.15.10/dist/sweetalert2.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-FLATPICKR + ESPAÑOL
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-INPUTMASK 5
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.9/dist/inputmask.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-AUTONUMERIC (formatos de moneda)
-========================================-->
-<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js" crossorigin="anonymous"></script>
-
-<!--=======================================
-JS DEL SISTEMA
+JS DEL SISTEMA — Van al final porque dependen
+de jQuery, shims y el DOM ya construido.
+Las librerias y shims estan en el <head>.
 ========================================-->
 <script src="vistas/js/plantilla.js"></script>
 <script src="vistas/js/usuarios.js"></script>
@@ -290,141 +390,6 @@ JS DEL SISTEMA
 <script src="vistas/js/clientes.js"></script>
 <script src="vistas/js/ventas.js"></script>
 <script src="vistas/js/reportes.js"></script>
-
-<!--=======================================
-CONFIGURACIÓN GLOBAL + SHIMS DE COMPATIBILIDAD
-Los shims permiten que el código del curso (ventas.js,
-reportes.js, etc.) funcione sin modificarlo.
-========================================-->
-<script>
-/* ─── 1. Flatpickr en español ─────────────────────── */
-flatpickr.localize(flatpickr.l10ns.es);
-
-/* ─── 2. SweetAlert2 Toast helper ────────────────── */
-window.Toast = Swal.mixin({
-  toast: true, position: 'top-end',
-  showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  didOpen: (t) => { t.onmouseenter = Swal.stopTimer; t.onmouseleave = Swal.resumeTimer; }
-});
-
-/* ─── 3. SHIM: swal() → SweetAlert2 ──────────────────
-   El curso usa swal({ title, type, text, confirmButtonText })
-   SweetAlert2 usa Swal.fire({ title, icon, text, confirmButtonText })
-   ─────────────────────────────────────────────────── */
-window.swal = function(opciones, texto, tipo) {
-  // Soporte para swal("título", "texto", "tipo")
-  if (typeof opciones === 'string') {
-    return Swal.fire({ title: opciones, text: texto, icon: tipo || 'info' });
-  }
-  return Swal.fire({
-    title:              opciones.title,
-    text:               opciones.text,
-    icon:               opciones.type || opciones.icon || 'info',
-    confirmButtonText:  opciones.confirmButtonText  || 'Aceptar',
-    cancelButtonText:   opciones.cancelButtonText   || 'Cancelar',
-    showCancelButton:   opciones.showCancelButton   || false,
-    confirmButtonColor: opciones.confirmButtonColor || '#3085d6',
-    cancelButtonColor:  opciones.cancelButtonColor  || '#d33',
-  });
-};
-
-/* ─── 4. SHIM: $.fn.number() → Intl.NumberFormat ─────
-   El curso usa $(".precio").number(true, 2)
-   Lo reemplazamos con formato nativo del navegador
-   ─────────────────────────────────────────────────── */
-$.fn.number = function(format, decimals) {
-  decimals = decimals != null ? decimals : 2;
-  return this.each(function() {
-    var raw = parseFloat($(this).val().toString().replace(/,/g, '')) || 0;
-    if (format) {
-      $(this).val(raw.toLocaleString('en-US', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-      }));
-    }
-  });
-};
-
-/* ─── 5. SHIM: moment() → Date nativo ────────────────
-   El curso usa moment() para daterangepicker.
-   Implementamos lo que se usa en ventas.js y reportes.js
-   ─────────────────────────────────────────────────── */
-window.moment = function(input) {
-  var d = input instanceof Date ? new Date(input) : (input ? new Date(input) : new Date());
-  var self = {
-    _d: d,
-    format: function(fmt) {
-      var y  = d.getFullYear(),
-          mo = String(d.getMonth()+1).padStart(2,'0'),
-          dd = String(d.getDate()).padStart(2,'0');
-      return fmt
-        .replace('YYYY', y).replace('MM', mo).replace('DD', dd)
-        .replace('YYYY-MM-DD', y+'-'+mo+'-'+dd)
-        .replace('MMMM D, YYYY', d.toLocaleDateString('es', {year:'numeric',month:'long',day:'numeric'}));
-    },
-    subtract: function(n, unit) {
-      var nd = new Date(d);
-      if (unit === 'days')   nd.setDate(nd.getDate() - n);
-      if (unit === 'month' || unit === 'months') nd.setMonth(nd.getMonth() - n);
-      return window.moment(nd);
-    },
-    startOf: function(unit) {
-      var nd = new Date(d);
-      if (unit === 'month') { nd.setDate(1); nd.setHours(0,0,0,0); }
-      return window.moment(nd);
-    },
-    endOf: function(unit) {
-      var nd = new Date(d);
-      if (unit === 'month') nd = new Date(nd.getFullYear(), nd.getMonth()+1, 0);
-      return window.moment(nd);
-    },
-    toDate: function() { return d; },
-    valueOf: function() { return d.getTime(); }
-  };
-  return self;
-};
-
-/* ─── 6. SHIM: $.fn.daterangepicker() → Flatpickr ────
-   El curso usa $('#btn').daterangepicker({ranges}, callback)
-   Lo mapeamos a Flatpickr con mode:'range'
-   ─────────────────────────────────────────────────── */
-$.fn.daterangepicker = function(opciones, callback) {
-  return this.each(function() {
-    var el = this;
-    // Crear un input oculto auxiliar para Flatpickr
-    var inputId = 'fp_' + Math.random().toString(36).substr(2,6);
-    var fpInput = $('<input type="text" id="'+inputId+'" style="display:none">').insertAfter(el);
-
-    flatpickr(fpInput[0], {
-      mode: 'range',
-      dateFormat: 'Y-m-d',
-      locale: 'es',
-      onChange: function(selectedDates) {
-        if (selectedDates.length === 2 && typeof callback === 'function') {
-          var start = window.moment(selectedDates[0]);
-          var end   = window.moment(selectedDates[1]);
-          callback(start, end);
-        }
-      }
-    });
-
-    // Al hacer click en el botón original, abrir Flatpickr
-    $(el).on('click', function(e) {
-      e.preventDefault();
-      fpInput[0]._flatpickr.open();
-    });
-  });
-};
-
-/* ─── 7. Confirmación global ──────────────────────── */
-window.confirmar = function(mensaje, callback) {
-  Swal.fire({
-    title: '¿Estás seguro?', text: mensaje, icon: 'warning',
-    showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Sí, continuar', cancelButtonText: 'Cancelar'
-  }).then((r) => { if (r.isConfirmed) callback(); });
-};
-</script>
 
 </body>
 </html>

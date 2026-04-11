@@ -500,54 +500,65 @@ $(".tablas").on("click", ".btnImprimirFactura", function(){
 });
 
 /*=============================================
-RANGO DE FECHAS (daterangepicker + moment.js)
+RANGO DE FECHAS — Flatpickr 4.x (reemplaza daterangepicker + moment.js)
 =============================================*/
-$('#daterange-btn').daterangepicker(
-	{
-		ranges: {
-			'Hoy':            [moment(), moment()],
-			'Ayer':           [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-			'Últimos 7 días': [moment().subtract(6, 'days'), moment()],
-			'Últimos 30 días':[moment().subtract(29, 'days'), moment()],
-			'Este mes':       [moment().startOf('month'), moment().endOf('month')],
-			'Último mes':     [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+(function () {
+	var KEY = "capturarRangoVentas";
+	var btn = document.getElementById("daterange-btn");
+	if (!btn) return;
+
+	// Input oculto que Flatpickr abre
+	var input = document.createElement("input");
+	input.type = "text";
+	input.id   = "fpVentasInput";
+	input.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;";
+	document.body.appendChild(input);
+
+	// Restaurar texto guardado al cargar la página
+	var rangoGuardado = localStorage.getItem(KEY);
+	if (rangoGuardado) {
+		var spanRango = btn.querySelector("span.rango-texto");
+		if (spanRango) spanRango.textContent = rangoGuardado;
+	}
+
+	var fp = flatpickr(input, {
+		mode: "range",
+		dateFormat: "Y-m-d",
+		locale: {
+			rangeSeparator: " al ",
+			weekdays: {
+				shorthand: ["Do","Lu","Ma","Mi","Ju","Vi","Sá"],
+				longhand:  ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"]
+			},
+			months: {
+				shorthand: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
+				longhand:  ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+			},
+			firstDayOfWeek: 1
 		},
-		startDate: moment(),
-		endDate:   moment()
-	},
-	function(start, end){
-		$('#daterange-btn span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+		onClose: function (selectedDates, dateStr) {
+			if (selectedDates.length < 2) return;
+			var fechaInicial = selectedDates[0].toISOString().slice(0, 10);
+			var fechaFinal   = selectedDates[1].toISOString().slice(0, 10);
+			localStorage.setItem(KEY, fechaInicial + " → " + fechaFinal);
+			window.location = "index.php?ruta=ventas"
+				+ "&fechaInicial=" + encodeURIComponent(fechaInicial)
+				+ "&fechaFinal="   + encodeURIComponent(fechaFinal);
+		}
+	});
 
-		var fechaInicial = start.format('YYYY-MM-DD');
-		var fechaFinal   = end.format('YYYY-MM-DD');
+	btn.addEventListener("click", function () { fp.open(); });
 
-		localStorage.setItem("capturarRango", $("#daterange-btn span").html());
-		window.location = "index.php?ruta=ventas&fechaInicial=" + fechaInicial + "&fechaFinal=" + fechaFinal;
+	// Botón limpiar
+	var btnLimpiar = document.getElementById("btnLimpiarFechaVentas");
+	if (btnLimpiar) {
+		btnLimpiar.addEventListener("click", function (e) {
+			e.preventDefault();
+			localStorage.removeItem(KEY);
+			window.location = "ventas";
+		});
 	}
-);
-
-$(".daterangepicker.opensleft .range_inputs .cancelBtn").on("click", function(){
-	localStorage.removeItem("capturarRango");
-	localStorage.clear();
-	window.location = "ventas";
-});
-
-$(".daterangepicker.opensleft .ranges li").on("click", function(){
-
-	var textoHoy = $(this).attr("data-range-key");
-
-	if(textoHoy == "Hoy"){
-		var d   = new Date();
-		var dia = ("0" + d.getDate()).slice(-2);
-		var mes = ("0" + (d.getMonth() + 1)).slice(-2);
-		var año = d.getFullYear();
-		var fechaInicial = año + "-" + mes + "-" + dia;
-		var fechaFinal   = año + "-" + mes + "-" + dia;
-		localStorage.setItem("capturarRango", "Hoy");
-		window.location = "index.php?ruta=ventas&fechaInicial=" + fechaInicial + "&fechaFinal=" + fechaFinal;
-	}
-
-});
+})();
 
 /*=============================================
 ABRIR XML EN NUEVA PESTAÑA

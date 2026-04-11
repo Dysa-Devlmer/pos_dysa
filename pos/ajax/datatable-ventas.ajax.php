@@ -1,93 +1,66 @@
 <?php
 
+header('Content-Type: application/json; charset=utf-8');
+
 require_once "../controladores/productos.controlador.php";
 require_once "../modelos/productos.modelo.php";
 
+/*=============================================
+MOSTRAR TABLA DE PRODUCTOS PARA CREAR VENTA
+— Devuelve JSON compatible con DataTables 2.x
+=============================================*/
 
-class TablaProductosVentas{
+$item  = null;
+$valor = null;
+$orden = "id";
 
- 	/*=============================================
- 	 MOSTRAR LA TABLA DE PRODUCTOS
-  	=============================================*/ 
+$productos = ControladorProductos::ctrMostrarProductos($item, $valor, $orden);
 
-	public function mostrarTablaProductosVentas(){
-
-		$item = null;
-    	$valor = null;
-    	$orden = "id";
-
-  		$productos = ControladorProductos::ctrMostrarProductos($item, $valor, $orden);
- 		
-  		if(count($productos) == 0){
-
-  			echo '{"data": []}';
-
-		  	return;
-  		}	
-		
-  		$datosJson = '{
-		  "data": [';
-
-		  for($i = 0; $i < count($productos); $i++){
-
-		  	/*=============================================
- 	 		TRAEMOS LA IMAGEN
-  			=============================================*/ 
-
-		  	$imagen = "<img src='".$productos[$i]["imagen"]."' width='40px'>";
-
-		  	/*=============================================
- 	 		STOCK
-  			=============================================*/ 
-
-  			if($productos[$i]["stock"] <= 10){
-
-  				$stock = "<button class='btn btn-danger'>".$productos[$i]["stock"]."</button>";
-
-  			}else if($productos[$i]["stock"] > 11 && $productos[$i]["stock"] <= 15){
-
-  				$stock = "<button class='btn btn-warning'>".$productos[$i]["stock"]."</button>";
-
-  			}else{
-
-  				$stock = "<button class='btn btn-success'>".$productos[$i]["stock"]."</button>";
-
-  			}
-
-		  	/*=============================================
- 	 		TRAEMOS LAS ACCIONES
-  			=============================================*/ 
-
-		  	$botones =  "<div class='btn-group'><button class='btn btn-primary agregarProducto recuperarBoton' idProducto='".$productos[$i]["id"]."'>Agregar</button></div>"; 
-
-		  	$datosJson .='[
-			      "'.($i+1).'",
-			      "'.$imagen.'",
-			      "'.$productos[$i]["codigo"].'",
-			      "'.$productos[$i]["descripcion"].'",
-			      "'.$stock.'",
-			      "'.$botones.'"
-			    ],';
-
-		  }
-
-		  $datosJson = substr($datosJson, 0, -1);
-
-		 $datosJson .=   '] 
-
-		 }';
-		
-		echo $datosJson;
-
-
-	}
-
-
+if (!$productos || count($productos) === 0) {
+    echo json_encode(["data" => []]);
+    exit;
 }
 
-/*=============================================
-ACTIVAR TABLA DE PRODUCTOS
-=============================================*/ 
-$activarProductosVentas = new TablaProductosVentas();
-$activarProductosVentas -> mostrarTablaProductosVentas();
+$data = [];
 
+foreach ($productos as $i => $producto) {
+
+    /*=============================================
+    IMAGEN
+    =============================================*/
+    $imagen = "<img src='" . htmlspecialchars($producto["imagen"]) . "' width='40' class='rounded shadow-sm'>";
+
+    /*=============================================
+    BADGE DE STOCK — colores semánticos BS5
+    =============================================*/
+    $stock = (int) $producto["stock"];
+
+    if ($stock === 0) {
+        $stockHtml = "<span class='badge bg-danger'>Sin stock</span>";
+    } elseif ($stock <= 5) {
+        $stockHtml = "<span class='badge bg-danger'>" . $stock . "</span>";
+    } elseif ($stock <= 15) {
+        $stockHtml = "<span class='badge bg-warning text-dark'>" . $stock . "</span>";
+    } else {
+        $stockHtml = "<span class='badge bg-success'>" . $stock . "</span>";
+    }
+
+    /*=============================================
+    BOTÓN AGREGAR
+    =============================================*/
+    $boton = "<button class='btn btn-sm btn-primary agregarProducto recuperarBoton' "
+           . "idProducto='" . (int) $producto["id"] . "'>"
+           . "<i class='bi bi-plus-lg me-1'></i>Agregar"
+           . "</button>";
+
+    $data[] = [
+        (string) ($i + 1),
+        $imagen,
+        htmlspecialchars($producto["codigo"]),
+        htmlspecialchars($producto["descripcion"]),
+        $stockHtml,
+        $boton
+    ];
+}
+
+echo json_encode(["data" => $data], JSON_UNESCAPED_UNICODE);

@@ -165,8 +165,9 @@ Antes de dar por terminado cualquier módulo verificar:
 | Crear Venta | ✅ | ✅ | ✅ | ✅ | ✅ Completo |
 | Editar Venta | ✅ | ✅ | ✅ | ✅ | ✅ Completo |
 | Reportes | ✅ | ✅ | ✅ | ✅ | ✅ Completo |
-| Dashboard | 🔄 | 🔄 | 🔄 | 🔄 | 🔄 Pendiente |
+| Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ Completo |
 | 404 | ✅ | — | — | — | ✅ Completo |
+| REST API | ✅ | — | ✅ | ✅ | ✅ Completo (bonus) |
 
 > **Actualizar esta tabla en cada sesión** cuando se complete o inicie un módulo.
 
@@ -175,11 +176,16 @@ Antes de dar por terminado cualquier módulo verificar:
 ### 8. Próximos módulos / tareas pendientes
 
 ```
-[ ] Dashboard — ApexCharts (ventas del día, top productos, resumen KPIs)
+[x] Dashboard — ApexCharts (ventas del día, top productos, resumen KPIs) ✅
+[x] REST API — JWT + CRUD genérico en pos/api/ ✅
+[x] Facturas PDF — TCPDF moderno: factura A4 + ticket térmico ✅
+[x] datatable-ventas.ajax.php — static + json_encode + BS5 badges ✅
+[x] datatable-productos.ajax.php — static + json_encode + BS5 ✅
+[x] ventas.js — daterangepicker/moment.js → Flatpickr 4.x ✅
+[x] ventas.php — span.rango-texto + botón limpiar fecha condicional ✅
 [ ] Perfil de usuario — editar datos, cambiar contraseña, foto
 [ ] Inventario / alertas de stock bajo
 [ ] Módulo de proveedores (si el curso lo incluye)
-[ ] Exportar reportes a PDF (además de Excel)
 [ ] Tests básicos de integración AJAX
 ```
 

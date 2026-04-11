@@ -41,17 +41,26 @@ if($xml){
       <i class="bi bi-plus-circle me-1"></i> Agregar venta
     </a>
 
-    <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" id="daterange-btn">
-      <i class="bi bi-calendar3 me-1"></i>
-      <?php
-        if(isset($_GET["fechaInicial"])){
-          echo htmlspecialchars($_GET["fechaInicial"])." - ".htmlspecialchars($_GET["fechaFinal"]);
-        } else {
-          echo 'Rango de fecha';
-        }
-      ?>
-      <i class="bi bi-caret-down-fill ms-1"></i>
-    </button>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="daterange-btn">
+        <i class="bi bi-calendar3 me-1"></i>
+        <span class="rango-texto">
+          <?php
+            if(isset($_GET["fechaInicial"])){
+              echo htmlspecialchars($_GET["fechaInicial"])." → ".htmlspecialchars($_GET["fechaFinal"]);
+            } else {
+              echo 'Rango de fecha';
+            }
+          ?>
+        </span>
+        <i class="bi bi-caret-down-fill ms-1"></i>
+      </button>
+      <?php if(isset($_GET["fechaInicial"])): ?>
+      <a href="ventas" id="btnLimpiarFechaVentas" class="btn btn-outline-danger btn-sm" title="Quitar filtro">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      <?php endif; ?>
+    </div>
 
   </div>
 

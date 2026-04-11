@@ -24,18 +24,26 @@ if($_SESSION["perfil"] == "Especial" || $_SESSION["perfil"] == "Vendedor"){
 <div class="card shadow-sm mb-4">
   <div class="card-header d-flex flex-wrap align-items-center gap-2">
 
-    <!-- Filtro de rango de fechas -->
+    <!-- Filtro de rango de fechas — Flatpickr -->
     <button type="button" class="btn btn-outline-secondary btn-sm" id="daterange-btn2">
       <i class="bi bi-calendar3 me-1"></i>
-      <?php
-        if(isset($_GET["fechaInicial"])){
-          echo htmlspecialchars($_GET["fechaInicial"])." - ".htmlspecialchars($_GET["fechaFinal"]);
-        } else {
-          echo 'Rango de fecha';
-        }
-      ?>
+      <span class="rango-texto">
+        <?php
+          if(isset($_GET["fechaInicial"])){
+            echo htmlspecialchars($_GET["fechaInicial"])." → ".htmlspecialchars($_GET["fechaFinal"]);
+          } else {
+            echo 'Rango de fecha';
+          }
+        ?>
+      </span>
       <i class="bi bi-caret-down-fill ms-1"></i>
     </button>
+
+    <?php if(isset($_GET["fechaInicial"])): ?>
+    <a href="reportes" id="btnLimpiarFecha" class="btn btn-outline-danger btn-sm" title="Quitar filtro de fecha">
+      <i class="bi bi-x-lg"></i>
+    </a>
+    <?php endif; ?>
 
     <!-- Botón descargar Excel -->
     <?php

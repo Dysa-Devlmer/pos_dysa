@@ -1,306 +1,256 @@
 <?php
 
+/*=============================================
+FACTURA PDF — TCPDF
+Genera y muestra la factura de venta en el navegador
+=============================================*/
+
 require_once "../../../controladores/ventas.controlador.php";
 require_once "../../../modelos/ventas.modelo.php";
-
 require_once "../../../controladores/clientes.controlador.php";
 require_once "../../../modelos/clientes.modelo.php";
-
 require_once "../../../controladores/usuarios.controlador.php";
 require_once "../../../modelos/usuarios.modelo.php";
-
 require_once "../../../controladores/productos.controlador.php";
 require_once "../../../modelos/productos.modelo.php";
+require_once "tcpdf_include.php";
 
-class imprimirFactura{
+/*=============================================
+VALIDAR PARÁMETRO
+=============================================*/
+if (!isset($_GET["codigo"]) || trim($_GET["codigo"]) === "") {
+    http_response_code(400);
+    die("Código de factura no proporcionado.");
+}
 
-public $codigo;
+$codigoFactura = trim($_GET["codigo"]);
 
-public function traerImpresionFactura(){
+/*=============================================
+TRAER DATOS DE LA VENTA
+=============================================*/
+$venta = ControladorVentas::ctrMostrarVentas("codigo", $codigoFactura);
 
-//TRAEMOS LA INFORMACIÓN DE LA VENTA
+if (!$venta) {
+    http_response_code(404);
+    die("Factura no encontrada.");
+}
 
-$itemVenta = "codigo";
-$valorVenta = $this->codigo;
+$fecha     = substr($venta["fecha"], 0, -8);
+$productos = json_decode($venta["productos"], true) ?: [];
+$neto      = (float) $venta["neto"];
+$impuesto  = (float) $venta["impuesto"];
+$total     = (float) $venta["total"];
+$metodo    = htmlspecialchars($venta["metodo_pago"] ?? "—");
 
-$respuestaVenta = ControladorVentas::ctrMostrarVentas($itemVenta, $valorVenta);
+/*=============================================
+TRAER CLIENTE Y VENDEDOR
+=============================================*/
+$cliente  = ControladorClientes::ctrMostrarClientes("id", $venta["id_cliente"]);
+$vendedor = ControladorUsuarios::ctrMostrarUsuarios("id", $venta["id_vendedor"]);
 
-$fecha = substr($respuestaVenta["fecha"],0,-8);
-$productos = json_decode($respuestaVenta["productos"], true);
-$neto = number_format($respuestaVenta["neto"],2);
-$impuesto = number_format($respuestaVenta["impuesto"],2);
-$total = number_format($respuestaVenta["total"],2);
+$nombreCliente  = htmlspecialchars($cliente["nombre"]  ?? "—");
+$nombreVendedor = htmlspecialchars($vendedor["nombre"] ?? "—");
 
-//TRAEMOS LA INFORMACIÓN DEL CLIENTE
+/*=============================================
+CONFIGURAR TCPDF
+=============================================*/
+$pdf = new TCPDF("P", PDF_UNIT, "A4", true, "UTF-8", false);
 
-$itemCliente = "id";
-$valorCliente = $respuestaVenta["id_cliente"];
+// Metadatos
+$pdf->SetCreator("POS System");
+$pdf->SetAuthor("Devlmer POS");
+$pdf->SetTitle("Factura #" . $codigoFactura);
+$pdf->SetSubject("Factura de Venta");
+$pdf->SetKeywords("factura, venta, pos");
 
-$respuestaCliente = ControladorClientes::ctrMostrarClientes($itemCliente, $valorCliente);
+// Sin cabecera ni pie de página por defecto
+$pdf->setPrintHeader(false);
+$pdf->setPrintFooter(false);
 
-//TRAEMOS LA INFORMACIÓN DEL VENDEDOR
-
-$itemVendedor = "id";
-$valorVendedor = $respuestaVenta["id_vendedor"];
-
-$respuestaVendedor = ControladorUsuarios::ctrMostrarUsuarios($itemVendedor, $valorVendedor);
-
-//REQUERIMOS LA CLASE TCPDF
-
-require_once('tcpdf_include.php');
-
-$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+// Márgenes
+$pdf->SetMargins(15, 15, 15);
+$pdf->SetAutoPageBreak(true, 15);
+$pdf->SetFont("helvetica", "", 9);
 
 $pdf->startPageGroup();
-
 $pdf->AddPage();
 
-// ---------------------------------------------------------
+// Paleta de colores
+$colorPrimario  = [22,  163, 74];   // verde
+$colorGris      = [71,  85,  105];  // gris slate
+$colorGrisClaro = [241, 245, 249];  // fondo filas pares
+$colorBorde     = [203, 213, 225];  // borde tabla
+$colorBlanco    = [255, 255, 255];
+$colorTexto     = [30,  41,  59];   // slate-800
 
-$bloque1 = <<<EOF
+/*=============================================
+CABECERA — EMPRESA + NRO FACTURA
+=============================================*/
 
-	<table>
-		
-		<tr>
-			
-			<td style="width:150px"><img src="images/logo-negro-bloque.png"></td>
+// Fondo verde del header
+$pdf->SetFillColor(...$colorPrimario);
+$pdf->Rect(15, 15, 180, 28, "F");
 
-			<td style="background-color:white; width:140px">
-				
-				<div style="font-size:8.5px; text-align:right; line-height:15px;">
-					
-					<br>
-					NIT: 71.759.963-9
+// Nombre empresa
+$pdf->SetFont("helvetica", "B", 18);
+$pdf->SetTextColor(...$colorBlanco);
+$pdf->SetXY(20, 19);
+$pdf->Cell(100, 8, "DEVLMER POS", 0, 0, "L", false);
 
-					<br>
-					Dirección: Calle 44B 92-11
+// Subtítulo empresa
+$pdf->SetFont("helvetica", "", 8);
+$pdf->SetXY(20, 27);
+$pdf->Cell(100, 5, "Sistema de Punto de Venta  |  ventas@devlmerpos.com  |  Tel. 300 786 52 49", 0, 0, "L", false);
+$pdf->SetXY(20, 33);
+$pdf->Cell(100, 4, "NIT: 71.759.963-9  |  Calle 44B 92-11, Ciudad", 0, 0, "L", false);
 
-				</div>
+// Bloque FACTURA N.°
+$pdf->SetFillColor(15, 118, 54);  // verde oscuro
+$pdf->Rect(130, 15, 65, 28, "F");
+$pdf->SetFont("helvetica", "B", 8);
+$pdf->SetTextColor(...$colorBlanco);
+$pdf->SetXY(130, 18);
+$pdf->Cell(65, 5, "FACTURA N.\xc2\xb0", 0, 0, "C", false);
+$pdf->SetFont("helvetica", "B", 16);
+$pdf->SetXY(130, 24);
+$pdf->Cell(65, 10, $codigoFactura, 0, 0, "C", false);
 
-			</td>
+/*=============================================
+BLOQUE DE DATOS DEL CLIENTE / VENTA
+=============================================*/
+$pdf->SetTextColor(...$colorTexto);
+$pdf->SetFont("helvetica", "", 9);
+$pdf->SetY(50);
 
-			<td style="background-color:white; width:140px">
+// Fondo gris claro para el bloque de info
+$pdf->SetFillColor(...$colorGrisClaro);
+$pdf->Rect(15, 50, 180, 24, "F");
 
-				<div style="font-size:8.5px; text-align:right; line-height:15px;">
-					
-					<br>
-					Teléfono: 300 786 52 49
-					
-					<br>
-					ventas@inventorysystem.com
+// Etiquetas en negrita
+$pdf->SetFont("helvetica", "B", 8);
+$pdf->SetTextColor(...$colorGris);
 
-				</div>
-				
-			</td>
+$pdf->SetXY(18, 53);
+$pdf->Cell(30, 5, "CLIENTE:", 0, 0, "L");
+$pdf->SetXY(18, 60);
+$pdf->Cell(30, 5, "VENDEDOR:", 0, 0, "L");
 
-			<td style="background-color:white; width:110px; text-align:center; color:red"><br><br>FACTURA N.<br>$valorVenta</td>
+$pdf->SetXY(110, 53);
+$pdf->Cell(25, 5, "FECHA:", 0, 0, "L");
+$pdf->SetXY(110, 60);
+$pdf->Cell(25, 5, "PAGO:", 0, 0, "L");
 
-		</tr>
+// Valores
+$pdf->SetFont("helvetica", "", 9);
+$pdf->SetTextColor(...$colorTexto);
 
-	</table>
+$pdf->SetXY(48, 53);
+$pdf->Cell(60, 5, $nombreCliente, 0, 0, "L");
+$pdf->SetXY(48, 60);
+$pdf->Cell(60, 5, $nombreVendedor, 0, 0, "L");
 
-EOF;
+$pdf->SetXY(135, 53);
+$pdf->Cell(55, 5, $fecha, 0, 0, "L");
+$pdf->SetXY(135, 60);
+$pdf->Cell(55, 5, $metodo, 0, 0, "L");
 
-$pdf->writeHTML($bloque1, false, false, false, false, '');
+/*=============================================
+TABLA DE PRODUCTOS — ENCABEZADO
+=============================================*/
+$yTabla = 80;
 
-// ---------------------------------------------------------
+$pdf->SetFillColor(...$colorPrimario);
+$pdf->SetTextColor(...$colorBlanco);
+$pdf->SetFont("helvetica", "B", 9);
+$pdf->SetXY(15, $yTabla);
 
-$bloque2 = <<<EOF
+$pdf->Cell(80, 7, "PRODUCTO", 0, 0, "C", true);
+$pdf->Cell(25, 7, "CANTIDAD", 0, 0, "C", true);
+$pdf->Cell(37, 7, "PRECIO UNIT.", 0, 0, "C", true);
+$pdf->Cell(38, 7, "TOTAL", 0, 1, "C", true);
 
-	<table>
-		
-		<tr>
-			
-			<td style="width:540px"><img src="images/back.jpg"></td>
-		
-		</tr>
+/*=============================================
+TABLA DE PRODUCTOS — FILAS
+=============================================*/
+$pdf->SetFont("helvetica", "", 9);
+$esPar = false;
 
-	</table>
+foreach ($productos as $item) {
 
-	<table style="font-size:10px; padding:5px 10px;">
-	
-		<tr>
-		
-			<td style="border: 1px solid #666; background-color:white; width:390px">
+    // Buscar precio unitario del producto
+    $prod = ControladorProductos::ctrMostrarProductos("descripcion", $item["descripcion"], null);
+    $valorUnitario = $prod ? (float) $prod["precio_venta"] : (float) $item["precio"];
+    $totalItem     = (float) $item["total"];
 
-				Cliente: $respuestaCliente[nombre]
+    // Alternar color de fila
+    if ($esPar) {
+        $pdf->SetFillColor(...$colorGrisClaro);
+    } else {
+        $pdf->SetFillColor(...$colorBlanco);
+    }
+    $esPar = !$esPar;
 
-			</td>
+    $pdf->SetTextColor(...$colorTexto);
 
-			<td style="border: 1px solid #666; background-color:white; width:150px; text-align:right">
-			
-				Fecha: $fecha
-
-			</td>
-
-		</tr>
-
-		<tr>
-		
-			<td style="border: 1px solid #666; background-color:white; width:540px">Vendedor: $respuestaVendedor[nombre]</td>
-
-		</tr>
-
-		<tr>
-		
-		<td style="border-bottom: 1px solid #666; background-color:white; width:540px"></td>
-
-		</tr>
-
-	</table>
-
-EOF;
-
-$pdf->writeHTML($bloque2, false, false, false, false, '');
-
-// ---------------------------------------------------------
-
-$bloque3 = <<<EOF
-
-	<table style="font-size:10px; padding:5px 10px;">
-
-		<tr>
-		
-		<td style="border: 1px solid #666; background-color:white; width:260px; text-align:center">Producto</td>
-		<td style="border: 1px solid #666; background-color:white; width:80px; text-align:center">Cantidad</td>
-		<td style="border: 1px solid #666; background-color:white; width:100px; text-align:center">Valor Unit.</td>
-		<td style="border: 1px solid #666; background-color:white; width:100px; text-align:center">Valor Total</td>
-
-		</tr>
-
-	</table>
-
-EOF;
-
-$pdf->writeHTML($bloque3, false, false, false, false, '');
-
-// ---------------------------------------------------------
-
-foreach ($productos as $key => $item) {
-
-$itemProducto = "descripcion";
-$valorProducto = $item["descripcion"];
-$orden = null;
-
-$respuestaProducto = ControladorProductos::ctrMostrarProductos($itemProducto, $valorProducto, $orden);
-
-$valorUnitario = number_format($respuestaProducto["precio_venta"], 2);
-
-$precioTotal = number_format($item["total"], 2);
-
-$bloque4 = <<<EOF
-
-	<table style="font-size:10px; padding:5px 10px;">
-
-		<tr>
-			
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:260px; text-align:center">
-				$item[descripcion]
-			</td>
-
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:80px; text-align:center">
-				$item[cantidad]
-			</td>
-
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center">$ 
-				$valorUnitario
-			</td>
-
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center">$ 
-				$precioTotal
-			</td>
-
-
-		</tr>
-
-	</table>
-
-
-EOF;
-
-$pdf->writeHTML($bloque4, false, false, false, false, '');
-
+    $pdf->Cell(80, 6, htmlspecialchars($item["descripcion"]), 0, 0, "L", true);
+    $pdf->Cell(25, 6, $item["cantidad"], 0, 0, "C", true);
+    $pdf->Cell(37, 6, "$ " . number_format($valorUnitario, 2), 0, 0, "R", true);
+    $pdf->Cell(38, 6, "$ " . number_format($totalItem, 2), 0, 1, "R", true);
 }
 
-// ---------------------------------------------------------
+// Línea divisoria
+$yActual = $pdf->GetY();
+$pdf->SetDrawColor(...$colorBorde);
+$pdf->Line(15, $yActual + 2, 195, $yActual + 2);
 
-$bloque5 = <<<EOF
+/*=============================================
+TOTALES
+=============================================*/
+$yTotales = $yActual + 6;
+$pdf->SetFont("helvetica", "", 9);
+$pdf->SetTextColor(...$colorGris);
 
-	<table style="font-size:10px; padding:5px 10px;">
+// Neto
+$pdf->SetXY(120, $yTotales);
+$pdf->SetFillColor(...$colorGrisClaro);
+$pdf->Cell(45, 6, "Subtotal (neto):", 0, 0, "R", false);
+$pdf->SetTextColor(...$colorTexto);
+$pdf->Cell(30, 6, "$ " . number_format($neto, 2), 0, 1, "R", false);
 
-		<tr>
+// Impuesto
+$pdf->SetXY(120, $pdf->GetY());
+$pdf->SetTextColor(...$colorGris);
+$pdf->Cell(45, 6, "Impuesto:", 0, 0, "R", false);
+$pdf->SetTextColor(...$colorTexto);
+$pdf->Cell(30, 6, "$ " . number_format($impuesto, 2), 0, 1, "R", false);
 
-			<td style="color:#333; background-color:white; width:340px; text-align:center"></td>
+// Separador
+$yLinea = $pdf->GetY() + 1;
+$pdf->SetDrawColor(...$colorPrimario);
+$pdf->SetLineWidth(0.5);
+$pdf->Line(120, $yLinea, 195, $yLinea);
+$pdf->SetLineWidth(0.2);
 
-			<td style="border-bottom: 1px solid #666; background-color:white; width:100px; text-align:center"></td>
+// Total
+$pdf->SetXY(120, $yLinea + 2);
+$pdf->SetFillColor(...$colorPrimario);
+$pdf->SetTextColor(...$colorBlanco);
+$pdf->SetFont("helvetica", "B", 11);
+$pdf->Cell(75, 8, "TOTAL:   $ " . number_format($total, 2), 0, 1, "R", true);
 
-			<td style="border-bottom: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center"></td>
+/*=============================================
+PIE DE PÁGINA
+=============================================*/
+$yPie = $pdf->GetY() + 12;
+$pdf->SetTextColor(...$colorGris);
+$pdf->SetFont("helvetica", "I", 8);
+$pdf->SetXY(15, $yPie);
+$pdf->Cell(180, 5, "Gracias por su compra. Este documento es v\xc3\xa1lido como soporte de pago.", 0, 1, "C");
+$pdf->SetFont("helvetica", "", 7);
+$pdf->SetXY(15, $pdf->GetY());
+$pdf->Cell(180, 4, "Generado por Devlmer POS  |  " . date("d/m/Y H:i"), 0, 0, "C");
 
-		</tr>
-		
-		<tr>
-		
-			<td style="border-right: 1px solid #666; color:#333; background-color:white; width:340px; text-align:center"></td>
-
-			<td style="border: 1px solid #666;  background-color:white; width:100px; text-align:center">
-				Neto:
-			</td>
-
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center">
-				$ $neto
-			</td>
-
-		</tr>
-
-		<tr>
-
-			<td style="border-right: 1px solid #666; color:#333; background-color:white; width:340px; text-align:center"></td>
-
-			<td style="border: 1px solid #666; background-color:white; width:100px; text-align:center">
-				Impuesto:
-			</td>
-		
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center">
-				$ $impuesto
-			</td>
-
-		</tr>
-
-		<tr>
-		
-			<td style="border-right: 1px solid #666; color:#333; background-color:white; width:340px; text-align:center"></td>
-
-			<td style="border: 1px solid #666; background-color:white; width:100px; text-align:center">
-				Total:
-			</td>
-			
-			<td style="border: 1px solid #666; color:#333; background-color:white; width:100px; text-align:center">
-				$ $total
-			</td>
-
-		</tr>
-
-
-	</table>
-
-EOF;
-
-$pdf->writeHTML($bloque5, false, false, false, false, '');
-
-
-
-// ---------------------------------------------------------
-//SALIDA DEL ARCHIVO 
-
-//$pdf->Output('factura.pdf', 'D');
-$pdf->Output('factura.pdf');
-
-}
-
-}
-
-$factura = new imprimirFactura();
-$factura -> codigo = $_GET["codigo"];
-$factura -> traerImpresionFactura();
-
-?>
+/*=============================================
+SALIDA — inline en el navegador
+=============================================*/
+$pdf->Output("factura-" . $codigoFactura . ".pdf", "I");
