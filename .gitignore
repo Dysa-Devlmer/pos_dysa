@@ -2,27 +2,55 @@
 .claude/mcp-env-setup.sh
 .claude/logs/
 .claude/memory/
+.claude/settings.json
+.claude/settings.local.json
 
 # ZIPs del curso (no subir al repo)
 *.zip
-
-# Docker volumes / DB data
-mysql_data/
-*.sql.bak
+zip/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# PHP
-*.log
-/pos/uploads/temp/
-
 # IDE
 .vscode/
 .idea/
 
-# Claude settings con API keys — NUNCA subir al repo
-.claude/settings.json
-.claude/settings.local.json
-.claude/mcp-env-setup.sh
+# dependencies
+node_modules
+.pnpm-store
+
+# Next.js
+.next/
+out/
+
+# turbo
+.turbo
+
+# env files (NUNCA commitear secretos)
+.env
+.env.local
+.env.docker
+.env*.local
+!.env.example
+
+# build outputs
+dist/
+build/
+
+# misc
+*.pem
+
+# logs
+*.log
+npm-debug.log
+
+# prisma
+packages/db/prisma/generated/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Claude worktrees (git repos embebidos)
+.claude/worktrees/

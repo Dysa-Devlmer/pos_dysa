@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  CAJERO
+  VENDEDOR
+}
+
+enum MetodoPago {
+  EFECTIVO
+  DEBITO
+  CREDITO
+  TRANSFERENCIA
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  nombre    String
+  password  String
+  rol       Rol      @default(CAJERO)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ventas Venta[]
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String?
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  productos Producto[]
+
+  @@map("categorias")
+}
+
+model Producto {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  descripcion  String?
+  codigoBarras String   @unique @map("codigo_barras")
+  precio       Int
+  stock        Int      @default(0)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  categoriaId Int       @map("categoria_id")
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+
+  detallesVenta DetalleVenta[]
+
+  @@index([categoriaId])
+  @@index([codigoBarras])
+  @@index([nombre])
+  @@map("productos")
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  rut       String   @unique
+  nombre    String
+  email     String?
+  telefono  String?
+  direccion String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ventas Venta[]
+
+  @@index([rut])
+  @@map("clientes")
+}
+
+model Venta {
+  id           Int        @id @default(autoincrement())
+  numeroBoleta String     @unique @map("numero_boleta")
+  fecha        DateTime   @default(now())
+  subtotal     Int
+  impuesto     Int
+  total        Int
+  metodoPago   MetodoPago @default(EFECTIVO) @map("metodo_pago")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  clienteId Int?     @map("cliente_id")
+  cliente   Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+
+  usuarioId Int     @map("usuario_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  detalles DetalleVenta[]
+
+  @@index([fecha])
+  @@index([numeroBoleta])
+  @@index([clienteId])
+  @@index([usuarioId])
+  @@map("ventas")
+}
+
+model DetalleVenta {
+  id             Int @id @default(autoincrement())
+  cantidad       Int
+  precioUnitario Int @map("precio_unitario")
+  subtotal       Int
+
+  ventaId    Int      @map("venta_id")
+  venta      Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  @@index([ventaId])
+  @@index([productoId])
+  @@map("detalle_ventas")
+}

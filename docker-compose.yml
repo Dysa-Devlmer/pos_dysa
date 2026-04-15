@@ -1,85 +1,56 @@
+version: "3.9"
+
 services:
-
-  # ────────────────────────────────────────
-  # PHP 8.2 + Apache
-  # URL: http://localhost/pos
-  # ────────────────────────────────────────
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: pos_web
-    ports:
-      - "80:80"
-    volumes:
-      - ./pos:/var/www/html/pos
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - APACHE_DOCUMENT_ROOT=/var/www/html
+  postgres:
+    image: postgres:16-alpine
+    container_name: pos-postgres
     restart: unless-stopped
-    networks:
-      - pos_network
-
-  # ────────────────────────────────────────
-  # MySQL 8
-  # Puerto local: 3306
-  # ────────────────────────────────────────
-  db:
-    image: mysql:8.0
-    container_name: pos_db
-    ports:
-      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: pos
-      MYSQL_ROOT_HOST: "%"
+      POSTGRES_USER: ${POSTGRES_USER:-pos_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pos_secret_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-pos_chile_db}
+      TZ: America/Santiago
+      PGTZ: America/Santiago
+    ports:
+      - "5432:5432"
     volumes:
-      - pos_mysql_data:/var/lib/mysql
-      - ./pos/pos.sql:/docker-entrypoint-initdb.d/01_pos.sql
-    command: >
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_spanish_ci
-      --default-authentication-plugin=mysql_native_password
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pos-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
-    networks:
-      - pos_network
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pos_admin} -d ${POSTGRES_DB:-pos_chile_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # ────────────────────────────────────────
-  # phpMyAdmin
-  # URL: http://localhost:8080
-  # ────────────────────────────────────────
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: pos_phpmyadmin
-    ports:
-      - "8080:80"
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pos-pgadmin
+    restart: unless-stopped
     environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: root
-      UPLOAD_LIMIT: 64M
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@pos-chile.cl}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-pgadmin_secret_2025}
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     networks:
-      - pos_network
+      - pos-network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-# ────────────────────────────────────────
-# Volúmenes y redes
-# ────────────────────────────────────────
 volumes:
-  pos_mysql_data:
+  postgres_data:
     driver: local
+    name: pos-postgres-data
+  pgadmin_data:
+    driver: local
+    name: pos-pgadmin-data
 
 networks:
-  pos_network:
+  pos-network:
     driver: bridge
+    name: pos-chile-network

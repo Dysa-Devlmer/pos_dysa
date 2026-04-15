@@ -74,37 +74,6 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "TU_GITHUB_PERSONAL_ACCESS_TOKEN_AQUI"
       }
     },
-    "google-analytics": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-google-analytics"
-      ],
-      "env": {}
-    },
-    "langchain": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "langchain-mcp"
-      ]
-    },
-    "linear": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-linear"
-      ],
-      "env": {}
-    },
-    "neon": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-neon"
-      ],
-      "env": {}
-    },
     "pinecone": {
       "command": "npx",
       "args": [
@@ -132,14 +101,6 @@
         "REDIS_URL": "TU_REDIS_URL_AQUI"
       }
     },
-    "resend": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-resend"
-      ],
-      "env": {}
-    },
     "sendgrid": {
       "command": "npx",
       "args": [
@@ -159,14 +120,6 @@
       "env": {
         "SENTRY_AUTH_TOKEN": "TU_SENTRY_AUTH_TOKEN_AQUI"
       }
-    },
-    "shopify": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-shopify"
-      ],
-      "env": {}
     },
     "slack": {
       "command": "npx",
