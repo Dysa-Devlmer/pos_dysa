@@ -99,6 +99,7 @@ model Producto {
   codigoBarras String   @unique @map("codigo_barras")
   precio       Int
   stock        Int      @default(0)
+  ventas       Int      @default(0)
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -115,14 +116,16 @@ model Producto {
 }
 
 model Cliente {
-  id        Int      @id @default(autoincrement())
-  rut       String   @unique
-  nombre    String
-  email     String?
-  telefono  String?
-  direccion String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            Int       @id @default(autoincrement())
+  rut           String    @unique
+  nombre        String
+  email         String?
+  telefono      String?
+  direccion     String?
+  compras       Int       @default(0)
+  ultimaCompra  DateTime? @map("ultima_compra")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   ventas Venta[]
 
