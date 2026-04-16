@@ -1,29 +1,25 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 
 export async function loginAction(
   _prevState: { error?: string } | undefined,
   formData: FormData
 ) {
-  const email = formData.get("email");
-  const password = formData.get("password");
-
   try {
     await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/",
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      redirect: false,
     });
-    return { error: undefined };
   } catch (error) {
     if (error instanceof AuthError) {
-      if (error.type === "CredentialsSignin") {
-        return { error: "Email o contraseña incorrectos" };
-      }
-      return { error: "Error al iniciar sesión" };
+      return { error: "Email o contraseña incorrectos" };
     }
     throw error;
   }
+
+  redirect("/");
 }
