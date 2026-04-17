@@ -4,6 +4,11 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 
+// TODO: En producción, implementar rate limiting con Upstash Ratelimit + Redis
+// para prevenir brute-force en login. Ejemplo:
+//   import { Ratelimit } from "@upstash/ratelimit";
+//   const ratelimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "60s") });
+
 export async function loginAction(
   _prevState: { error?: string } | undefined,
   formData: FormData

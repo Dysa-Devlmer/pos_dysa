@@ -1,6 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
-const DB_URL = "postgresql://pos_admin:pos_secret_2025@localhost:5432/pos_chile_db?schema=public";
+const dbUrl = process.env.POS_DATABASE_URL || process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error(
+    "POS_DATABASE_URL (o DATABASE_URL) no definida. " +
+    "Configura la variable de entorno antes de iniciar la app."
+  );
+}
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -10,7 +16,7 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     datasources: {
-      db: { url: process.env.POS_DATABASE_URL || DB_URL },
+      db: { url: dbUrl },
     },
     log:
       process.env.NODE_ENV === "development"

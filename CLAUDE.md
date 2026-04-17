@@ -14,9 +14,9 @@
 | Framework | Next.js | 15.3.x — App Router + Turbopack |
 | CSS | Tailwind CSS | v4.2.x — CSS-native, sin tailwind.config.js |
 | Componentes | shadcn/ui | new-york style, `"config": ""` en components.json |
-| ORM | Prisma | 6.x — PostgreSQL provider |
+| ORM | Prisma | 6.x → resuelve 6.19.3 |
 | BD | PostgreSQL | 16-alpine (Docker, localhost:5432) |
-| Auth | NextAuth | v5 beta — JWT strategy, PrismaAdapter |
+| Auth | NextAuth | v5.0.0-beta.31 — JWT strategy, PrismaAdapter |
 | Lenguaje | TypeScript | 5.8.x — strict mode |
 | Infra | Docker Compose | v2 (sin `version:` key) |
 
@@ -24,136 +24,96 @@
 
 ## 🔴 Reglas Obligatorias
 
-### 1. Convenciones de código Next.js
+### 1. Convenciones de código
 
 ```typescript
 // ✅ Server Component por defecto (sin "use client")
-// ✅ "use client" solo cuando se usan hooks (usePathname, useState, etc.)
+// ✅ "use client" solo cuando se usan hooks
 // ✅ Server Actions en app/*/actions.ts
 // ✅ API routes en app/api/*/route.ts
+// ✅ crearVenta/editarVenta/eliminarVenta SIEMPRE en $transaction
 
-// CLP siempre Int en Prisma, formatCLP() en display
-// RUT siempre String "12.345.678-9", validarRUT() para validación
-// IVA 19% fijo → calcularIVA(subtotal) en lib/utils.ts
+// CLP → Int en Prisma, formatCLP() en display
+// RUT → String "12.345.678-9", validarRUT() para validación
+// IVA → 19% fijo, calcularIVA(subtotal) en lib/utils.ts
+// Boleta → nanoid formato B-YYYYMMDD-XXXXXXXX
 
-// ✅ Nombres:
-// Variables/funciones: camelCase
-// Componentes: PascalCase
-// Rutas/archivos: kebab-case
+// Nombres: camelCase vars, PascalCase componentes, kebab-case rutas
 ```
 
-### 2. Estructura del monorepo
-
-```
-system_pos/
-├── apps/
-│   └── web/                   ← Next.js App (localhost:3000)
-│       ├── app/(dashboard)/   ← Rutas protegidas post-login
-│       ├── app/login/         ← Ruta pública
-│       ├── app/api/           ← API routes
-│       ├── components/ui/     ← shadcn/ui components
-│       ├── components/        ← Sidebar, Header, etc.
-│       ├── lib/utils.ts       ← cn, formatCLP, calcularIVA, validarRUT, formatRUT
-│       ├── auth.ts            ← NextAuth (Node, usa Prisma)
-│       ├── auth.config.ts     ← NextAuth config (edge-safe, sin Prisma)
-│       └── middleware.ts      ← usa auth.config.ts
-├── packages/
-│   ├── db/                    ← @repo/db — Prisma client + schema
-│   │   ├── prisma/schema.prisma
-│   │   ├── prisma/seed.ts     ← pnpm db:seed
-│   │   └── src/               ← client.ts + index.ts
-│   ├── ui/                    ← @repo/ui — componentes compartidos
-│   └── typescript-config/     ← tsconfig base/nextjs/react-library
-└── docker-compose.yml         ← postgres + pgadmin (sin `version:` key)
-```
-
-### 3. NextAuth v5 — patterns correctos
+### 2. NextAuth v5 — patterns correctos
 
 ```typescript
-// auth.ts — usa Prisma, SOLO en Node
-export const { auth, handlers, signIn, signOut } = NextAuth({ ... })
-
-// auth.config.ts — edge-compatible (sin Prisma, para middleware)
-export default { ... } satisfies NextAuthConfig
-
-// middleware.ts — SIEMPRE usa authConfig, NO auth.ts
-export const { auth: middleware } = NextAuth(authConfig)
-
-// API route — pattern correcto v5
-const { GET, POST } = handlers  // ❌ NO: export { GET, POST } from "@/auth"
-
-// Tipos — usar auth-types.d.ts (NO next-auth.d.ts → shadow del paquete)
-// Cast explícito: token.rol as Session["user"]["rol"] (bug en v5 beta)
+// auth.ts (Node) → export const { auth, handlers, signIn, signOut } = NextAuth({...})
+// auth.config.ts (edge) → export default { ... } satisfies NextAuthConfig
+// middleware.ts → export const { auth: middleware } = NextAuth(authConfig)
+// API route → const { GET, POST } = handlers  (NO: export { GET, POST } from "@/auth")
+// Tipos → auth-types.d.ts (NO next-auth.d.ts — shadow)
+// Cast → token.rol as Session["user"]["rol"] (bug v5 beta)
 ```
 
-### 4. Prisma — Chile-específico
+### 3. Prisma — Chile-específico
 
 ```prisma
-precio    Int    // ✅ CLP sin decimales — NUNCA Float
-rut       String // ✅ "12.345.678-9" normalizado
+precio    Int    // CLP sin decimales — NUNCA Float
+rut       String // "12.345.678-9" normalizado
+ventas    Int    @default(0)    // contador en Producto
+compras   Int    @default(0)    // contador en Cliente
+ultimaCompra DateTime?          // recalcular desde historial al eliminar venta
 
-enum Rol        { ADMIN CAJERO VENDEDOR }
-enum MetodoPago { EFECTIVO DEBITO CREDITO TRANSFERENCIA }
-
-// db scripts usan: dotenv -e .env -o -- prisma ...
-// El -o es OBLIGATORIO para override de DATABASE_URL del shell
+// db scripts: dotenv -e .env -o -- prisma ...
+// -o OBLIGATORIO → override de DATABASE_URL de Supabase en shell de Pierre
 ```
 
-### 5. Lógica de negocio crítica
+### 4. Lógica de negocio crítica (ventas)
 
 ```
-Crear venta:
-  → producto.ventas += cantidad, producto.stock -= cantidad (por cada item)
-  → cliente.compras += 1, cliente.ultima_compra = now()
-
-Eliminar venta:
-  → Revertir stock/ventas de cada producto
-  → Recalcular ultima_compra desde historial completo (NO asumir fecha anterior)
-
-Editar venta:
-  → Revertir efectos venta vieja → aplicar efectos nuevos
+Crear:  stock -= cantidad, ventas += cantidad, compras += 1, ultimaCompra = now()  → $transaction
+Eliminar: stock += cantidad, ventas -= cantidad, compras -= 1,
+          ultimaCompra = MAX(fecha) del historial restante (NO asumir anterior) → $transaction
+Editar: revertir vieja + aplicar nueva → $transaction
 ```
 
-### 6. Gotchas conocidos (NO repetir estos errores)
+### 5. Gotchas — NO repetir estos errores
 
-1. `pnpm.onlyBuiltDependencies` en root package.json — requerido para Prisma en pnpm 10
-2. `declaration: false` en nextjs.json — apps Next.js no emiten .d.ts
-3. `app/page.tsx` NO debe existir si existe `app/(dashboard)/page.tsx`
-4. `rm -r` (no `rm -rf`) en Claude Code CLI — protección hardcoded
-5. Tailwind v4 NO tiene `tailwind.config.js` ni `tailwindcss-animate`
-6. Turbo v2 usa `"tasks"` no `"pipeline"` en turbo.json
+1. `pnpm.onlyBuiltDependencies` en root package.json — requerido para Prisma pnpm 10
+2. `declaration: false` en nextjs.json — TS2742 si es true
+3. `app/page.tsx` NO coexiste con `app/(dashboard)/page.tsx`
+4. `rm -r` (no `rm -rf`) — protección hardcoded en CLI
+5. Tailwind v4: sin `tailwind.config.js` ni `tailwindcss-animate`
+6. `apps/web/.env.local` va en `apps/web/`, NO en la raíz del monorepo
+7. `@prisma/client` como dep directa en `apps/web/` + `serverExternalPackages`
+8. `POS_DATABASE_URL` en PrismaClient (Pierre tiene DATABASE_URL de Supabase en shell)
+9. login action: `redirect: false` + `redirect("/")` manual (v5 beta bug)
+10. client.ts tiene URL hardcodeada como fallback — LIMPIAR en Fase 8
 
 ---
 
 ## 📊 Plan Maestro — Estado
 
-| Fase | Contenido | Commit | Estado |
+| Fase | Contenido | Agente | Estado |
 |------|-----------|--------|--------|
-| 1 | Setup monorepo + Docker + Prisma | 253f2c4 | ✅ |
-| fix | dotenv-cli + docker-compose cleanup | 6e93c56 | ✅ |
-| 2 | NextAuth v5 + roles + layout + sidebar | 063edfb | ✅ |
-| 3 | CRUD: Categorías, Productos, Clientes, Usuarios | — | ⏳ Siguiente |
-| 4 | Módulo Ventas: crear/editar/eliminar + stock | — | ⏳ |
-| 5 | POS Caja: carrito, IVA, métodos pago, boletas | — | ⏳ |
-| 6 | Dashboard: KPIs CLP, Recharts, top productos | — | ⏳ |
-| 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | — | ⏳ |
-| 8 | API REST + Pulido + Deploy Docker | — | ⏳ |
+| 1 | Setup monorepo + Docker + Prisma | CLI | ✅ 253f2c4 |
+| fix | dotenv-cli + docker-compose | CLI | ✅ 6e93c56 |
+| 2 | NextAuth v5 + roles + layout + sidebar | CLI | ✅ 063edfb |
+| fix | E2E auth + Prisma resolution | CLI | ✅ d25add8 |
+| 3 | CRUD: Categorías, Productos, Clientes, Usuarios | Worktree | ✅ 23faa99 |
+| 4 | Módulo Ventas: crear/editar/eliminar + stock | Worktree | ✅ 60d5dd9 |
+| 5 | POS Caja: carrito real-time, IVA, métodos pago | Worktree | ✅ fe13e63 |
+| 6 | Dashboard: KPIs CLP, Recharts, top productos | Worktree | ✅ bc89c09 |
+| 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | Worktree | ✅ 3c6f96d |
+| 8 | API REST + Pulido + Deploy Docker | CLI | ⏳ |
 
 ---
 
 ## 🏗️ Infraestructura Docker
 
 ```yaml
-# Servicios activos:
 pos-postgres: localhost:5432  # BD: pos_chile_db | user: pos_admin
 pos-pgadmin:  localhost:5050  # admin@pos-chile.cl / pgadmin_secret_2025
-
-# Comandos:
-docker compose up -d
-docker compose ps            # verificar "healthy"
 ```
 
-**Usuario seed:** admin@pos-chile.cl / admin123 / rol: ADMIN
+**Usuarios disponibles:** admin@pos-chile.cl / admin123 (ADMIN) · cajero@pos-chile.cl / cajero123 (CAJERO)
 
 ---
 
@@ -164,17 +124,8 @@ docker compose ps            # verificar "healthy"
 | Claude Cowork | Coordinador, verificador independiente, memoria |
 | Claude Code CLI | Setup, infra, auth, API, deploy |
 | Claude Code Worktree | CRUD, Ventas, POS, Dashboard, Reportes |
+| Gemini | Por definir — candidatos: tests, security audit, docs API |
 | Pierre | Copia instrucciones entre agentes |
 
 > **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales.
 > **Memoria completa:** `memory/projects/pos-chile-monorepo.md` y `memory/context/stack-tech.md`
-
----
-
-## ⚙️ Archivos DEE
-
-| Archivo | Propósito |
-|---------|-----------|
-| `CLAUDE.md` | Este archivo — reglas del monorepo Next.js |
-| `.claude/settings.local.json` | Hooks, permisos Bash |
-| `memory/` | Memoria detallada del proyecto |

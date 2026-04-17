@@ -137,5 +137,5 @@ export async function GET(request: Request) {
   });
 }
 
-// Avoids unused-import warning when only fmtSoloFechaCL might be used in future
-export const _utils = { fmtSoloFechaCL };
+// Keep fmtSoloFechaCL available without triggering unused-import
+void fmtSoloFechaCL;

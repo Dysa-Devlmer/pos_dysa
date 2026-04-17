@@ -57,7 +57,7 @@ export async function crearUsuario(
       return { ok: false, error: "Ya existe un usuario con ese email" };
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const passwordHash = await bcrypt.hash(data.password, 12);
 
     await prisma.usuario.create({
       data: {
@@ -122,7 +122,7 @@ export async function actualizarUsuario(
       activo: data.activo ?? true,
     };
     if (data.password) {
-      updateData.password = await bcrypt.hash(data.password, 10);
+      updateData.password = await bcrypt.hash(data.password, 12);
     }
 
     await prisma.usuario.update({ where: { id }, data: updateData });

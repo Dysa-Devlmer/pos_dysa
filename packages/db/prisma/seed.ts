@@ -4,28 +4,41 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "admin@pos-chile.cl";
-  const password = "admin123";
-  const hashed = await bcrypt.hash(password, 10);
-
   const admin = await prisma.usuario.upsert({
-    where: { email },
+    where: { email: "admin@pos-chile.cl" },
     update: {
-      password: hashed,
+      password: await bcrypt.hash("admin123", 12),
       rol: Rol.ADMIN,
       activo: true,
       nombre: "Administrador",
     },
     create: {
-      email,
+      email: "admin@pos-chile.cl",
       nombre: "Administrador",
-      password: hashed,
+      password: await bcrypt.hash("admin123", 12),
       rol: Rol.ADMIN,
       activo: true,
     },
   });
+  console.log(`✓ ADMIN:  ${admin.email} (id=${admin.id})`);
 
-  console.log(`✓ Usuario ADMIN listo: ${admin.email} (id=${admin.id})`);
+  const cajero = await prisma.usuario.upsert({
+    where: { email: "cajero@pos-chile.cl" },
+    update: {
+      password: await bcrypt.hash("cajero123", 12),
+      rol: Rol.CAJERO,
+      activo: true,
+      nombre: "Cajero Demo",
+    },
+    create: {
+      email: "cajero@pos-chile.cl",
+      nombre: "Cajero Demo",
+      password: await bcrypt.hash("cajero123", 12),
+      rol: Rol.CAJERO,
+      activo: true,
+    },
+  });
+  console.log(`✓ CAJERO: ${cajero.email} (id=${cajero.id})`);
 }
 
 main()

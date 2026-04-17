@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { checkEnv } from "@/lib/check-env";
 import "./globals.css";
+
+checkEnv();
 
 export const metadata: Metadata = {
   title: "POS Chile",
