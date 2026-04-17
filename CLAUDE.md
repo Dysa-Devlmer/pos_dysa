@@ -85,7 +85,7 @@ Editar: revertir vieja + aplicar nueva → $transaction
 7. `@prisma/client` como dep directa en `apps/web/` + `serverExternalPackages`
 8. `POS_DATABASE_URL` en PrismaClient (Pierre tiene DATABASE_URL de Supabase en shell)
 9. login action: `redirect: false` + `redirect("/")` manual (v5 beta bug)
-10. client.ts tiene URL hardcodeada como fallback — LIMPIAR en Fase 8
+10. client.ts: POS_DATABASE_URL obligatoria (ya no hay hardcoded fallback)
 
 ---
 
@@ -102,7 +102,7 @@ Editar: revertir vieja + aplicar nueva → $transaction
 | 5 | POS Caja: carrito real-time, IVA, métodos pago | Worktree | ✅ fe13e63 |
 | 6 | Dashboard: KPIs CLP, Recharts, top productos | Worktree | ✅ bc89c09 |
 | 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | Worktree | ✅ 3c6f96d |
-| 8 | API REST + Pulido + Deploy Docker | CLI | ⏳ |
+| 8 | API REST + Security + Vitest + Docker | CLI | ✅ acdcbce |
 
 ---
 
