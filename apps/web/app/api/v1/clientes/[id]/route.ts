@@ -1,9 +1,11 @@
 import { prisma } from "@repo/db";
-import { requireAuth, jsonOk, jsonError } from "../../_helpers";
+import { requireAuth, requireRateLimit, jsonOk, jsonError } from "../../_helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { error } = await requireAuth();
   if (error) return error;
 

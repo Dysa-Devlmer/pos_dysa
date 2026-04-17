@@ -20,7 +20,7 @@ system_pos/
 │       │   ├── ventas/             ← Módulo Ventas ✅ Fase 4
 │       │   │   ├── nueva/
 │       │   │   └── [id]/ (editar + detalle)
-│       │   └── caja/               ← POS Caja 🔄 Fase 5 en curso
+│       │   └── caja/               ← POS Caja ✅ Fase 5
 │       ├── app/login/              ← Ruta pública ✅ Fase 2
 │       ├── app/api/auth/           ← NextAuth handlers ✅ Fase 2
 │       ├── components/ui/          ← shadcn/ui (new-york)
@@ -41,7 +41,7 @@ system_pos/
 ├── docker-compose.yml              ← postgres:16-alpine + pgadmin (sin version:)
 ├── turbo.json                      ← usa "tasks" (NO "pipeline")
 ├── pnpm-workspace.yaml
-├── .env.local / .env.docker / .env.example
+├── .env.docker / .env.example  (NO hay .env.local en raíz — va en apps/web/)
 ├── memory/                         ← Memoria del proyecto (este archivo)
 └── CLAUDE.md                       ← Reglas del proyecto (actualizado)
 ```
@@ -145,6 +145,8 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 3f5003b | chore: eliminar archivos PHP/DEE obsoletos, limpiar config |
+| 04d32f7 | fix(security): migrar xlsx → exceljs (fix M3 CVEs Prototype Pollution) |
 | 75b7891 | docs: marcar Fase 8 como completada en CLAUDE.md |
 | acdcbce | feat(api-v1): API REST + security fixes + vitest + Docker deploy (Fase 8) |
 | fe9fcac | merge(fase-4): Módulo Ventas con lógica transaccional de stock |
@@ -174,7 +176,7 @@ $transaction:
 12. **@prisma/client** como dep directa en apps/web — Turbopack strict isolation
 13. **serverExternalPackages: ["@prisma/client"]** en next.config.ts
 14. **login action v5**: `redirect: false` + `redirect("/")` manual
-15. **client.ts tiene URL hardcodeada como fallback** — limpiar en Fase 8
+15. **client.ts POS_DATABASE_URL obligatoria** — ya no hay fallback hardcodeado (resuelto Fase 8)
 16. **Turbo v2**: usar `"tasks"` no `"pipeline"` en turbo.json
 17. **Tailwind v4**: sin `tailwind.config.js`, usa `@import "tailwindcss"` + `@theme inline`
 

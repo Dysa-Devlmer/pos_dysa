@@ -1,0 +1,449 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "POS Chile API v1",
+    "description": "API REST del sistema POS Chile. Requiere autenticación NextAuth (cookie de sesión). Rate limit: 100 req/min por IP.",
+    "version": "1.0.0",
+    "contact": { "name": "POS Chile" }
+  },
+  "servers": [
+    { "url": "/api/v1", "description": "Producción / Desarrollo local" }
+  ],
+  "security": [{ "cookieAuth": [] }],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "authjs.session-token"
+      }
+    },
+    "schemas": {
+      "Producto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "nombre": { "type": "string", "example": "Coca-Cola 350ml" },
+          "descripcion": { "type": "string", "nullable": true },
+          "codigoBarras": { "type": "string", "example": "7801234567890" },
+          "precio": { "type": "integer", "description": "CLP sin decimales", "example": 990 },
+          "stock": { "type": "integer", "example": 50 },
+          "ventas": { "type": "integer", "example": 12 },
+          "activo": { "type": "boolean", "example": true },
+          "categoriaId": { "type": "integer", "example": 1 },
+          "categoria": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "nombre": { "type": "string" }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Cliente": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "rut": { "type": "string", "description": "RUT chileno formato 12.345.678-9", "example": "12.345.678-9" },
+          "nombre": { "type": "string", "example": "Juan Pérez" },
+          "email": { "type": "string", "nullable": true, "format": "email" },
+          "telefono": { "type": "string", "nullable": true },
+          "direccion": { "type": "string", "nullable": true },
+          "compras": { "type": "integer", "example": 5 },
+          "ultimaCompra": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DetalleVenta": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "cantidad": { "type": "integer", "example": 2 },
+          "precioUnitario": { "type": "integer", "example": 990 },
+          "subtotal": { "type": "integer", "example": 1980 },
+          "productoId": { "type": "integer" },
+          "producto": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "nombre": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Venta": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "numeroBoleta": { "type": "string", "example": "BOL-1729123456789" },
+          "fecha": { "type": "string", "format": "date-time" },
+          "subtotal": { "type": "integer", "description": "CLP" },
+          "impuesto": { "type": "integer", "description": "IVA 19%, CLP" },
+          "total": { "type": "integer", "description": "subtotal + impuesto, CLP" },
+          "metodoPago": {
+            "type": "string",
+            "enum": ["EFECTIVO", "DEBITO", "CREDITO", "TRANSFERENCIA"]
+          },
+          "clienteId": { "type": "integer", "nullable": true },
+          "usuarioId": { "type": "integer" },
+          "cliente": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": { "type": "integer" },
+              "nombre": { "type": "string" },
+              "rut": { "type": "string" }
+            }
+          },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "nombre": { "type": "string" }
+            }
+          },
+          "detalles": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DetalleVenta" }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "total": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "No autenticado" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "401 — No autenticado",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "Forbidden": {
+        "description": "403 — Requiere rol ADMIN",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "NotFound": {
+        "description": "404 — Recurso no encontrado",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "BadRequest": {
+        "description": "400 — Datos de entrada inválidos",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "RateLimit": {
+        "description": "429 — Rate limit excedido (100 req/min)",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      }
+    }
+  },
+  "paths": {
+    "/productos": {
+      "get": {
+        "summary": "Listar productos",
+        "tags": ["Productos"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } },
+          { "name": "categoriaId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Búsqueda por nombre (case-insensitive)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de productos activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Producto" } },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "post": {
+        "summary": "Crear producto (solo ADMIN)",
+        "tags": ["Productos"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nombre", "codigoBarras", "precio", "categoriaId"],
+                "properties": {
+                  "nombre": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "descripcion": { "type": "string" },
+                  "codigoBarras": { "type": "string", "minLength": 1 },
+                  "precio": { "type": "integer", "minimum": 1 },
+                  "stock": { "type": "integer", "minimum": 0, "default": 0 },
+                  "categoriaId": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Producto creado",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Producto" } } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "description": "Código de barras ya existe" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    },
+    "/productos/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "summary": "Obtener producto por id",
+        "tags": ["Productos"],
+        "responses": {
+          "200": { "description": "Producto", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Producto" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "put": {
+        "summary": "Actualizar producto (solo ADMIN)",
+        "tags": ["Productos"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "descripcion": { "type": "string" },
+                  "codigoBarras": { "type": "string" },
+                  "precio": { "type": "integer", "minimum": 1 },
+                  "stock": { "type": "integer", "minimum": 0 },
+                  "categoriaId": { "type": "integer" },
+                  "activo": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Producto actualizado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "delete": {
+        "summary": "Desactivar producto (soft delete, solo ADMIN)",
+        "tags": ["Productos"],
+        "responses": {
+          "200": { "description": "{ data: { deleted: true } }" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    },
+    "/clientes": {
+      "get": {
+        "summary": "Listar clientes",
+        "tags": ["Clientes"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Busca por nombre o RUT" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de clientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Cliente" } },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "post": {
+        "summary": "Crear cliente",
+        "tags": ["Clientes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rut", "nombre"],
+                "properties": {
+                  "rut": { "type": "string", "minLength": 3, "maxLength": 12 },
+                  "nombre": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "email": { "type": "string", "format": "email" },
+                  "telefono": { "type": "string" },
+                  "direccion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cliente creado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "description": "RUT ya registrado" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    },
+    "/clientes/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "summary": "Cliente con últimas 10 ventas",
+        "tags": ["Clientes"],
+        "responses": {
+          "200": { "description": "Cliente + historial de ventas" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    },
+    "/ventas": {
+      "get": {
+        "summary": "Listar ventas con filtros",
+        "tags": ["Ventas"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } },
+          { "name": "desde", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "YYYY-MM-DD" },
+          { "name": "hasta", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "YYYY-MM-DD" },
+          { "name": "clienteId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "metodoPago", "in": "query", "schema": { "type": "string", "enum": ["EFECTIVO", "DEBITO", "CREDITO", "TRANSFERENCIA"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de ventas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Venta" } },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "post": {
+        "summary": "Crear venta (transacción atómica: actualiza stock + ventas de productos + compras del cliente)",
+        "tags": ["Ventas"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items"],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["productoId", "cantidad"],
+                      "properties": {
+                        "productoId": { "type": "integer", "minimum": 1 },
+                        "cantidad": { "type": "integer", "minimum": 1 }
+                      }
+                    }
+                  },
+                  "clienteId": { "type": "integer", "description": "Opcional" },
+                  "metodoPago": {
+                    "type": "string",
+                    "enum": ["EFECTIVO", "DEBITO", "CREDITO", "TRANSFERENCIA"],
+                    "default": "EFECTIVO"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Venta creada" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "description": "Stock insuficiente o producto inactivo" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    },
+    "/ventas/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "summary": "Detalle de venta con líneas y productos",
+        "tags": ["Ventas"],
+        "responses": {
+          "200": { "description": "Venta con detalles" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar venta (revierte stock + compras del cliente)",
+        "tags": ["Ventas"],
+        "responses": {
+          "200": { "description": "{ data: { deleted: true } }" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "description": "Error al revertir transacción" },
+          "429": { "$ref": "#/components/responses/RateLimit" }
+        }
+      }
+    }
+  }
+}

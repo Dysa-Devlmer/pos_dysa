@@ -1,8 +1,10 @@
 import { prisma, MetodoPago } from "@repo/db";
 import { z } from "zod";
-import { requireAuth, jsonOk, jsonError, parsePagination } from "../_helpers";
+import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
 
 export async function GET(request: Request) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { error } = await requireAuth();
   if (error) return error;
 
@@ -58,6 +60,8 @@ const CreateVentaSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { session, error } = await requireAuth();
   if (error) return error;
 

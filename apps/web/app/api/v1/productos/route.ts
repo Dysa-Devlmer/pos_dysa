@@ -1,8 +1,10 @@
 import { prisma } from "@repo/db";
 import { z } from "zod";
-import { requireAuth, requireAdmin, jsonOk, jsonError, parsePagination } from "../_helpers";
+import { requireAuth, requireAdmin, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
 
 export async function GET(request: Request) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { error } = await requireAuth();
   if (error) return error;
 
@@ -43,6 +45,8 @@ const CreateSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { session, error } = await requireAuth();
   if (error) return error;
   const denied = requireAdmin(session);

@@ -11,22 +11,34 @@ import {
   ShoppingCart,
   CreditCard,
   FileBarChart,
+  Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+type Rol = "ADMIN" | "CAJERO" | "VENDEDOR";
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  adminOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/categorias", label: "Categorías", icon: FolderTree },
   { href: "/productos", label: "Productos", icon: Package },
   { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/usuarios", label: "Usuarios", icon: UserCog },
+  { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/caja", label: "Caja", icon: CreditCard },
   { href: "/reportes", label: "Reportes", icon: FileBarChart },
+  { href: "/docs", label: "API Docs", icon: Code2, adminOnly: true },
 ];
 
-export function Sidebar() {
+export function Sidebar({ rol }: { rol?: Rol }) {
   const pathname = usePathname();
+  const items = navItems.filter((i) => !i.adminOnly || rol === "ADMIN");
 
   return (
     <aside className="hidden w-60 shrink-0 border-r bg-sidebar md:block">
@@ -36,7 +48,7 @@ export function Sidebar() {
         </Link>
       </div>
       <nav className="flex flex-col gap-1 p-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link

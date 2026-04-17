@@ -1,10 +1,12 @@
 import { prisma } from "@repo/db";
 import { z } from "zod";
-import { requireAuth, requireAdmin, jsonOk, jsonError } from "../../_helpers";
+import { requireAuth, requireAdmin, requireRateLimit, jsonOk, jsonError } from "../../_helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { error } = await requireAuth();
   if (error) return error;
 
@@ -29,6 +31,8 @@ const UpdateSchema = z.object({
 });
 
 export async function PUT(request: Request, { params }: Params) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { session, error } = await requireAuth();
   if (error) return error;
   const denied = requireAdmin(session);
@@ -60,7 +64,9 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
   const { session, error } = await requireAuth();
   if (error) return error;
   const denied = requireAdmin(session);

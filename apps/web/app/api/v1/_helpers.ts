@@ -39,3 +39,21 @@ export function parsePagination(searchParams: URLSearchParams) {
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 }
+
+/**
+ * Aplica rate limiting si Upstash está configurado.
+ * Retorna una Response 429 si se excede el límite, o null si todo OK.
+ */
+export async function requireRateLimit(request: Request): Promise<NextResponse | null> {
+  if (!process.env.UPSTASH_REDIS_REST_URL) return null; // skip en dev
+  const { apiRatelimit, getClientIP } = await import("@/lib/rate-limit");
+  const ip = getClientIP(request);
+  const { success } = await apiRatelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Rate limit excedido. Máximo 100 requests/minuto." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+  return null;
+}

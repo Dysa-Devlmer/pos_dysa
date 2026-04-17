@@ -68,3 +68,4 @@ packages/db/prisma/generated/
 .claude/legacy-install.sh
 .claude/setup-wizard.sh
 .claude/settings.example.json
+.worktrees/
