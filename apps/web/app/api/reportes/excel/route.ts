@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
-
+import ExcelJS from "exceljs";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { CHILE_TZ, parseRangoDesdeURL } from "@/lib/reportes-fecha";
@@ -25,19 +23,16 @@ function fmtFechaCL(d: Date): string {
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    return Response.json({ error: "No autenticado" }, { status: 401 });
   }
 
   let rango;
   try {
     rango = parseRangoDesdeURL(new URL(request.url));
   } catch (err) {
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Parámetros de fecha inválidos",
-      },
-      { status: 400 },
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Parámetros de fecha inválidos" },
+      { status: 400 }
     );
   }
 
@@ -53,113 +48,114 @@ export async function GET(request: Request) {
     },
   });
 
-  // ─── Hoja 1: Ventas ───
-  const ventasSheetData = ventas.map((v) => ({
-    "N° Boleta": v.numeroBoleta,
-    Fecha: fmtFechaCL(v.fecha),
-    "Cliente RUT": v.cliente?.rut ?? "",
-    "Cliente Nombre": v.cliente?.nombre ?? "",
-    Vendedor: v.usuario.nombre,
-    "Método Pago": v.metodoPago,
-    Items: v._count.detalles,
-    "Subtotal (CLP)": v.subtotal,
-    "IVA 19% (CLP)": v.impuesto,
-    "Total (CLP)": v.total,
-  }));
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "POS Chile";
+  workbook.created = new Date();
 
-  const wsVentas = XLSX.utils.json_to_sheet(
-    ventasSheetData.length > 0
-      ? ventasSheetData
-      : [
-          {
-            "N° Boleta": "",
-            Fecha: "",
-            "Cliente RUT": "",
-            "Cliente Nombre": "",
-            Vendedor: "",
-            "Método Pago": "",
-            Items: "",
-            "Subtotal (CLP)": "",
-            "IVA 19% (CLP)": "",
-            "Total (CLP)": "",
-          },
-        ],
-  );
-  wsVentas["!cols"] = [
-    { wch: 24 }, // Boleta
-    { wch: 18 }, // Fecha
-    { wch: 14 }, // RUT
-    { wch: 28 }, // Cliente
-    { wch: 22 }, // Vendedor
-    { wch: 14 }, // Método
-    { wch: 7 }, // Items
-    { wch: 14 }, // Subtotal
-    { wch: 14 }, // IVA
-    { wch: 14 }, // Total
+  // ─── Hoja 1: Ventas ───────────────────────────────────────
+  const wsVentas = workbook.addWorksheet("Ventas");
+  wsVentas.columns = [
+    { header: "N° Boleta",      key: "numeroBoleta",  width: 24 },
+    { header: "Fecha",          key: "fecha",          width: 18 },
+    { header: "Cliente RUT",    key: "clienteRut",     width: 14 },
+    { header: "Cliente Nombre", key: "clienteNombre",  width: 28 },
+    { header: "Vendedor",       key: "vendedor",       width: 22 },
+    { header: "Método Pago",    key: "metodoPago",     width: 14 },
+    { header: "Items",          key: "items",          width: 7  },
+    { header: "Subtotal (CLP)", key: "subtotal",       width: 16 },
+    { header: "IVA 19% (CLP)", key: "impuesto",       width: 16 },
+    { header: "Total (CLP)",   key: "total",           width: 16 },
   ];
 
-  // ─── Hoja 2: Resumen ───
-  const totalVentas = ventas.length;
-  const totalCLP = ventas.reduce((a, v) => a + v.total, 0);
-  const subtotalCLP = ventas.reduce((a, v) => a + v.subtotal, 0);
-  const impuestoCLP = ventas.reduce((a, v) => a + v.impuesto, 0);
-  const ticket = totalVentas > 0 ? Math.round(totalCLP / totalVentas) : 0;
+  // Header bold
+  wsVentas.getRow(1).font = { bold: true };
+  wsVentas.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFD9E1F2" },
+  };
+
+  for (const v of ventas) {
+    wsVentas.addRow({
+      numeroBoleta: v.numeroBoleta,
+      fecha:        fmtFechaCL(v.fecha),
+      clienteRut:   v.cliente?.rut ?? "",
+      clienteNombre: v.cliente?.nombre ?? "",
+      vendedor:     v.usuario.nombre,
+      metodoPago:   v.metodoPago,
+      items:        v._count.detalles,
+      subtotal:     v.subtotal,
+      impuesto:     v.impuesto,
+      total:        v.total,
+    });
+  }
+
+  // ─── Hoja 2: Resumen ──────────────────────────────────────
+  const wsResumen = workbook.addWorksheet("Resumen");
+  wsResumen.columns = [
+    { key: "a", width: 32 },
+    { key: "b", width: 18 },
+    { key: "c", width: 16 },
+  ];
+
+  const totalVentas  = ventas.length;
+  const totalCLP     = ventas.reduce((a, v) => a + v.total, 0);
+  const subtotalCLP  = ventas.reduce((a, v) => a + v.subtotal, 0);
+  const impuestoCLP  = ventas.reduce((a, v) => a + v.impuesto, 0);
+  const ticket       = totalVentas > 0 ? Math.round(totalCLP / totalVentas) : 0;
 
   const byMetodo = new Map<string, { cantidad: number; total: number }>();
   for (const v of ventas) {
     const m = byMetodo.get(v.metodoPago) ?? { cantidad: 0, total: 0 };
     m.cantidad += 1;
-    m.total += v.total;
+    m.total    += v.total;
     byMetodo.set(v.metodoPago, m);
   }
 
-  const resumenRows: Array<(string | number)[]> = [
-    ["Reporte de Ventas — POS Chile"],
-    [],
-    ["Período desde", desdeYMD],
-    ["Período hasta", hastaYMD],
-    ["Generado", fmtFechaCL(new Date())],
-    [],
-    ["KPIs", "Valor"],
-    ["Total ventas (cantidad)", totalVentas],
-    ["Subtotal (neto, CLP)", subtotalCLP],
-    ["IVA 19% (CLP)", impuestoCLP],
-    ["Total facturado (CLP)", totalCLP],
-    ["Ticket promedio (CLP)", ticket],
-    [],
-    ["Desglose por método de pago", "", ""],
-    ["Método", "Cantidad", "Total (CLP)"],
-    ...[...byMetodo.entries()]
-      .sort((a, b) => b[1].total - a[1].total)
-      .map(
-        ([metodo, v]) =>
-          [metodo, v.cantidad, v.total] as (string | number)[],
-      ),
-  ];
+  // Título
+  const titleRow = wsResumen.addRow(["Reporte de Ventas — POS Chile"]);
+  titleRow.font = { bold: true, size: 14 };
 
-  const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
-  wsResumen["!cols"] = [{ wch: 32 }, { wch: 18 }, { wch: 16 }];
+  wsResumen.addRow([]);
+  wsResumen.addRow(["Período desde", desdeYMD]);
+  wsResumen.addRow(["Período hasta", hastaYMD]);
+  wsResumen.addRow(["Generado",      fmtFechaCL(new Date())]);
+  wsResumen.addRow([]);
 
-  // ─── Workbook ───
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, wsVentas, "Ventas");
-  XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+  const kpiHeader = wsResumen.addRow(["KPIs", "Valor"]);
+  kpiHeader.font = { bold: true };
 
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
-  const body = new Uint8Array(buffer);
+  wsResumen.addRow(["Total ventas (cantidad)",   totalVentas]);
+  wsResumen.addRow(["Subtotal (neto, CLP)",       subtotalCLP]);
+  wsResumen.addRow(["IVA 19% (CLP)",              impuestoCLP]);
+  wsResumen.addRow(["Total facturado (CLP)",      totalCLP]);
+  wsResumen.addRow(["Ticket promedio (CLP)",      ticket]);
+  wsResumen.addRow([]);
 
+  const metodoTitle = wsResumen.addRow(["Desglose por método de pago"]);
+  metodoTitle.font = { bold: true };
+
+  const metodoHeader = wsResumen.addRow(["Método", "Cantidad", "Total (CLP)"]);
+  metodoHeader.font = { bold: true };
+
+  for (const [metodo, data] of [...byMetodo.entries()].sort((a, b) => b[1].total - a[1].total)) {
+    wsResumen.addRow([metodo, data.cantidad, data.total]);
+  }
+
+  // ─── Buffer y Response ────────────────────────────────────
+  const buffer = await workbook.xlsx.writeBuffer();
+  const body   = new Uint8Array(buffer as ArrayBuffer);
   const filename = `reporte-ventas_${desdeYMD}_a_${hastaYMD}.xlsx`;
 
   return new Response(body, {
     status: 200,
     headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Length": String(body.byteLength),
+      "Content-Type":        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Length":      String(body.byteLength),
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-      "X-Total-Ventas": String(totalVentas),
-      "X-Total-CLP": String(totalCLP),
+      "Cache-Control":       "no-store",
+      "X-Total-Ventas":      String(totalVentas),
+      "X-Total-CLP":         String(totalCLP),
     },
   });
 }
