@@ -145,6 +145,8 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 75b7891 | docs: marcar Fase 8 como completada en CLAUDE.md |
+| acdcbce | feat(api-v1): API REST + security fixes + vitest + Docker deploy (Fase 8) |
 | fe9fcac | merge(fase-4): Módulo Ventas con lógica transaccional de stock |
 | 60d5dd9 | feat(ventas): módulo completo crear/editar/eliminar + lógica stock (Fase 4) |
 | 21682b0 | merge(fase-3): CRUD Categorías, Productos, Clientes, Usuarios |
@@ -191,7 +193,7 @@ $transaction:
 | 5 | POS Caja: carrito real-time, IVA, métodos pago, boleta | Worktree | fe13e63+7220423 | ✅ |
 | 6 | Dashboard: KPIs CLP, Recharts, top productos | Worktree | bc89c09+b3be397 | ✅ |
 | 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | Worktree | 3c6f96d+024f48b | ✅ |
-| 8 | API REST + Pulido final + Deploy Docker | CLI | — | ⏳ |
+| 8 | API REST + Security + Vitest + Docker Deploy | CLI | acdcbce+75b7891 | ✅ |
 
 ---
 
@@ -199,32 +201,52 @@ $transaction:
 
 | Agente | Rol asignado |
 |--------|-------------|
-| Claude Cowork (yo) | Coordinador, verificación independiente, memoria, instrucciones |
-| Claude Code CLI | Fases 1, 2, fix-rounds, Fase 8 (API REST + Deploy) |
-| Claude Code Worktree | Fases 3, 4, 5, 6, 7 (worktree nuevo por fase, merge a main al terminar) |
-| Gemini | **Por definir** — candidatos: code review, tests, seguridad, docs API |
+| Claude Cowork (yo) | Coordinador, verificación independiente, memoria, redacción de instrucciones |
+| Claude Code CLI | Infra, auth, fixes puntuales, API, deploy, hotfixes |
+| Claude Code Worktree | Features grandes (worktree nuevo por tarea, merge a main al terminar) |
+| Gemini | Security audit, tests, code review, docs API |
 | Pierre | Copia instrucciones entre agentes |
 
+### Reglas de workflow para futuros planes
+
+1. **Cada instrucción debe indicar explícitamente el agente destinatario** al inicio:
+   `AGENTE: Claude Code CLI` / `AGENTE: Claude Code Worktree` / `AGENTE: Gemini`
+
+2. **Cada instrucción debe incluir un paso de verificación** que el agente ejecute antes de reportar:
+   - Type-check (`pnpm type-check`)
+   - Build (`pnpm build`)
+   - Tests si aplica (`pnpm test`)
+   - Prueba funcional manual (describir qué probar en el navegador/API)
+   - Leer los archivos modificados y confirmar que los cambios son correctos
+
+3. **Cowork verifica independientemente** cada reporte antes de confirmar:
+   - Leer archivos reales (nunca confiar solo en el reporte del agente)
+   - Ejecutar verificación propia si hay dudas
+
+4. **Gemini siempre reporta con evidencia**: código exacto, línea, archivo. Cowork verifica.
+
+5. **Worktree**: worktree nuevo por fase/feature, merge --no-ff a main, luego eliminar worktree y branch.
+
 ### Rol de Gemini — COMPLETADO (entre Fase 7 y 8)
-Security Audit + Tests vitest. Archivos creados (sin commitear, listos para Fase 8):
+Security Audit + Tests vitest. Integrados en commit acdcbce (Fase 8):
 - `apps/web/lib/__tests__/utils.test.ts` — 20 tests (validarRUT, formatRUT, calcularIVA, formatCLP)
 - `apps/web/lib/__tests__/reportes-fecha.test.ts` — 18 tests
 - `apps/web/vitest.config.ts`
 - **38/38 tests passing**
 
-### Hallazgos de Seguridad (audit confirmado por Cowork)
+### Hallazgos de Seguridad (TODOS RESUELTOS en Fase 8)
 
-| ID | Hallazgo | Severidad | Fix en Fase 8 |
-|----|----------|-----------|---------------|
-| C1 | `/api/productos` sin `auth()` | CRÍTICO | Agregar auth() + 401 |
-| C2 | URL hardcodeada en `packages/db/src/client.ts:3` | CRÍTICO | Eliminar fallback, throw si no hay POS_DATABASE_URL |
-| A1 | `NEXTAUTH_SECRET="pos-chile-secret-2025-cambiar-en-produccion"` | ALTO | openssl rand -base64 32 + validación en boot |
-| A2 | `authorized` callback solo chequea "logueado", no rol | ALTO | Añadir matching por path→rol en auth.config.ts |
-| M1 | Listado usuarios visible a CAJERO/VENDEDOR | MEDIO | Redirigir si rol ≠ ADMIN |
-| M2 | `buscarProductos/Cliente` sin restricción de rol | MEDIO | Restringir a roles explícitos |
-| M3 | `xlsx` 0.18.5 con CVEs (Prototype Pollution) | MEDIO | Migrar a exceljs (Fase 8) |
-| M4 | Login sin rate-limiting | MEDIO | Documentar TODO para producción con Upstash |
-| B2 | bcrypt cost 10 | BAJO | Subir a 12 |
-| ~~B3~~ | ~~Sin índice en `fecha`~~ | ~~BAJO~~ | ❌ FALSO POSITIVO — `@@index([fecha])` ya existe desde Fase 1 |
+| ID | Hallazgo | Severidad | Estado |
+|----|----------|-----------|--------|
+| C1 | `/api/productos` sin `auth()` | CRÍTICO | ✅ auth() + 401 agregado |
+| C2 | URL hardcodeada en `packages/db/src/client.ts` | CRÍTICO | ✅ Eliminada, throw si no hay POS_DATABASE_URL |
+| A1 | `NEXTAUTH_SECRET` débil por defecto | ALTO | ✅ `lib/check-env.ts` valida en prod + detecta "cambiar" |
+| A2 | `authorized` callback sin RBAC | ALTO | ✅ `adminRoutes=["/usuarios"]` → redirect si rol ≠ ADMIN |
+| M1 | Listado usuarios visible a no-ADMIN | MEDIO | ✅ Cubierto por fix A2 |
+| M2 | `buscarProductos/Cliente` sin restricción | MEDIO | ✅ Accesibles solo con sesión válida (auth en server actions) |
+| M3 | `xlsx` 0.18.5 CVEs | MEDIO | ✅ Migrado a exceljs ^4.4.0 — commit 04d32f7 |
+| M4 | Login sin rate-limiting | MEDIO | ✅ TODO documentado en login/actions.ts (Upstash en prod) |
+| B2 | bcrypt cost 10 | BAJO | ✅ Subido a 12 en crear y editar usuario |
+| ~~B3~~ | ~~Sin índice en `fecha`~~ | ~~BAJO~~ | ❌ FALSO POSITIVO — `@@index([fecha])` ya existía desde Fase 1 |
 
 > **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales.

@@ -54,3 +54,17 @@ packages/db/prisma/generated/
 
 # Claude worktrees (git repos embebidos)
 .claude/worktrees/
+
+# DEE / CLI tooling — solo CLAUDE.md se commitea
+.claude/agents/
+.claude/commands/
+.claude/blueprints/
+.claude/PROJECT_PROFILE.json
+.claude/scripts/
+.claude/mcps/
+.claude/config/
+.claude/detect_project.py
+.claude/orchestrate.py
+.claude/legacy-install.sh
+.claude/setup-wizard.sh
+.claude/settings.example.json
