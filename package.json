@@ -20,9 +20,13 @@
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
+      "@tailwindcss/oxide",
       "esbuild",
       "prisma",
       "sharp"
     ]
+  },
+  "dependencies": {
+    "@tailwindcss/oxide-darwin-x64": "4.2.2"
   }
 }

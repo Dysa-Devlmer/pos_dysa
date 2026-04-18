@@ -1,28 +1,37 @@
-import { LogOut } from "lucide-react";
-import { signOut } from "@/auth";
-import { Button } from "@/components/ui/button";
 import type { Session } from "next-auth";
+import { signOut } from "@/auth";
+import { SignOutInline, UserMenu } from "@/components/user-menu";
 
-export function Header({ user }: { user: Session["user"] }) {
+export function Header({
+  user,
+  avatar,
+}: {
+  user: Session["user"];
+  avatar: string | null;
+}) {
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-6">
-      <div className="text-sm">
-        <span className="font-medium">{user.name}</span>{" "}
-        <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-          {user.rol}
-        </span>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
+      <div className="md:hidden text-base font-bold">POS Chile</div>
+
+      <div className="ml-auto">
+        <UserMenu
+          nombre={user.name ?? "Usuario"}
+          email={user.email ?? ""}
+          rol={user.rol}
+          avatar={avatar}
+          signOutForm={
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/login" });
+              }}
+              className="w-full"
+            >
+              <SignOutInline />
+            </form>
+          }
+        />
       </div>
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/login" });
-        }}
-      >
-        <Button type="submit" variant="ghost" size="sm">
-          <LogOut className="size-4" />
-          Cerrar sesión
-        </Button>
-      </form>
     </header>
   );
 }

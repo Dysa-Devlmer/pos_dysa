@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   CreditCard,
   FileBarChart,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/caja", label: "Caja", icon: CreditCard },
   { href: "/reportes", label: "Reportes", icon: FileBarChart },
+  { href: "/perfil", label: "Mi Perfil", icon: UserCircle },
 ];
 
 export function Sidebar() {

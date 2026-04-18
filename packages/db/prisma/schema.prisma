@@ -27,6 +27,7 @@ model Usuario {
   password  String
   rol       Rol      @default(CAJERO)
   activo    Boolean  @default(true)
+  avatar    String?  // Data URL base64 (JPEG 200x200 comprimido, ~50-100 KB)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
