@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   FolderTree,
@@ -68,7 +69,8 @@ export function Sidebar({ rol, alertasStockCount = 0 }: SidebarProps) {
       </div>
       <nav className="flex flex-col gap-1 p-3">
         {items.map(({ href, label, icon: Icon, badgeCountKey }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const isActive =
+            href === "/" ? pathname === "/" : pathname.startsWith(href);
           const count =
             badgeCountKey === "alertasStock" ? alertasStockCount : 0;
           return (
@@ -76,17 +78,40 @@ export function Sidebar({ rol, alertasStockCount = 0 }: SidebarProps) {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
+              aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="size-4" />
-              <span className="flex-1">{label}</span>
+              {/* Pill animada que se desliza al item activo */}
+              {isActive ? (
+                <motion.span
+                  layoutId="sidebar-active"
+                  aria-hidden
+                  className="absolute inset-0 -z-0 rounded-md bg-sidebar-primary"
+                  transition={{
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 32,
+                  }}
+                />
+              ) : null}
+
+              <span className="relative z-10 flex items-center gap-3">
+                <Icon className="size-4" />
+                <span className="flex-1">{label}</span>
+              </span>
+
               {count > 0 ? (
                 <span
-                  className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold tabular-nums text-destructive-foreground"
+                  className={cn(
+                    "relative z-10 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
+                    isActive
+                      ? "bg-sidebar-primary-foreground text-sidebar-primary"
+                      : "bg-destructive text-destructive-foreground",
+                  )}
                   aria-label={`${count} productos con stock bajo`}
                 >
                   {count > 99 ? "99+" : count}
