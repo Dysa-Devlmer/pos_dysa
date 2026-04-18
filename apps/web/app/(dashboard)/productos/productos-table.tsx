@@ -21,6 +21,7 @@ export interface ProductoRow {
   categoriaNombre: string;
   precio: number;
   stock: number;
+  alertaStock: number;
   activo: boolean;
 }
 
@@ -100,14 +101,41 @@ export function ProductosTable({
         header: "Stock",
         cell: ({ row }) => {
           const s = row.original.stock;
-          const tone =
-            s <= 0
-              ? "text-destructive"
-              : s < 10
-                ? "text-amber-600 dark:text-amber-500"
-                : "text-foreground";
-          return <span className={`tabular-nums ${tone}`}>{s}</span>;
+          const umbral = row.original.alertaStock;
+          if (s <= 0) {
+            return (
+              <div className="flex items-center gap-2">
+                <span className="tabular-nums font-medium">{s}</span>
+                <Badge className="bg-zinc-900 text-white hover:bg-zinc-900/90 dark:bg-zinc-100 dark:text-zinc-900">
+                  Sin stock
+                </Badge>
+              </div>
+            );
+          }
+          if (s <= umbral) {
+            return (
+              <div className="flex items-center gap-2">
+                <span className="tabular-nums font-medium text-destructive">
+                  {s}
+                </span>
+                <Badge variant="destructive">Stock bajo</Badge>
+              </div>
+            );
+          }
+          return <span className="tabular-nums">{s}</span>;
         },
+      },
+      {
+        accessorKey: "alertaStock",
+        header: "Alerta",
+        cell: ({ row }) => (
+          <span
+            className="tabular-nums text-muted-foreground"
+            title="Umbral de alerta de stock"
+          >
+            ≤ {row.original.alertaStock}
+          </span>
+        ),
       },
       {
         accessorKey: "activo",

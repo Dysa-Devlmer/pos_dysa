@@ -1,6 +1,8 @@
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 
+import { AlertasBanner } from "./alertas-banner";
+import { contarAlertasStock } from "./alertas/actions";
 import { DashboardStats } from "./dashboard-stats";
 import { TopProductos, type TopProductoRow } from "./top-productos";
 import { UltimasVentas, type UltimaVentaRow } from "./ultimas-ventas";
@@ -8,7 +10,6 @@ import { VentasChart, type VentasPorDia } from "./ventas-chart";
 
 export const dynamic = "force-dynamic";
 
-const STOCK_BAJO_UMBRAL = 10;
 const CHILE_TZ = "America/Santiago";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ export default async function DashboardPage() {
   const [
     ventasHoyAgg,
     ventasMesAgg,
-    stockBajoCount,
+    alertasStockCount,
     totalClientes,
     ventas7dias,
     topProductos,
@@ -82,9 +83,7 @@ export default async function DashboardPage() {
       _count: { _all: true },
       _sum: { total: true },
     }),
-    prisma.producto.count({
-      where: { activo: true, stock: { lt: STOCK_BAJO_UMBRAL } },
-    }),
+    contarAlertasStock().catch(() => 0),
     prisma.cliente.count(),
     prisma.venta.findMany({
       where: { fecha: { gte: hace7 } },
@@ -162,6 +161,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <AlertasBanner count={alertasStockCount} />
+
       <DashboardStats
         ventasHoy={{
           cantidad: ventasHoyAgg._count._all,
@@ -172,8 +173,8 @@ export default async function DashboardPage() {
           total: ventasMesAgg._sum.total ?? 0,
         }}
         stockBajo={{
-          cantidad: stockBajoCount,
-          umbral: STOCK_BAJO_UMBRAL,
+          cantidad: alertasStockCount,
+          umbral: null,
         }}
         totalClientes={totalClientes}
       />

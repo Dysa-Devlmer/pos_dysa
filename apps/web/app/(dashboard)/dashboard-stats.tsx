@@ -14,7 +14,7 @@ import { formatCLP } from "@/lib/utils";
 export interface DashboardStatsProps {
   ventasHoy: { cantidad: number; total: number };
   ventasMes: { cantidad: number; total: number };
-  stockBajo: { cantidad: number; umbral: number };
+  stockBajo: { cantidad: number; umbral: number | null };
   totalClientes: number;
 }
 
@@ -92,7 +92,9 @@ export function DashboardStats({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            productos con stock menor a {stockBajo.umbral}
+            {stockBajo.umbral !== null
+              ? `productos con stock menor a ${stockBajo.umbral}`
+              : "productos bajo su umbral de alerta"}
           </p>
         </CardContent>
       </Card>

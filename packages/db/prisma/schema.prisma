@@ -100,6 +100,7 @@ model Producto {
   codigoBarras String   @unique @map("codigo_barras")
   precio       Int
   stock        Int      @default(0)
+  alertaStock  Int      @default(5) @map("alerta_stock")
   ventas       Int      @default(0)
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")

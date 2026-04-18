@@ -27,6 +27,7 @@ export default async function ProductosPage() {
     categoriaNombre: p.categoria.nombre,
     precio: p.precio,
     stock: p.stock,
+    alertaStock: p.alertaStock,
     activo: p.activo,
   }));
 
