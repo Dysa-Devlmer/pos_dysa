@@ -3,6 +3,7 @@ import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { contarAlertasStock } from "./alertas/actions";
 
 export default async function DashboardLayout({
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-muted/20">
+      <ScrollToTop />
       <Sidebar rol={session.user.rol} alertasStockCount={alertasCount} />
       <div className="flex flex-1 flex-col">
         <Header user={session.user} avatar={perfil?.avatar ?? null} />
