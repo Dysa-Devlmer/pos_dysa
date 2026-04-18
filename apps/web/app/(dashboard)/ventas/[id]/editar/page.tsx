@@ -90,6 +90,8 @@ export default async function EditarVentaPage({
         initialItems={initialItems}
         initialCliente={initialCliente}
         initialMetodoPago={venta.metodoPago}
+        initialDescuentoPct={Number(venta.descuentoPct)}
+        initialDescuentoMonto={venta.descuentoMonto}
         refundCantidades={refundCantidades}
       />
     </div>

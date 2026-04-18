@@ -29,7 +29,16 @@ export interface BoletaData {
     precioUnitario: number;
     subtotal: number;
   }>;
+  /** Subtotal bruto (suma de precios * cantidad, sin descuento). */
   subtotal: number;
+  /** Porcentaje de descuento aplicado (0 si no hay). */
+  descuentoPct?: number;
+  /** Monto CLP del descuento fijo efectivo (ya truncado si superaba la base). */
+  descuentoMonto?: number;
+  /** Monto CLP del descuento porcentual (derivado). */
+  descuentoPorcentual?: number;
+  /** Base imponible (subtotal − descuentos). */
+  baseImponible?: number;
   impuesto: number;
   total: number;
   metodoPago: MetodoPago;
@@ -155,11 +164,43 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
 
               <div className="space-y-0.5 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Subtotal (neto)</span>
+                  <span>Subtotal</span>
                   <span className="tabular-nums">
                     {formatCLP(boleta.subtotal)}
                   </span>
                 </div>
+                {boleta.descuentoPorcentual && boleta.descuentoPorcentual > 0 ? (
+                  <div className="flex justify-between">
+                    <span>
+                      Descuento (
+                      {Number(boleta.descuentoPct ?? 0).toLocaleString("es-CL", {
+                        maximumFractionDigits: 2,
+                      })}
+                      %)
+                    </span>
+                    <span className="tabular-nums">
+                      − {formatCLP(boleta.descuentoPorcentual)}
+                    </span>
+                  </div>
+                ) : null}
+                {boleta.descuentoMonto && boleta.descuentoMonto > 0 ? (
+                  <div className="flex justify-between">
+                    <span>Descuento fijo</span>
+                    <span className="tabular-nums">
+                      − {formatCLP(boleta.descuentoMonto)}
+                    </span>
+                  </div>
+                ) : null}
+                {(boleta.descuentoPorcentual ?? 0) +
+                  (boleta.descuentoMonto ?? 0) >
+                0 ? (
+                  <div className="flex justify-between">
+                    <span>Base imponible</span>
+                    <span className="tabular-nums">
+                      {formatCLP(boleta.baseImponible ?? boleta.subtotal)}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <span>IVA 19%</span>
                   <span className="tabular-nums">

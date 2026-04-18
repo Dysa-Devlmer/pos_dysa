@@ -5,7 +5,7 @@ import { z } from "zod";
 import { customAlphabet } from "nanoid";
 import { prisma, MetodoPago, type Prisma } from "@repo/db";
 import { auth } from "@/auth";
-import { calcularIVA } from "@/lib/utils";
+import { calcularDesglose } from "@/lib/utils";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -22,6 +22,19 @@ const ventaInputSchema = z.object({
   items: z
     .array(itemSchema)
     .min(1, "La venta debe tener al menos un producto"),
+  descuentoPct: z
+    .number()
+    .min(0, "No puede ser negativo")
+    .max(100, "Máximo 100%")
+    .multipleOf(0.01, "Máximo 2 decimales")
+    .optional()
+    .default(0),
+  descuentoMonto: z
+    .number()
+    .int("Debe ser entero (CLP)")
+    .min(0, "No puede ser negativo")
+    .optional()
+    .default(0),
 });
 
 export type VentaInput = z.infer<typeof ventaInputSchema>;
@@ -128,8 +141,15 @@ export async function crearVenta(
         subtotal: p.precio * it.cantidad,
       };
     });
-    const subtotal = detalles.reduce((a, d) => a + d.subtotal, 0);
-    const { impuesto, total } = calcularIVA(subtotal);
+    const subtotalBruto = detalles.reduce((a, d) => a + d.subtotal, 0);
+    const desglose = calcularDesglose(
+      subtotalBruto,
+      data.descuentoPct,
+      data.descuentoMonto,
+    );
+    // El descuentoMonto efectivo puede haber sido truncado si excedía la base
+    // tras el descuento porcentual. Persistimos el valor efectivo, no el input.
+    const descuentoMontoEfectivo = desglose.descuentoFijo;
 
     // Validar cliente si se envió
     if (data.clienteId) {
@@ -148,9 +168,11 @@ export async function crearVenta(
       const v = await tx.venta.create({
         data: {
           numeroBoleta,
-          subtotal,
-          impuesto,
-          total,
+          subtotal: subtotalBruto,
+          descuentoPct: data.descuentoPct,
+          descuentoMonto: descuentoMontoEfectivo,
+          impuesto: desglose.iva,
+          total: desglose.total,
           metodoPago: data.metodoPago,
           usuarioId,
           clienteId: data.clienteId ?? null,
@@ -339,8 +361,13 @@ export async function editarVenta(
         subtotal: p.precio * it.cantidad,
       };
     });
-    const subtotal = detallesNuevos.reduce((a, d) => a + d.subtotal, 0);
-    const { impuesto, total } = calcularIVA(subtotal);
+    const subtotalBruto = detallesNuevos.reduce((a, d) => a + d.subtotal, 0);
+    const desglose = calcularDesglose(
+      subtotalBruto,
+      data.descuentoPct,
+      data.descuentoMonto,
+    );
+    const descuentoMontoEfectivo = desglose.descuentoFijo;
 
     // Validar cliente nuevo si existe
     if (data.clienteId) {
@@ -383,9 +410,11 @@ export async function editarVenta(
       const v = await tx.venta.update({
         where: { id },
         data: {
-          subtotal,
-          impuesto,
-          total,
+          subtotal: subtotalBruto,
+          descuentoPct: data.descuentoPct,
+          descuentoMonto: descuentoMontoEfectivo,
+          impuesto: desglose.iva,
+          total: desglose.total,
           metodoPago: data.metodoPago,
           clienteId: data.clienteId ?? null,
           usuarioId,

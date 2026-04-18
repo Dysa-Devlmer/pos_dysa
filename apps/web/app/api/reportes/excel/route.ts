@@ -55,16 +55,19 @@ export async function GET(request: Request) {
   // ─── Hoja 1: Ventas ───────────────────────────────────────
   const wsVentas = workbook.addWorksheet("Ventas");
   wsVentas.columns = [
-    { header: "N° Boleta",      key: "numeroBoleta",  width: 24 },
-    { header: "Fecha",          key: "fecha",          width: 18 },
-    { header: "Cliente RUT",    key: "clienteRut",     width: 14 },
-    { header: "Cliente Nombre", key: "clienteNombre",  width: 28 },
-    { header: "Vendedor",       key: "vendedor",       width: 22 },
-    { header: "Método Pago",    key: "metodoPago",     width: 14 },
-    { header: "Items",          key: "items",          width: 7  },
-    { header: "Subtotal (CLP)", key: "subtotal",       width: 16 },
-    { header: "IVA 19% (CLP)", key: "impuesto",       width: 16 },
-    { header: "Total (CLP)",   key: "total",           width: 16 },
+    { header: "N° Boleta",         key: "numeroBoleta",    width: 24 },
+    { header: "Fecha",             key: "fecha",           width: 18 },
+    { header: "Cliente RUT",       key: "clienteRut",      width: 14 },
+    { header: "Cliente Nombre",    key: "clienteNombre",   width: 28 },
+    { header: "Vendedor",          key: "vendedor",        width: 22 },
+    { header: "Método Pago",       key: "metodoPago",      width: 14 },
+    { header: "Items",             key: "items",           width: 7  },
+    { header: "Subtotal (CLP)",    key: "subtotal",        width: 16 },
+    { header: "Descuento % ",      key: "descuentoPct",    width: 12 },
+    { header: "Descuento fijo (CLP)", key: "descuentoMonto", width: 18 },
+    { header: "Descuento total (CLP)", key: "descuentoTotal", width: 18 },
+    { header: "IVA 19% (CLP)",     key: "impuesto",        width: 16 },
+    { header: "Total (CLP)",       key: "total",           width: 16 },
   ];
 
   // Header bold
@@ -76,6 +79,9 @@ export async function GET(request: Request) {
   };
 
   for (const v of ventas) {
+    const pct = Number(v.descuentoPct);
+    const pctAmount = Math.round(v.subtotal * (pct / 100));
+    const descuentoTotal = pctAmount + v.descuentoMonto;
     wsVentas.addRow({
       numeroBoleta: v.numeroBoleta,
       fecha:        fmtFechaCL(v.fecha),
@@ -85,6 +91,9 @@ export async function GET(request: Request) {
       metodoPago:   v.metodoPago,
       items:        v._count.detalles,
       subtotal:     v.subtotal,
+      descuentoPct: pct,
+      descuentoMonto: v.descuentoMonto,
+      descuentoTotal,
       impuesto:     v.impuesto,
       total:        v.total,
     });
@@ -102,6 +111,10 @@ export async function GET(request: Request) {
   const totalCLP     = ventas.reduce((a, v) => a + v.total, 0);
   const subtotalCLP  = ventas.reduce((a, v) => a + v.subtotal, 0);
   const impuestoCLP  = ventas.reduce((a, v) => a + v.impuesto, 0);
+  const descuentoCLP = ventas.reduce((a, v) => {
+    const pct = Number(v.descuentoPct);
+    return a + Math.round(v.subtotal * (pct / 100)) + v.descuentoMonto;
+  }, 0);
   const ticket       = totalVentas > 0 ? Math.round(totalCLP / totalVentas) : 0;
 
   const byMetodo = new Map<string, { cantidad: number; total: number }>();
@@ -126,7 +139,8 @@ export async function GET(request: Request) {
   kpiHeader.font = { bold: true };
 
   wsResumen.addRow(["Total ventas (cantidad)",   totalVentas]);
-  wsResumen.addRow(["Subtotal (neto, CLP)",       subtotalCLP]);
+  wsResumen.addRow(["Subtotal (bruto, CLP)",      subtotalCLP]);
+  wsResumen.addRow(["Descuentos totales (CLP)",   descuentoCLP]);
   wsResumen.addRow(["IVA 19% (CLP)",              impuestoCLP]);
   wsResumen.addRow(["Total facturado (CLP)",      totalCLP]);
   wsResumen.addRow(["Ticket promedio (CLP)",      ticket]);

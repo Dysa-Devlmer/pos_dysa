@@ -75,16 +75,22 @@ export async function GET(request: Request) {
     },
   });
 
-  const rows: ReporteVentaRow[] = ventas.map((v) => ({
-    numeroBoleta: v.numeroBoleta,
-    fechaFmt: fmtFechaCL(v.fecha),
-    clienteNombre: v.cliente?.nombre ?? "—",
-    metodoPago: v.metodoPago,
-    vendedor: v.usuario.nombre,
-    subtotal: v.subtotal,
-    impuesto: v.impuesto,
-    total: v.total,
-  }));
+  const rows: ReporteVentaRow[] = ventas.map((v) => {
+    const pct = Number(v.descuentoPct);
+    const pctAmount = Math.round(v.subtotal * (pct / 100));
+    const descuentoTotal = pctAmount + v.descuentoMonto;
+    return {
+      numeroBoleta: v.numeroBoleta,
+      fechaFmt: fmtFechaCL(v.fecha),
+      clienteNombre: v.cliente?.nombre ?? "—",
+      metodoPago: v.metodoPago,
+      vendedor: v.usuario.nombre,
+      subtotal: v.subtotal,
+      descuentoTotal,
+      impuesto: v.impuesto,
+      total: v.total,
+    };
+  });
 
   // Agregados
   const totalCLP = rows.reduce((a, r) => a + r.total, 0);
