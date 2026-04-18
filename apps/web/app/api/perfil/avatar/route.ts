@@ -18,6 +18,20 @@ export async function POST(request: Request) {
   }
   const userId = Number(session.user.id);
 
+  // Check Content-Length ANTES de leer el body para evitar que el servidor
+  // absorba payloads gigantes. Es un pre-filtro: el header puede estar ausente
+  // o ser manipulado, por eso no reemplaza el check de file.size más abajo.
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    const bytes = parseInt(contentLength, 10);
+    if (!isNaN(bytes) && bytes > MAX_BYTES) {
+      return NextResponse.json(
+        { error: "Archivo demasiado grande (máximo 2 MB)" },
+        { status: 413 },
+      );
+    }
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();

@@ -5,14 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Formatear precios en CLP chileno
+// Formatear precios en CLP chileno.
+// Normaliza \u202f (NBSP estrecho, Node 20+) y \u00a0 (NBSP) a espacio
+// regular para evitar "Text content did not match" en hidratación React.
 export function formatCLP(amount: number): string {
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
     currency: "CLP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  })
+    .format(amount)
+    .replace(/[\u202f\u00a0]/g, " ");
 }
 
 // Calcular IVA 19%

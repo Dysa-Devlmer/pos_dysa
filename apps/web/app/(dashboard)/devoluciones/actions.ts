@@ -63,6 +63,13 @@ export async function crearDevolucion(
     );
 
     const result = await prisma.$transaction(async (tx) => {
+      // 0. Bloqueo pesimista: serializa devoluciones sobre la misma venta.
+      //    NOWAIT falla rápido si otra transacción ya tiene el lock —
+      //    el catch de $transaction lo convierte en { ok: false, error }.
+      await tx.$queryRaw`
+        SELECT id FROM ventas WHERE id = ${data.ventaId} FOR UPDATE NOWAIT
+      `;
+
       // 1. Cargar venta con detalles y cliente + devoluciones previas
       const venta = await tx.venta.findUnique({
         where: { id: data.ventaId },
