@@ -27,6 +27,11 @@ const productoSchema = z.object({
     .number()
     .int("El stock debe ser un entero")
     .nonnegative("El stock no puede ser negativo"),
+  alertaStock: z.coerce
+    .number()
+    .int("El umbral de alerta debe ser un entero")
+    .nonnegative("El umbral no puede ser negativo")
+    .default(5),
   activo: z.boolean().optional().default(true),
 });
 
@@ -71,11 +76,14 @@ export async function crearProducto(
         categoriaId: data.categoriaId,
         precio: data.precio,
         stock: data.stock,
+        alertaStock: data.alertaStock,
         activo: data.activo ?? true,
       },
     });
 
     revalidatePath("/productos");
+    revalidatePath("/alertas");
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -122,11 +130,14 @@ export async function actualizarProducto(
         categoriaId: data.categoriaId,
         precio: data.precio,
         stock: data.stock,
+        alertaStock: data.alertaStock,
         activo: data.activo ?? true,
       },
     });
 
     revalidatePath("/productos");
+    revalidatePath("/alertas");
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (err) {
     if (err instanceof z.ZodError) {

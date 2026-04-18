@@ -13,6 +13,7 @@ import {
   FileBarChart,
   UserCircle,
   Code2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,8 @@ type NavItem = {
   label: string;
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
+  /** Si está definido, muestra un badge con el conteo (solo si > 0). */
+  badgeCountKey?: "alertasStock";
 };
 
 const navItems: NavItem[] = [
@@ -33,12 +36,24 @@ const navItems: NavItem[] = [
   { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/caja", label: "Caja", icon: CreditCard },
+  {
+    href: "/alertas",
+    label: "Alertas",
+    icon: AlertTriangle,
+    badgeCountKey: "alertasStock",
+  },
   { href: "/reportes", label: "Reportes", icon: FileBarChart },
   { href: "/perfil", label: "Mi Perfil", icon: UserCircle },
   { href: "/docs", label: "API Docs", icon: Code2, adminOnly: true },
 ];
 
-export function Sidebar({ rol }: { rol?: Rol }) {
+export interface SidebarProps {
+  rol?: Rol;
+  /** Contador de productos con stock bajo. Si > 0, se muestra un badge rojo. */
+  alertasStockCount?: number;
+}
+
+export function Sidebar({ rol, alertasStockCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const items = navItems.filter((i) => !i.adminOnly || rol === "ADMIN");
 
@@ -50,8 +65,10 @@ export function Sidebar({ rol }: { rol?: Rol }) {
         </Link>
       </div>
       <nav className="flex flex-col gap-1 p-3">
-        {items.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon, badgeCountKey }) => {
           const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const count =
+            badgeCountKey === "alertasStock" ? alertasStockCount : 0;
           return (
             <Link
               key={href}
@@ -64,7 +81,15 @@ export function Sidebar({ rol }: { rol?: Rol }) {
               )}
             >
               <Icon className="size-4" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {count > 0 ? (
+                <span
+                  className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold tabular-nums text-destructive-foreground"
+                  aria-label={`${count} productos con stock bajo`}
+                >
+                  {count > 99 ? "99+" : count}
+                </span>
+              ) : null}
             </Link>
           );
         })}

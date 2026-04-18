@@ -42,6 +42,10 @@ const formSchema = z.object({
     .int("Precio debe ser entero (CLP)")
     .nonnegative("No puede ser negativo"),
   stock: z.number().int().nonnegative("No puede ser negativo"),
+  alertaStock: z
+    .number()
+    .int("El umbral debe ser un entero")
+    .nonnegative("No puede ser negativo"),
   activo: z.boolean(),
 });
 
@@ -59,6 +63,7 @@ export interface ProductoFormProps {
     categoriaId: number;
     precio: number;
     stock: number;
+    alertaStock: number;
     activo: boolean;
   } | null;
 }
@@ -70,6 +75,7 @@ const DEFAULTS: FormValues = {
   categoriaId: 0,
   precio: 0,
   stock: 0,
+  alertaStock: 5,
   activo: true,
 };
 
@@ -96,6 +102,7 @@ export function ProductoForm({
         categoriaId: producto?.categoriaId ?? 0,
         precio: producto?.precio ?? 0,
         stock: producto?.stock ?? 0,
+        alertaStock: producto?.alertaStock ?? 5,
         activo: producto?.activo ?? true,
       });
       setServerError(null);
@@ -111,6 +118,7 @@ export function ProductoForm({
       categoriaId: values.categoriaId,
       precio: values.precio,
       stock: values.stock,
+      alertaStock: values.alertaStock,
       activo: values.activo,
     };
     const res = isEdit
@@ -250,6 +258,37 @@ export function ProductoForm({
                       }}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="alertaStock"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Umbral de alerta de stock</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={1}
+                      placeholder="5"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={Number.isFinite(field.value) ? field.value : 0}
+                      onChange={(e) => {
+                        const v = e.target.valueAsNumber;
+                        field.onChange(Number.isFinite(v) ? v : 0);
+                      }}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Se enviará alerta cuando el stock sea menor o igual a este
+                    valor. Por defecto: 5.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
