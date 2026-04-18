@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, RotateCcw } from "lucide-react";
 import { prisma } from "@repo/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -50,9 +50,20 @@ export default async function VentaDetallePage({
           },
         },
       },
+      devoluciones: {
+        orderBy: { fecha: "desc" },
+        include: {
+          usuario: { select: { nombre: true } },
+          items: {
+            include: { producto: { select: { nombre: true } } },
+          },
+        },
+      },
     },
   });
   if (!venta) notFound();
+
+  const tieneDevolucionTotal = venta.devoluciones.some((d) => d.esTotal);
 
   return (
     <div className="space-y-6">
@@ -65,13 +76,21 @@ export default async function VentaDetallePage({
             {venta.numeroBoleta}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">
             <Link href="/ventas">
               <ArrowLeft className="size-4" />
               Volver
             </Link>
           </Button>
+          {!tieneDevolucionTotal ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/devoluciones/nueva?ventaId=${venta.id}`}>
+                <RotateCcw className="size-4" />
+                Nueva devolución
+              </Link>
+            </Button>
+          ) : null}
           <Button asChild size="sm">
             <Link href={`/ventas/${venta.id}/editar`}>
               <Pencil className="size-4" />
@@ -189,6 +208,76 @@ export default async function VentaDetallePage({
           </div>
         </CardContent>
       </Card>
+
+      {venta.devoluciones.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RotateCcw className="size-4" />
+              Devoluciones ({venta.devoluciones.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y">
+              {venta.devoluciones.map((d) => (
+                <li key={d.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">
+                          {formatFechaHora(d.fecha)}
+                        </span>
+                        {d.esTotal ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <RotateCcw className="size-3" />
+                            Total
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                          >
+                            <RotateCcw className="size-3" />
+                            Parcial
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {d.motivo}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Registrada por{" "}
+                        <span className="font-medium">{d.usuario.nombre}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase text-muted-foreground">
+                        Monto devuelto
+                      </p>
+                      <p className="tabular-nums font-semibold text-amber-700 dark:text-amber-400">
+                        − {formatCLP(d.montoDevuelto)}
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="ml-2 space-y-0.5 border-l-2 border-amber-200 pl-3 text-xs dark:border-amber-900">
+                    {d.items.map((it) => (
+                      <li
+                        key={it.id}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="truncate">{it.producto.nombre}</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {it.cantidad} × {formatCLP(it.precioUnitario)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

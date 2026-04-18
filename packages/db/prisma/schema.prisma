@@ -31,9 +31,10 @@ model Usuario {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  ventas   Venta[]
-  accounts Account[]
-  sessions Session[]
+  ventas       Venta[]
+  accounts     Account[]
+  sessions     Session[]
+  devoluciones Devolucion[]
 
   @@map("usuarios")
 }
@@ -109,7 +110,8 @@ model Producto {
   categoriaId Int       @map("categoria_id")
   categoria   Categoria @relation(fields: [categoriaId], references: [id])
 
-  detallesVenta DetalleVenta[]
+  detallesVenta   DetalleVenta[]
+  devolucionItems DevolucionItem[]
 
   @@index([categoriaId])
   @@index([codigoBarras])
@@ -154,7 +156,8 @@ model Venta {
   usuarioId Int     @map("usuario_id")
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
-  detalles DetalleVenta[]
+  detalles     DetalleVenta[]
+  devoluciones Devolucion[]
 
   @@index([fecha])
   @@index([numeroBoleta])
@@ -178,4 +181,39 @@ model DetalleVenta {
   @@index([ventaId])
   @@index([productoId])
   @@map("detalle_ventas")
+}
+
+model Devolucion {
+  id            Int      @id @default(autoincrement())
+  ventaId       Int      @map("venta_id")
+  venta         Venta    @relation(fields: [ventaId], references: [id])
+  fecha         DateTime @default(now())
+  motivo        String   @db.VarChar(255)
+  montoDevuelto Int      @map("monto_devuelto")
+  esTotal       Boolean  @default(false) @map("es_total")
+
+  creadoPor Int     @map("creado_por")
+  usuario   Usuario @relation(fields: [creadoPor], references: [id])
+
+  items DevolucionItem[]
+
+  @@index([ventaId])
+  @@index([fecha])
+  @@index([creadoPor])
+  @@map("devoluciones")
+}
+
+model DevolucionItem {
+  id             Int        @id @default(autoincrement())
+  devolucionId   Int        @map("devolucion_id")
+  devolucion     Devolucion @relation(fields: [devolucionId], references: [id], onDelete: Cascade)
+  productoId     Int        @map("producto_id")
+  producto       Producto   @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  precioUnitario Int        @map("precio_unitario")
+  subtotal       Int
+
+  @@index([devolucionId])
+  @@index([productoId])
+  @@map("devolucion_items")
 }

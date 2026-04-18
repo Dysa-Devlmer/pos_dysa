@@ -14,6 +14,7 @@ import {
   UserCircle,
   Code2,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
+  { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw },
   { href: "/caja", label: "Caja", icon: CreditCard },
   {
     href: "/alertas",
