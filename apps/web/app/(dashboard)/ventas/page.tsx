@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { prisma, type Prisma } from "@repo/db";
 
 import { Button } from "@/components/ui/button";
-import { formatCLP } from "@/lib/utils";
+import { calcularDesglose, formatCLP } from "@/lib/utils";
 import { RangoFechasFiltro } from "./rango-fechas";
 import { VentasTable, type VentaRow } from "./ventas-table";
 
@@ -46,17 +46,28 @@ export default async function VentasPage({
     },
   });
 
-  const rows: VentaRow[] = ventas.map((v) => ({
-    id: v.id,
-    numeroBoleta: v.numeroBoleta,
-    fechaISO: v.fecha.toISOString(),
-    clienteNombre: v.cliente?.nombre ?? null,
-    clienteRut: v.cliente?.rut ?? null,
-    usuarioNombre: v.usuario.nombre,
-    metodoPago: v.metodoPago,
-    total: v.total,
-    items: v._count.detalles,
-  }));
+  const rows: VentaRow[] = ventas.map((v) => {
+    const pct = Number(v.descuentoPct);
+    const { descuentoTotal } = calcularDesglose(
+      v.subtotal,
+      pct,
+      v.descuentoMonto,
+    );
+    return {
+      id: v.id,
+      numeroBoleta: v.numeroBoleta,
+      fechaISO: v.fecha.toISOString(),
+      clienteNombre: v.cliente?.nombre ?? null,
+      clienteRut: v.cliente?.rut ?? null,
+      usuarioNombre: v.usuario.nombre,
+      metodoPago: v.metodoPago,
+      total: v.total,
+      items: v._count.detalles,
+      descuentoPct: pct,
+      descuentoMonto: v.descuentoMonto,
+      descuentoTotal,
+    };
+  });
 
   const totalPeriodo = rows.reduce((a, r) => a + r.total, 0);
 

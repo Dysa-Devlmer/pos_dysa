@@ -23,6 +23,10 @@ export interface VentaRow {
   metodoPago: MetodoPago;
   total: number;
   items: number;
+  descuentoPct: number;
+  descuentoMonto: number;
+  /** Descuento total en CLP (porcentual + fijo) para mostrar en columna. */
+  descuentoTotal: number;
 }
 
 const METODO_STYLES: Record<MetodoPago, string> = {
@@ -127,6 +131,31 @@ export function VentasTable({ data }: { data: VentaRow[] }) {
             {row.original.metodoPago}
           </Badge>
         ),
+      },
+      {
+        accessorKey: "descuentoTotal",
+        header: "Descuento",
+        cell: ({ row }) => {
+          const { descuentoTotal, descuentoPct } = row.original;
+          if (descuentoTotal <= 0) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex flex-col items-start leading-tight">
+              <span className="tabular-nums text-sm font-medium text-amber-700 dark:text-amber-400">
+                − {formatCLP(descuentoTotal)}
+              </span>
+              {descuentoPct > 0 ? (
+                <span className="text-[10px] text-muted-foreground">
+                  {Number(descuentoPct).toLocaleString("es-CL", {
+                    maximumFractionDigits: 2,
+                  })}
+                  %
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "total",

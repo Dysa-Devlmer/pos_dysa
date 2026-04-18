@@ -19,6 +19,8 @@ export interface ReporteVentaRow {
   metodoPago: string;
   vendedor: string;
   subtotal: number;
+  /** CLP total descontado (porcentual + fijo). 0 si no hay descuento. */
+  descuentoTotal: number;
   impuesto: number;
   total: number;
 }
@@ -169,13 +171,14 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
   },
   // Column widths (must sum to 100)
-  cBoleta: { width: "18%" },
-  cFecha: { width: "15%" },
-  cCliente: { width: "22%" },
-  cVendedor: { width: "15%" },
-  cMetodo: { width: "10%" },
-  cTotal: { width: "20%", textAlign: "right" },
-  numberCell: { textAlign: "right" },
+  cBoleta: { width: "17%" },
+  cFecha: { width: "13%" },
+  cCliente: { width: "19%" },
+  cVendedor: { width: "13%" },
+  cMetodo: { width: "9%" },
+  cDescuento: { width: "11%", textAlign: "right" as const },
+  cTotal: { width: "18%", textAlign: "right" as const },
+  numberCell: { textAlign: "right" as const },
   // Footer
   footer: {
     position: "absolute",
@@ -286,6 +289,7 @@ export function ReporteDocument({
               <Text style={[styles.th, styles.cCliente]}>Cliente</Text>
               <Text style={[styles.th, styles.cVendedor]}>Vendedor</Text>
               <Text style={[styles.th, styles.cMetodo]}>Pago</Text>
+              <Text style={[styles.th, styles.cDescuento]}>Descuento</Text>
               <Text style={[styles.th, styles.cTotal]}>Total</Text>
             </View>
             {rows.map((r, i) => (
@@ -301,6 +305,11 @@ export function ReporteDocument({
                 </Text>
                 <Text style={[styles.td, styles.cVendedor]}>{r.vendedor}</Text>
                 <Text style={[styles.td, styles.cMetodo]}>{r.metodoPago}</Text>
+                <Text style={[styles.td, styles.cDescuento]}>
+                  {r.descuentoTotal > 0
+                    ? `− ${formatCLPPlain(r.descuentoTotal)}`
+                    : "—"}
+                </Text>
                 <Text style={[styles.td, styles.cTotal]}>
                   {formatCLPPlain(r.total)}
                 </Text>

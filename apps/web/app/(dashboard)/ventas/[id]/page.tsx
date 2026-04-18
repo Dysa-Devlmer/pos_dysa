@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResumenVenta } from "@/components/resumen-venta";
 import { formatCLP } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -179,24 +180,12 @@ export default async function VentaDetallePage({
           </Table>
 
           <div className="mt-6 flex justify-end">
-            <div className="w-full max-w-xs space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal (neto)</span>
-                <span className="tabular-nums">
-                  {formatCLP(venta.subtotal)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">IVA (19%)</span>
-                <span className="tabular-nums">
-                  {formatCLP(venta.impuesto)}
-                </span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5 text-base font-semibold">
-                <span>Total</span>
-                <span className="tabular-nums">{formatCLP(venta.total)}</span>
-              </div>
-            </div>
+            <ResumenVenta
+              className="w-full max-w-xs"
+              subtotalBruto={venta.subtotal}
+              descuentoPct={Number(venta.descuentoPct)}
+              descuentoMonto={venta.descuentoMonto}
+            />
           </div>
         </CardContent>
       </Card>

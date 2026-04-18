@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { calcularIVA, formatCLP, validarRUT } from "@/lib/utils";
+import { formatCLP, validarRUT } from "@/lib/utils";
 import {
   buscarClientePorRut,
   buscarProductos,
@@ -34,6 +34,8 @@ import {
   editarVenta,
   type VentaInput,
 } from "@/app/(dashboard)/ventas/actions";
+import { DescuentoInput, type DescuentoModo } from "@/components/descuento-input";
+import { ResumenVenta } from "@/components/resumen-venta";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -70,6 +72,8 @@ export interface VentaCarritoProps {
   initialItems?: CarritoItem[];
   initialCliente?: ClienteResult | null;
   initialMetodoPago?: MetodoPago;
+  initialDescuentoPct?: number;
+  initialDescuentoMonto?: number;
   /** Mapping productoId → cantidad que venía en la venta vieja (para stock efectivo) */
   refundCantidades?: Record<number, number>;
 }
@@ -101,6 +105,8 @@ export function VentaCarrito({
   initialItems = [],
   initialCliente = null,
   initialMetodoPago = "EFECTIVO",
+  initialDescuentoPct = 0,
+  initialDescuentoMonto = 0,
   refundCantidades = {},
 }: VentaCarritoProps) {
   const router = useRouter();
@@ -125,6 +131,17 @@ export function VentaCarrito({
   // Método pago
   const [metodoPago, setMetodoPago] = React.useState<MetodoPago>(
     initialMetodoPago,
+  );
+
+  // Descuento
+  const [descuentoModo, setDescuentoModo] = React.useState<DescuentoModo>(
+    initialDescuentoMonto > 0 && initialDescuentoPct === 0 ? "monto" : "pct",
+  );
+  const [descuentoPct, setDescuentoPct] = React.useState<number>(
+    initialDescuentoPct,
+  );
+  const [descuentoMonto, setDescuentoMonto] = React.useState<number>(
+    initialDescuentoMonto,
   );
 
   // Submit state
@@ -245,10 +262,6 @@ export function VentaCarrito({
     () => items.reduce((a, it) => a + it.precioUnitario * it.cantidad, 0),
     [items],
   );
-  const { impuesto, total } = React.useMemo(
-    () => calcularIVA(subtotal),
-    [subtotal],
-  );
 
   // ──── Submit ────
   const onSubmit = async () => {
@@ -266,6 +279,8 @@ export function VentaCarrito({
           productoId: it.productoId,
           cantidad: it.cantidad,
         })),
+        descuentoPct,
+        descuentoMonto,
       };
 
       const res =
@@ -554,24 +569,35 @@ export function VentaCarrito({
 
         <Card>
           <CardHeader>
+            <CardTitle>Descuento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DescuentoInput
+              modo={descuentoModo}
+              onChangeModo={setDescuentoModo}
+              descuentoPct={descuentoPct}
+              onChangeDescuentoPct={setDescuentoPct}
+              descuentoMonto={descuentoMonto}
+              onChangeDescuentoMonto={setDescuentoMonto}
+              subtotalBruto={subtotal}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Resumen</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal (neto)</span>
-              <span className="tabular-nums">{formatCLP(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IVA (19%)</span>
-              <span className="tabular-nums">{formatCLP(impuesto)}</span>
-            </div>
-            <div className="flex justify-between border-t pt-2 text-base font-semibold">
-              <span>Total</span>
-              <span className="tabular-nums">{formatCLP(total)}</span>
-            </div>
+          <CardContent>
+            <ResumenVenta
+              inline
+              subtotalBruto={subtotal}
+              descuentoPct={descuentoPct}
+              descuentoMonto={descuentoMonto}
+            />
 
             {submitError ? (
-              <p className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 {submitError}
               </p>
             ) : null}

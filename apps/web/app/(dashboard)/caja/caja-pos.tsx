@@ -18,8 +18,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calcularIVA, formatCLP } from "@/lib/utils";
+import { calcularDesglose, formatCLP } from "@/lib/utils";
 import { buscarProductos, crearVenta } from "@/app/(dashboard)/ventas/actions";
+import {
+  DescuentoInput,
+  type DescuentoModo,
+} from "@/components/descuento-input";
+import { ResumenVenta } from "@/components/resumen-venta";
 
 import { ModalCobro } from "./modal-cobro";
 import { BoletaModal, type BoletaData } from "./boleta-modal";
@@ -229,15 +234,22 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
     }
   };
 
+  // ─── Descuento (estado local, se aplica al confirmar) ───
+  const [descuentoModo, setDescuentoModo] =
+    React.useState<DescuentoModo>("pct");
+  const [descuentoPct, setDescuentoPct] = React.useState<number>(0);
+  const [descuentoMonto, setDescuentoMonto] = React.useState<number>(0);
+
   // ─── Totales derivados ───
   const subtotal = React.useMemo(
     () => items.reduce((a, it) => a + it.precioUnitario * it.cantidad, 0),
     [items],
   );
-  const { impuesto, total } = React.useMemo(
-    () => calcularIVA(subtotal),
-    [subtotal],
+  const desglose = React.useMemo(
+    () => calcularDesglose(subtotal, descuentoPct, descuentoMonto),
+    [subtotal, descuentoPct, descuentoMonto],
   );
+  const total = desglose.total;
   const cantidadItems = items.reduce((a, it) => a + it.cantidad, 0);
 
   // ─── Confirmar venta (llamado desde ModalCobro) ───
@@ -254,13 +266,16 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
         productoId: it.productoId,
         cantidad: it.cantidad,
       })),
+      descuentoPct,
+      descuentoMonto,
     });
     if (!res.ok) {
       setMensaje({ tipo: "error", texto: res.error });
       return { ok: false as const, error: res.error };
     }
 
-    // Construir boleta local (ya validada server-side)
+    // Construir boleta local (ya validada server-side). Reutilizamos el
+    // desglose calculado arriba que ya aplica el mismo algoritmo que el server.
     const boletaData: BoletaData = {
       id: res.data!.id,
       numeroBoleta: res.data!.numeroBoleta,
@@ -271,9 +286,13 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
         precioUnitario: it.precioUnitario,
         subtotal: it.precioUnitario * it.cantidad,
       })),
-      subtotal,
-      impuesto,
-      total,
+      subtotal: desglose.subtotalBruto,
+      descuentoPct,
+      descuentoMonto: desglose.descuentoFijo,
+      descuentoPorcentual: desglose.descuentoPorcentual,
+      baseImponible: desglose.baseImponible,
+      impuesto: desglose.iva,
+      total: desglose.total,
       metodoPago: args.metodoPago,
       montoRecibido: args.montoRecibido,
       vuelto:
@@ -284,6 +303,8 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
     setBoleta(boletaData);
     setCobroOpen(false);
     setItems([]);
+    setDescuentoPct(0);
+    setDescuentoMonto(0);
     setQuery("");
     setResults([]);
     return { ok: true as const };
@@ -497,22 +518,27 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
             )}
           </div>
 
+          {/* ─── Descuento ─── */}
+          <div className="border-t bg-background p-4">
+            <DescuentoInput
+              modo={descuentoModo}
+              onChangeModo={setDescuentoModo}
+              descuentoPct={descuentoPct}
+              onChangeDescuentoPct={setDescuentoPct}
+              descuentoMonto={descuentoMonto}
+              onChangeDescuentoMonto={setDescuentoMonto}
+              subtotalBruto={subtotal}
+            />
+          </div>
+
           {/* ─── Resumen ─── */}
-          <div className="border-t bg-muted/20 p-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal (neto)</span>
-              <span className="tabular-nums">{formatCLP(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IVA (19%)</span>
-              <span className="tabular-nums">{formatCLP(impuesto)}</span>
-            </div>
-            <div className="flex items-baseline justify-between border-t pt-2">
-              <span className="text-base font-semibold">Total</span>
-              <span className="tabular-nums text-2xl font-bold">
-                {formatCLP(total)}
-              </span>
-            </div>
+          <div className="border-t bg-muted/20 p-4">
+            <ResumenVenta
+              inline
+              subtotalBruto={subtotal}
+              descuentoPct={descuentoPct}
+              descuentoMonto={descuentoMonto}
+            />
           </div>
 
           <Button
@@ -547,9 +573,10 @@ export function CajaPos({ productosFrecuentes }: CajaPosProps) {
       <ModalCobro
         open={cobroOpen}
         onOpenChange={setCobroOpen}
-        subtotal={subtotal}
-        impuesto={impuesto}
-        total={total}
+        subtotal={desglose.subtotalBruto}
+        descuentoPct={descuentoPct}
+        descuentoMonto={descuentoMonto}
+        total={desglose.total}
         cantidadItems={cantidadItems}
         onConfirmar={onConfirmarVenta}
       />

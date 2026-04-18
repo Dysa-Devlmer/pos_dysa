@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCLP, validarRUT } from "@/lib/utils";
+import { ResumenVenta } from "@/components/resumen-venta";
 import { buscarClientePorRut } from "@/app/(dashboard)/ventas/actions";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -40,7 +41,8 @@ export interface ModalCobroProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subtotal: number;
-  impuesto: number;
+  descuentoPct?: number;
+  descuentoMonto?: number;
   total: number;
   cantidadItems: number;
   onConfirmar: (args: {
@@ -66,7 +68,8 @@ export function ModalCobro({
   open,
   onOpenChange,
   subtotal,
-  impuesto,
+  descuentoPct = 0,
+  descuentoMonto = 0,
   total,
   cantidadItems,
   onConfirmar,
@@ -169,26 +172,18 @@ export function ModalCobro({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Resumen compacto */}
-        <div className="rounded-md border bg-muted/20 p-3 space-y-1 text-sm">
+        {/* Resumen compacto (reusa ResumenVenta con desglose de descuentos) */}
+        <div className="rounded-md border bg-muted/20 p-3 space-y-2 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Items</span>
             <span className="tabular-nums">{cantidadItems}</span>
           </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Subtotal (neto)</span>
-            <span className="tabular-nums">{formatCLP(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>IVA 19%</span>
-            <span className="tabular-nums">{formatCLP(impuesto)}</span>
-          </div>
-          <div className="flex items-baseline justify-between border-t pt-1.5">
-            <span className="text-sm font-medium">Total a cobrar</span>
-            <span className="tabular-nums text-xl font-bold">
-              {formatCLP(total)}
-            </span>
-          </div>
+          <ResumenVenta
+            inline
+            subtotalBruto={subtotal}
+            descuentoPct={descuentoPct}
+            descuentoMonto={descuentoMonto}
+          />
         </div>
 
         {/* Método de pago */}

@@ -139,12 +139,14 @@ model Venta {
   id           Int        @id @default(autoincrement())
   numeroBoleta String     @unique @map("numero_boleta")
   fecha        DateTime   @default(now())
-  subtotal     Int
-  impuesto     Int
-  total        Int
-  metodoPago   MetodoPago @default(EFECTIVO) @map("metodo_pago")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  subtotal       Int
+  descuentoPct   Decimal  @default(0) @db.Decimal(5, 2) @map("descuento_pct")
+  descuentoMonto Int      @default(0) @map("descuento_monto")
+  impuesto       Int
+  total          Int
+  metodoPago     MetodoPago @default(EFECTIVO) @map("metodo_pago")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
 
   clienteId Int?     @map("cliente_id")
   cliente   Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
