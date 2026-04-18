@@ -20,6 +20,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@repo/db": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@scalar/nextjs-api-reference": "^0.10.8",
     "@tanstack/react-table": "^8.21.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
@@ -37,7 +38,6 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.72.1",
     "recharts": "^3.8.1",
-    "swagger-ui-react": "^5.32.4",
     "tailwind-merge": "^2.5.0",
     "zod": "^4.3.6"
   },
@@ -48,7 +48,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/swagger-ui-react": "^5.18.0",
     "@vitest/ui": "^4.1.4",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.2.0",

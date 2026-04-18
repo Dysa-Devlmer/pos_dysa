@@ -145,6 +145,7 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 80543c6 | feat(infra): rate limiting Upstash + Swagger UI + health endpoint (Fase 14) |
 | 3f5003b | chore: eliminar archivos PHP/DEE obsoletos, limpiar config |
 | 04d32f7 | fix(security): migrar xlsx → exceljs (fix M3 CVEs Prototype Pollution) |
 | 75b7891 | docs: marcar Fase 8 como completada en CLAUDE.md |
