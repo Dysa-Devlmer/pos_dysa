@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   CreditCard,
   FileBarChart,
+  UserCircle,
   Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/caja", label: "Caja", icon: CreditCard },
   { href: "/reportes", label: "Reportes", icon: FileBarChart },
+  { href: "/perfil", label: "Mi Perfil", icon: UserCircle },
   { href: "/docs", label: "API Docs", icon: Code2, adminOnly: true },
 ];
 
