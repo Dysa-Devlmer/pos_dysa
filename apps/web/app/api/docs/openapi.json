@@ -80,9 +80,11 @@
           "id": { "type": "integer" },
           "numeroBoleta": { "type": "string", "example": "BOL-1729123456789" },
           "fecha": { "type": "string", "format": "date-time" },
-          "subtotal": { "type": "integer", "description": "CLP" },
-          "impuesto": { "type": "integer", "description": "IVA 19%, CLP" },
-          "total": { "type": "integer", "description": "subtotal + impuesto, CLP" },
+          "subtotal": { "type": "integer", "description": "Subtotal bruto en CLP (antes de descuentos)" },
+          "descuentoPct": { "type": "number", "description": "Descuento porcentual aplicado (0-100)", "minimum": 0, "maximum": 100, "default": 0 },
+          "descuentoMonto": { "type": "integer", "description": "Descuento fijo en CLP (sobre base tras descuento %)", "minimum": 0, "default": 0 },
+          "impuesto": { "type": "integer", "description": "IVA 19% sobre base imponible (tras descuentos), CLP" },
+          "total": { "type": "integer", "description": "base imponible + IVA, CLP" },
           "metodoPago": {
             "type": "string",
             "enum": ["EFECTIVO", "DEBITO", "CREDITO", "TRANSFERENCIA"]
@@ -404,6 +406,19 @@
                     "type": "string",
                     "enum": ["EFECTIVO", "DEBITO", "CREDITO", "TRANSFERENCIA"],
                     "default": "EFECTIVO"
+                  },
+                  "descuentoPct": {
+                    "type": "number",
+                    "description": "Descuento porcentual (0-100). Se aplica antes del descuento fijo. Valores fuera de rango son clamped.",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "descuentoMonto": {
+                    "type": "integer",
+                    "description": "Descuento fijo en CLP sobre la base tras %. Si excede la base, se clampa (no genera base negativa).",
+                    "minimum": 0,
+                    "default": 0
                   }
                 }
               }

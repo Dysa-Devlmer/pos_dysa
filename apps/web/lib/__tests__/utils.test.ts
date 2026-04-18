@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  calcularDesglose,
   calcularIVA,
   formatCLP,
   formatRUT,
@@ -137,5 +138,93 @@ describe("formatCLP", () => {
     const s = norm(formatCLP(1000.7));
     // maximumFractionDigits: 0 -> redondeo Intl
     expect(s).toMatch(/^\$1\.001$/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// calcularDesglose (Fase 11 — descuentos)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("calcularDesglose", () => {
+  it("sin descuento: aplica solo IVA 19%", () => {
+    const r = calcularDesglose(100_000, 0, 0);
+    expect(r.subtotalBruto).toBe(100_000);
+    expect(r.descuentoPorcentual).toBe(0);
+    expect(r.descuentoFijo).toBe(0);
+    expect(r.descuentoTotal).toBe(0);
+    expect(r.baseImponible).toBe(100_000);
+    expect(r.iva).toBe(19_000);
+    expect(r.total).toBe(119_000);
+  });
+
+  it("solo descuento porcentual (10%)", () => {
+    const r = calcularDesglose(100_000, 10, 0);
+    expect(r.descuentoPorcentual).toBe(10_000);
+    expect(r.descuentoFijo).toBe(0);
+    expect(r.baseImponible).toBe(90_000);
+    expect(r.iva).toBe(17_100);
+    expect(r.total).toBe(107_100);
+  });
+
+  it("solo descuento monto fijo ($5000)", () => {
+    const r = calcularDesglose(100_000, 0, 5_000);
+    expect(r.descuentoPorcentual).toBe(0);
+    expect(r.descuentoFijo).toBe(5_000);
+    expect(r.baseImponible).toBe(95_000);
+    expect(r.iva).toBe(18_050);
+    expect(r.total).toBe(113_050);
+  });
+
+  it("combinado: 5% + $2000 (pct primero, luego fijo)", () => {
+    // pct: round(100000 * 0.05) = 5000 → baseTrasPct = 95000
+    // fijo: min(2000, 95000) = 2000 → base = 93000
+    // iva: round(93000 * 0.19) = 17670 → total = 110670
+    const r = calcularDesglose(100_000, 5, 2_000);
+    expect(r.descuentoPorcentual).toBe(5_000);
+    expect(r.descuentoFijo).toBe(2_000);
+    expect(r.descuentoTotal).toBe(7_000);
+    expect(r.baseImponible).toBe(93_000);
+    expect(r.iva).toBe(17_670);
+    expect(r.total).toBe(110_670);
+  });
+
+  it("edge: pct 100% → todo descontado, base 0", () => {
+    const r = calcularDesglose(100_000, 100, 0);
+    expect(r.descuentoPorcentual).toBe(100_000);
+    expect(r.baseImponible).toBe(0);
+    expect(r.iva).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it("edge: monto mayor que base → se clamplea sin base negativa", () => {
+    // bruto 10000, pct 0, monto 50000 → fijo clamped a 10000, base=0
+    const r = calcularDesglose(10_000, 0, 50_000);
+    expect(r.descuentoFijo).toBe(10_000);
+    expect(r.baseImponible).toBe(0);
+    expect(r.iva).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it("edge: subtotal 0 → todo cero", () => {
+    const r = calcularDesglose(0, 10, 5_000);
+    expect(r.subtotalBruto).toBe(0);
+    expect(r.descuentoPorcentual).toBe(0);
+    expect(r.descuentoFijo).toBe(0);
+    expect(r.baseImponible).toBe(0);
+    expect(r.iva).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it("edge: pct negativo → tratado como 0 (no rompe, no suma)", () => {
+    const r = calcularDesglose(100_000, -10, 0);
+    expect(r.descuentoPorcentual).toBe(0);
+    expect(r.baseImponible).toBe(100_000);
+    expect(r.total).toBe(119_000);
+  });
+
+  it("edge: pct 101 → clamped a 100 (100% de descuento)", () => {
+    const r = calcularDesglose(100_000, 101, 0);
+    expect(r.descuentoPorcentual).toBe(100_000);
+    expect(r.baseImponible).toBe(0);
+    expect(r.total).toBe(0);
   });
 });
