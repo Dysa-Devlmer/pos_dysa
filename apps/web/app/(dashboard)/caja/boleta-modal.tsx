@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { METODO_PAGO_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -245,7 +246,9 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
                 <p className="text-muted-foreground">ID interno</p>
                 <p className="font-mono">#{boleta.id}</p>
               </div>
-              <Badge variant="outline">{boleta.metodoPago}</Badge>
+              <Badge variant="outline" className={METODO_PAGO_BADGE[boleta.metodoPago]}>
+                {boleta.metodoPago}
+              </Badge>
             </div>
 
             <DialogFooter className="gap-2 sm:justify-between print:hidden">

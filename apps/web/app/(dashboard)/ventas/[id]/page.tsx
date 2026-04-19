@@ -2,6 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, RotateCcw } from "lucide-react";
 import { prisma } from "@repo/db";
+import {
+  METODO_PAGO_BADGE,
+  ROL_BADGE,
+  devolucionBadge,
+} from "@/lib/badge-styles";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -111,7 +116,9 @@ export default async function VentaDetallePage({
             <p className="text-sm font-medium">
               {formatFechaHora(venta.fecha)}
             </p>
-            <Badge variant="outline">{venta.metodoPago}</Badge>
+            <Badge variant="outline" className={METODO_PAGO_BADGE[venta.metodoPago]}>
+              {venta.metodoPago}
+            </Badge>
           </CardContent>
         </Card>
 
@@ -151,7 +158,10 @@ export default async function VentaDetallePage({
             <p className="text-xs text-muted-foreground">
               {venta.usuario.email}
             </p>
-            <Badge variant="outline" className="mt-2">
+            <Badge
+              variant="outline"
+              className={`mt-2 ${ROL_BADGE[venta.usuario.rol]}`}
+            >
               {venta.usuario.rol}
             </Badge>
           </CardContent>
@@ -175,7 +185,10 @@ export default async function VentaDetallePage({
             </TableHeader>
             <TableBody>
               {venta.detalles.map((d) => (
-                <TableRow key={d.id}>
+                <TableRow
+                  key={d.id}
+                  className="hover:bg-muted/50 transition-colors duration-200"
+                >
                   <TableCell className="font-medium">
                     {d.producto.nombre}
                   </TableCell>
@@ -227,20 +240,13 @@ export default async function VentaDetallePage({
                         <span className="font-medium">
                           {formatFechaHora(d.fecha)}
                         </span>
-                        {d.esTotal ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <RotateCcw className="size-3" />
-                            Total
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-                          >
-                            <RotateCcw className="size-3" />
-                            Parcial
-                          </Badge>
-                        )}
+                        <Badge
+                          variant="outline"
+                          className={`gap-1 ${devolucionBadge(d.esTotal)}`}
+                        >
+                          <RotateCcw className="size-3" />
+                          {d.esTotal ? "Total" : "Parcial"}
+                        </Badge>
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {d.motivo}

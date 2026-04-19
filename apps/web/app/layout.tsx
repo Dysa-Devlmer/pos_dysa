@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { checkEnv } from "@/lib/check-env";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 checkEnv();
@@ -25,13 +26,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            theme="system"
-          />
+          <TooltipProvider delayDuration={200} skipDelayDuration={100}>
+            {children}
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              theme="system"
+            />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -86,6 +86,20 @@ export function VentasChart({ data }: VentasChartProps) {
                 data={data}
                 margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
               >
+                <defs>
+                  <linearGradient id="ventasBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--primary)"
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--primary)"
+                      stopOpacity={0.2}
+                    />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   className="stroke-muted"
@@ -110,9 +124,9 @@ export function VentasChart({ data }: VentasChartProps) {
                 />
                 <Bar
                   dataKey="total"
-                  fill="currentColor"
-                  className="fill-primary"
+                  fill="url(#ventasBarGradient)"
                   radius={[6, 6, 0, 0]}
+                  animationDuration={1500}
                 />
               </BarChart>
             </ResponsiveContainer>

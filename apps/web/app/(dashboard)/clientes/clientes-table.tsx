@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/icon-button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
 import { formatCLP } from "@/lib/utils";
@@ -116,25 +117,22 @@ export function ClientesTable({ data }: { data: ClienteRow[] }) {
         header: () => <span className="sr-only">Acciones</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            <IconButton
+              label="Editar cliente"
               onClick={() => openEditar(row.original)}
-              aria-label="Editar"
             >
               <Pencil className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            </IconButton>
+            <IconButton
+              label="Eliminar cliente"
+              tone="destructive"
               onClick={() => {
                 setDeleteError(null);
                 setDeleting(row.original);
               }}
-              aria-label="Eliminar"
             >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+              <Trash2 className="size-4" />
+            </IconButton>
           </div>
         ),
       },

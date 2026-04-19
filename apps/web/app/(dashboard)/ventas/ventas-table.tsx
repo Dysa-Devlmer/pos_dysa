@@ -7,9 +7,10 @@ import type { MetodoPago } from "@repo/db";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { IconButton } from "@/components/icon-button";
+import { METODO_PAGO_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 import { eliminarVenta } from "./actions";
 
@@ -28,17 +29,6 @@ export interface VentaRow {
   /** Descuento total en CLP (porcentual + fijo) para mostrar en columna. */
   descuentoTotal: number;
 }
-
-const METODO_STYLES: Record<MetodoPago, string> = {
-  EFECTIVO:
-    "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-900",
-  DEBITO:
-    "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-900",
-  CREDITO:
-    "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-900",
-  TRANSFERENCIA:
-    "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-900",
-};
 
 function formatFechaHora(iso: string): string {
   const d = new Date(iso);
@@ -126,7 +116,7 @@ export function VentasTable({ data }: { data: VentaRow[] }) {
         cell: ({ row }) => (
           <Badge
             variant="outline"
-            className={METODO_STYLES[row.original.metodoPago]}
+            className={METODO_PAGO_BADGE[row.original.metodoPago]}
           >
             {row.original.metodoPago}
           </Badge>
@@ -171,27 +161,25 @@ export function VentasTable({ data }: { data: VentaRow[] }) {
         header: () => <span className="sr-only">Acciones</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button asChild variant="ghost" size="icon-sm" aria-label="Ver">
-              <Link href={`/ventas/${row.original.id}`}>
-                <Eye className="size-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="icon-sm" aria-label="Editar">
-              <Link href={`/ventas/${row.original.id}/editar`}>
-                <Pencil className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            <IconButton label="Ver detalle" href={`/ventas/${row.original.id}`}>
+              <Eye className="size-4" />
+            </IconButton>
+            <IconButton
+              label="Editar venta"
+              href={`/ventas/${row.original.id}/editar`}
+            >
+              <Pencil className="size-4" />
+            </IconButton>
+            <IconButton
+              label="Eliminar venta"
+              tone="destructive"
               onClick={() => {
                 setDeleteError(null);
                 setDeleting(row.original);
               }}
-              aria-label="Eliminar"
             >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+              <Trash2 className="size-4" />
+            </IconButton>
           </div>
         ),
       },

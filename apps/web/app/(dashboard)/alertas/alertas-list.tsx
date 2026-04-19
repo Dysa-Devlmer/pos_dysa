@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { AlertTriangle, PackageX, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/icon-button";
 import {
   Table,
   TableBody,
@@ -14,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SOFT_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 import type { AlertaProductoRow } from "./actions";
@@ -51,7 +51,7 @@ export function AlertasList({ data }: { data: AlertaProductoRow[] }) {
               key={p.id}
               variants={rowVariants}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="border-b last:border-0 hover:bg-muted/40"
+              className="border-b last:border-0 hover:bg-muted/50 transition-colors duration-200"
             >
               <TableCell>
                 <div className="flex flex-col">
@@ -68,8 +68,8 @@ export function AlertasList({ data }: { data: AlertaProductoRow[] }) {
                 <span
                   className={
                     p.sinStock
-                      ? "font-semibold text-zinc-900 dark:text-zinc-100"
-                      : "font-semibold text-destructive"
+                      ? "font-semibold text-red-700 dark:text-red-400"
+                      : "font-semibold text-amber-700 dark:text-amber-400"
                   }
                 >
                   {p.stock}
@@ -80,12 +80,12 @@ export function AlertasList({ data }: { data: AlertaProductoRow[] }) {
               </TableCell>
               <TableCell>
                 {p.sinStock ? (
-                  <Badge className="gap-1 bg-zinc-900 text-white hover:bg-zinc-900/90 dark:bg-zinc-100 dark:text-zinc-900">
+                  <Badge variant="outline" className={`gap-1 ${SOFT_BADGE.destructive}`}>
                     <PackageX className="size-3" />
                     Sin stock
                   </Badge>
                 ) : (
-                  <Badge variant="destructive" className="gap-1">
+                  <Badge variant="outline" className={`gap-1 ${SOFT_BADGE.warning}`}>
                     <AlertTriangle className="size-3" />
                     Stock bajo
                   </Badge>
@@ -95,11 +95,9 @@ export function AlertasList({ data }: { data: AlertaProductoRow[] }) {
                 {formatCLP(p.precio)}
               </TableCell>
               <TableCell className="text-right">
-                <Button asChild variant="ghost" size="icon-sm" aria-label="Editar producto">
-                  <Link href="/productos">
-                    <Pencil className="size-4" />
-                  </Link>
-                </Button>
+                <IconButton label="Editar producto" href="/productos">
+                  <Pencil className="size-4" />
+                </IconButton>
               </TableCell>
             </motion.tr>
           ))}
