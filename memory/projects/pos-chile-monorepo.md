@@ -1,8 +1,29 @@
+---
+title: Proyecto — POS Chile Monorepo
+tags:
+  - proyecto
+  - pos-chile
+  - nextjs
+  - master
+aliases:
+  - POS Chile
+  - Monorepo POS
+---
+
 # Proyecto: POS Chile Monorepo
 
 **Repo local:** `/Users/devlmer/Dysa-Projects/system_pos`
-**Stack:** Next.js 15.3 + Prisma 6 + PostgreSQL 16 + Tailwind v4 + NextAuth v5
-**Patrón:** Turborepo 2.5 monorepo con pnpm 10.6.0
+**Stack:** Next.js 15.5 + Prisma 6.19 + PostgreSQL 16 + Tailwind v4 + NextAuth v5-beta.31
+**Patrón:** Turborepo 2.9 monorepo con pnpm 10.6.0
+
+## Mapa de contexto
+
+- [[stack-tech]] — versiones exactas, deps por feature, gotchas por capa
+- [[auth-patterns]] — NextAuth v5 patterns, middleware RBAC, gotchas beta
+- [[security-owasp]] — audits OWASP, Gemini G1-G5, GAP-1/2, GAP-PROD-1/2
+- [[business-logic]] — IVA, RUT, CLP, ventas, descuentos, devoluciones
+- [[infra-docker]] — Compose, Dockerfile multi-stage, puertos, healthcheck
+- [[agents-workflow]] — roles Cowork/CLI/Worktree/Gemini + protocolo verificación
 
 ---
 
@@ -145,6 +166,23 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 81933a5 | fix(auth): RBAC funcional en middleware edge — session callback compartido (ver [[auth-patterns#Pattern 2]]) |
+| 2b90ed8 | feat(security): security headers + Sentry instrumentation (GAP-1, GAP-2 OWASP) |
+| 3bec5f5 | feat(security): checkEnv hardening + warnIfDisabledInProd (GAP-PROD-1/2) |
+| 2d4f8ce | feat(ux): chart gradients + table hover + soft badges + icon-button tooltips (Gemini UX audit) |
+| 7d36161 | fix(security): content-length avatar + FOR UPDATE devoluciones + formatCLP normalize (Gemini G1-G3) |
+| fa0828b | test(utils): tests para calcularDesglose + verificación suite completa (47 tests) |
+| 64fa064 | merge(fase-13): dark mode + transiciones de página + micro-animaciones |
+| 30a2065 | feat(ux-pro): dark mode + transiciones de página + micro-animaciones (Fase 13) |
+| 25c6aa7 | merge(fase-12): sistema de devoluciones parciales y totales con reversión de stock |
+| a4830e3 | feat(devoluciones): sistema de devoluciones parciales y totales (Fase 12) |
+| 4b051e3 | merge(fase-11): descuentos por porcentaje y monto fijo en ventas y caja |
+| 33ae07e | feat(descuentos): descuentos % y monto fijo en ventas y caja (Fase 11) |
+| a22d15b | merge(fase-10): alertas de stock bajo — panel, badge sidebar, banner dashboard |
+| c691b0c | feat(alertas): sistema de alertas de stock bajo con badge, panel y banner (Fase 10) |
+| 825d3e3 | merge(fase-9): Perfil de usuario — avatar, seguridad, actividad reciente |
+| 4837a84 | feat(perfil): perfil de usuario con avatar, datos, password strength y actividad (Fase 9) |
+| a3296ec | fix(docs): reemplazar swagger-ui-react por @scalar (React 19 nativo, sin peer dep warnings) |
 | 80543c6 | feat(infra): rate limiting Upstash + Swagger UI + health endpoint (Fase 14) |
 | 3f5003b | chore: eliminar archivos PHP/DEE obsoletos, limpiar config |
 | 04d32f7 | fix(security): migrar xlsx → exceljs (fix M3 CVEs Prototype Pollution) |
@@ -180,6 +218,18 @@ $transaction:
 15. **client.ts POS_DATABASE_URL obligatoria** — ya no hay fallback hardcodeado (resuelto Fase 8)
 16. **Turbo v2**: usar `"tasks"` no `"pipeline"` en turbo.json
 17. **Tailwind v4**: sin `tailwind.config.js`, usa `@import "tailwindcss"` + `@theme inline`
+18. **@tailwindcss/oxide** en `onlyBuiltDependencies` — binario nativo necesario en pnpm 10 + Tailwind v4
+19. **sharp** en `serverExternalPackages` — necesario para procesamiento de imágenes en Node runtime
+20. **Avatar base64 data URL en DB** — no requiere volumen Docker ni filesystem externo; sharp → 200×200 JPEG
+21. **Node 20 File duck-typing** — `typeof (raw as Blob).arrayBuffer === "function"` (no `instanceof File`)
+22. **Framer Motion instalado** en apps/web (^11.x) — disponible para todas las fases siguientes
+23. **Sonner instalado** en apps/web — `<Toaster />` ya montado en root layout
+24. **Prisma db:push requerido después de schema change** — tras merge de worktree con cambios en schema.prisma
+25. **next-themes**: envolver en ThemeProvider con `attribute="class"` + `suppressHydrationWarning` en `<html>`
+26. **template.tsx (NO layout.tsx)** para transiciones de página Framer Motion — template se remonta en cada ruta
+27. **formatCLP normalize** — `.replace(/[\u202f\u00a0]/g, " ")` obligatorio para evitar hydration mismatch Node 20+ vs browser
+28. **SELECT ... FOR UPDATE NOWAIT** en $transaction devoluciones — primera operación, bloqueo pesimista para concurrencia
+29. **Content-Length check** en rutas de upload (avatar) — pre-filtro ANTES de await request.formData()
 
 ---
 
@@ -197,6 +247,13 @@ $transaction:
 | 6 | Dashboard: KPIs CLP, Recharts, top productos | Worktree | bc89c09+b3be397 | ✅ |
 | 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | Worktree | 3c6f96d+024f48b | ✅ |
 | 8 | API REST + Security + Vitest + Docker Deploy | CLI | acdcbce+75b7891 | ✅ |
+| fix | Scalar API docs (reemplaza swagger-ui-react) | CLI | a3296ec | ✅ |
+| 14 | Infra Pro: rate limiting Upstash + health endpoint | CLI | 80543c6 | ✅ |
+| 9 | Perfil usuario: avatar, datos, password strength, actividad | Worktree | 4837a84+825d3e3 | ✅ |
+| 10 | Alertas stock bajo | Worktree | c691b0c+a22d15b | ✅ |
+| 11 | Descuentos en ventas | Worktree | 33ae07e+4b051e3 | ✅ |
+| 12 | Devoluciones | Worktree | a4830e3+25c6aa7 | ✅ |
+| 13 | UX Pro: dark mode + animaciones globales | Worktree | 30a2065+64fa064 | ✅ |
 
 ---
 
@@ -230,8 +287,9 @@ $transaction:
 
 5. **Worktree**: worktree nuevo por fase/feature, merge --no-ff a main, luego eliminar worktree y branch.
 
-### Rol de Gemini — COMPLETADO (entre Fase 7 y 8)
-Security Audit + Tests vitest. Integrados en commit acdcbce (Fase 8):
+### Rol de Gemini — Audit 1 (Fase 8) + Audit 2 (Fase 13)
+
+**Audit 1** — Security Audit + Tests vitest. Integrados en commit acdcbce (Fase 8):
 - `apps/web/lib/__tests__/utils.test.ts` — 20 tests (validarRUT, formatRUT, calcularIVA, formatCLP)
 - `apps/web/lib/__tests__/reportes-fecha.test.ts` — 18 tests
 - `apps/web/vitest.config.ts`
@@ -252,4 +310,35 @@ Security Audit + Tests vitest. Integrados en commit acdcbce (Fase 8):
 | B2 | bcrypt cost 10 | BAJO | ✅ Subido a 12 en crear y editar usuario |
 | ~~B3~~ | ~~Sin índice en `fecha`~~ | ~~BAJO~~ | ❌ FALSO POSITIVO — `@@index([fecha])` ya existía desde Fase 1 |
 
-> **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales.
+**Audit 2** — Security review Fases 9-12. Resueltos en commit 7d36161:
+
+| ID | Hallazgo | Severidad | Estado |
+|----|----------|-----------|--------|
+| G1 | Avatar route: 2MB check post-readBody DoS | ALTO | ✅ Content-Length pre-check + 413 |
+| G2 | devoluciones $transaction: read sin lock → race condition | CRÍTICO | ✅ SELECT FOR UPDATE NOWAIT como primera op |
+| G3 | formatCLP: `\u202f`/`\u00a0` → hydration mismatch React | MEDIO | ✅ `.replace(/[\u202f\u00a0]/g, " ")` |
+| G4 | bcrypt timing attack en cambiarPassword | INFO | ❌ Falso positivo — opera sobre sesión propia |
+| G5 | $queryRaw SQL injection / BigInt overflow en alertas | INFO | ❌ No aplica — template literal parametrizado |
+
+**Audit 3** — OWASP Top 10 (commit `2b90ed8`): 2 gaps cerrados.
+
+| ID | Hallazgo | Severidad | Estado |
+|----|----------|-----------|--------|
+| GAP-1 | Security headers faltantes (X-Frame-Options, HSTS, etc.) | ALTO | ✅ 5 headers en `next.config.ts` |
+| GAP-2 | Sin observability en auth events | MEDIO | ✅ Sentry `login_failure` + `login_rate_limited` |
+
+**Audit 4** — Producción hardening (commit `3bec5f5`): 2 gaps cerrados.
+
+| ID | Hallazgo | Severidad | Estado |
+|----|----------|-----------|--------|
+| GAP-PROD-1 | `checkEnv` solo validaba presencia, no calidad | ALTO | ✅ `INVALID_SECRET_PATTERNS` + longitud mínima 32 + 10 tests |
+| GAP-PROD-2 | Rate-limit silencioso en prod sin Upstash | MEDIO | ✅ `warnIfDisabledInProd` en login + API |
+
+**Audit 5** — Gemini UX (commit `2d4f8ce`): mejoras visuales + a11y en icon-buttons (tooltips obligatorios).
+
+**Fix crítico post-audit** — RBAC middleware edge (commit `81933a5`):
+El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo ejecutaba → `auth.user.rol` = undefined → `/usuarios` redirigía a `/` incluso para ADMIN. Fix: mover callback `session` a `auth.config.ts` (edge-safe). Validado E2E 4/4 Playwright. Detalle en [[auth-patterns#Pattern 2]].
+
+**Suite de tests final: 57/57 passing** (47 previos + 10 `check-env.test.ts` — commit `3bec5f5`)
+
+> **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales. Ver [[agents-workflow#3. Cowork verifica independientemente]].
