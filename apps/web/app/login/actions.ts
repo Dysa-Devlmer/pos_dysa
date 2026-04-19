@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
 import { signIn } from "@/auth";
-import { getClientIP } from "@/lib/rate-limit";
+import { getClientIP, warnIfDisabledInProd } from "@/lib/rate-limit";
 
 export async function loginAction(
   _prevState: { error?: string } | undefined,
@@ -28,6 +28,10 @@ export async function loginAction(
       });
       return { error: `Demasiados intentos. Intenta en ${minutos} minutos.` };
     }
+  } else {
+    // En prod sin Upstash: log warning visible en cada login attempt.
+    // En dev: silent.
+    warnIfDisabledInProd("login attempt");
   }
 
   try {

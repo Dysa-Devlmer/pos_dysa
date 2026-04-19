@@ -45,7 +45,11 @@ export function parsePagination(searchParams: URLSearchParams) {
  * Retorna una Response 429 si se excede el límite, o null si todo OK.
  */
 export async function requireRateLimit(request: Request): Promise<NextResponse | null> {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null; // skip en dev
+  if (!process.env.UPSTASH_REDIS_REST_URL) {
+    const { warnIfDisabledInProd } = await import("@/lib/rate-limit");
+    warnIfDisabledInProd("api/v1 request");
+    return null; // skip en dev; en prod ya emitió warning visible
+  }
   const { apiRatelimit, getClientIP } = await import("@/lib/rate-limit");
   const ip = getClientIP(request);
   const { success } = await apiRatelimit.limit(ip);
