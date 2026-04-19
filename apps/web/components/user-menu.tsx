@@ -15,15 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { gradientePorNombre, inicialesDe } from "@/lib/avatar";
-
-const ROL_STYLES: Record<Rol, string> = {
-  ADMIN:
-    "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-900",
-  CAJERO:
-    "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-900",
-  VENDEDOR:
-    "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-900",
-};
+import { ROL_BADGE } from "@/lib/badge-styles";
 
 export interface UserMenuProps {
   nombre: string;
@@ -98,7 +90,7 @@ export function UserMenu({
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-sm font-semibold">{nombre}</p>
             <p className="truncate text-xs text-muted-foreground">{email}</p>
-            <Badge variant="outline" className={`mt-1 text-[10px] ${ROL_STYLES[rol]}`}>
+            <Badge variant="outline" className={`mt-1 text-[10px] ${ROL_BADGE[rol]}`}>
               {rol}
             </Badge>
           </div>

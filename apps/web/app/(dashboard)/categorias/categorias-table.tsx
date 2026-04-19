@@ -6,6 +6,8 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/icon-button";
+import { estadoBadge } from "@/lib/badge-styles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
 import { CategoriaForm } from "./categoria-form";
@@ -75,12 +77,11 @@ export function CategoriasTable({ data }: { data: CategoriaRow[] }) {
       {
         accessorKey: "activa",
         header: "Estado",
-        cell: ({ row }) =>
-          row.original.activa ? (
-            <Badge variant="default">Activa</Badge>
-          ) : (
-            <Badge variant="secondary">Inactiva</Badge>
-          ),
+        cell: ({ row }) => (
+          <Badge variant="outline" className={estadoBadge(row.original.activa)}>
+            {row.original.activa ? "Activa" : "Inactiva"}
+          </Badge>
+        ),
       },
       {
         accessorKey: "productos",
@@ -94,25 +95,22 @@ export function CategoriasTable({ data }: { data: CategoriaRow[] }) {
         header: () => <span className="sr-only">Acciones</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            <IconButton
+              label="Editar categoría"
               onClick={() => openEditar(row.original)}
-              aria-label="Editar"
             >
               <Pencil className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            </IconButton>
+            <IconButton
+              label="Eliminar categoría"
+              tone="destructive"
               onClick={() => {
                 setDeleteError(null);
                 setDeleting(row.original);
               }}
-              aria-label="Eliminar"
             >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+              <Trash2 className="size-4" />
+            </IconButton>
           </div>
         ),
       },

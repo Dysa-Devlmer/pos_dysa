@@ -9,6 +9,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import type { Rol } from "@repo/db";
+import { ROL_BADGE } from "@/lib/badge-styles";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,15 +31,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const ROL_STYLES: Record<Rol, string> = {
-  ADMIN:
-    "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-900",
-  CAJERO:
-    "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-900",
-  VENDEDOR:
-    "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-900",
-};
 
 export interface DatosFormProps {
   nombre: string;
@@ -118,7 +110,7 @@ export function DatosForm({ nombre, email, rol }: DatosFormProps) {
               <div className="space-y-1.5">
                 <span className="text-sm font-medium">Rol</span>
                 <div>
-                  <Badge variant="outline" className={ROL_STYLES[rol]}>
+                  <Badge variant="outline" className={ROL_BADGE[rol]}>
                     {rol}
                   </Badge>
                 </div>

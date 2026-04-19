@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Eye, Inbox, Receipt, RotateCcw, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/icon-button";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { devolucionBadge } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 export interface DevolucionRow {
@@ -97,7 +98,7 @@ export function DevolucionesList({ data }: { data: DevolucionRow[] }) {
               key={d.id}
               variants={rowVariants}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="border-b last:border-0 hover:bg-muted/40"
+              className="border-b last:border-0 hover:bg-muted/50 transition-colors duration-200"
             >
               <TableCell className="text-sm text-muted-foreground tabular-nums">
                 {formatFechaHora(d.fechaISO)}
@@ -128,20 +129,13 @@ export function DevolucionesList({ data }: { data: DevolucionRow[] }) {
               </TableCell>
               <TableCell className="text-sm">{d.usuarioNombre}</TableCell>
               <TableCell>
-                {d.esTotal ? (
-                  <Badge variant="destructive" className="gap-1">
-                    <RotateCcw className="size-3" />
-                    Total
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="gap-1 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-                  >
-                    <RotateCcw className="size-3" />
-                    Parcial
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className={`gap-1 ${devolucionBadge(d.esTotal)}`}
+                >
+                  <RotateCcw className="size-3" />
+                  {d.esTotal ? "Total" : "Parcial"}
+                </Badge>
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {d.itemsCount}
@@ -150,16 +144,12 @@ export function DevolucionesList({ data }: { data: DevolucionRow[] }) {
                 − {formatCLP(d.montoDevuelto)}
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Ver venta"
+                <IconButton
+                  label="Ver venta original"
+                  href={`/ventas/${d.ventaId}`}
                 >
-                  <Link href={`/ventas/${d.ventaId}`}>
-                    <Eye className="size-4" />
-                  </Link>
-                </Button>
+                  <Eye className="size-4" />
+                </IconButton>
               </TableCell>
             </motion.tr>
           ))}

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { IconButton } from "@/components/icon-button";
+import { SOFT_BADGE, estadoBadge } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 import { ProductoForm } from "./producto-form";
 import { eliminarProducto } from "./actions";
@@ -105,8 +107,10 @@ export function ProductosTable({
           if (s <= 0) {
             return (
               <div className="flex items-center gap-2">
-                <span className="tabular-nums font-medium">{s}</span>
-                <Badge className="bg-zinc-900 text-white hover:bg-zinc-900/90 dark:bg-zinc-100 dark:text-zinc-900">
+                <span className="tabular-nums font-medium text-red-700 dark:text-red-400">
+                  {s}
+                </span>
+                <Badge variant="outline" className={SOFT_BADGE.destructive}>
                   Sin stock
                 </Badge>
               </div>
@@ -115,10 +119,12 @@ export function ProductosTable({
           if (s <= umbral) {
             return (
               <div className="flex items-center gap-2">
-                <span className="tabular-nums font-medium text-destructive">
+                <span className="tabular-nums font-medium text-amber-700 dark:text-amber-400">
                   {s}
                 </span>
-                <Badge variant="destructive">Stock bajo</Badge>
+                <Badge variant="outline" className={SOFT_BADGE.warning}>
+                  Stock bajo
+                </Badge>
               </div>
             );
           }
@@ -140,37 +146,33 @@ export function ProductosTable({
       {
         accessorKey: "activo",
         header: "Estado",
-        cell: ({ row }) =>
-          row.original.activo ? (
-            <Badge variant="default">Activo</Badge>
-          ) : (
-            <Badge variant="secondary">Inactivo</Badge>
-          ),
+        cell: ({ row }) => (
+          <Badge variant="outline" className={estadoBadge(row.original.activo)}>
+            {row.original.activo ? "Activo" : "Inactivo"}
+          </Badge>
+        ),
       },
       {
         id: "acciones",
         header: () => <span className="sr-only">Acciones</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            <IconButton
+              label="Editar producto"
               onClick={() => openEditar(row.original)}
-              aria-label="Editar"
             >
               <Pencil className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            </IconButton>
+            <IconButton
+              label="Eliminar producto"
+              tone="destructive"
               onClick={() => {
                 setDeleteError(null);
                 setDeleting(row.original);
               }}
-              aria-label="Eliminar"
             >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+              <Trash2 className="size-4" />
+            </IconButton>
           </div>
         ),
       },
