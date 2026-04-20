@@ -33,6 +33,14 @@ aliases:
 > - Segundo cerebro Obsidian operativo en `memory/` (7 notas densas)
 > - Último commit: `0f96905 merge(fase-19): polish final — badge consistency, animations, dark mode, loading states`
 
+> [!info] Milestone 2026-04-20 — Segundo cerebro auto-actualizable
+> **Memoria del proyecto ahora se actualiza sola.**
+> - `.git/hooks/post-commit` captura cada commit en `memory/.pending-notes`
+> - `/session-end` (actualizado) lee el buffer, procesa, commitea memory/, borra el buffer
+> - Regla de merge obligatoria: después de cada merge a `main` → ejecutar `/session-end` (documentado en [[agents-workflow#Protocolo de cierre de fase]])
+> - Convive con hook global de seguridad vía `core.hooksPath` local + copia del pre-commit (gotcha 36)
+> - Verificado con 3 commits reales capturados automáticamente
+
 ---
 
 ## Estructura del monorepo
@@ -174,6 +182,12 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| b138471 | chore(claude): documentar hook post-commit en Segundo Cerebro |
+| 48f640f | chore(memory): protocolo cierre de fase con /session-end obligatorio |
+| 77ef5a7 | chore(claude): /session-end procesa memory/.pending-notes del hook |
+| 4e22798 | chore(memory): gitignore pending-notes del hook post-commit |
+| b6e34f5 | chore(claude): auto-load memory/ al inicio de cada sesión |
+| e879e6c | chore: remove datatables.net ghost dir + gitignore |
 | 0f96905 | merge(fase-19): polish final — badge consistency, animations, dark mode, loading states |
 | 02cb8a6 | polish(fase-19): badge consistency, animations, dark mode, loading states |
 | 5ad3bef | chore(memory): session notes 2026-04-19 — fases 15-19 completadas |
@@ -257,6 +271,8 @@ $transaction:
 33. **Worktrees stale no se auto-limpian al mergear branch** — requiere `git worktree remove` explícito. Nunca `rm -rf` sobre `.worktrees/` porque deja refs zombie en `.git/worktrees/`
 34. **`validarRUT` acepta `"0-0"` como válido** — matemáticamente pasa módulo 11 (cuerpo "0", suma 0, DV esperado 0). No es RUT real pero el comportamiento queda congelado por test. Si se quiere rechazar, añadir length mínima > 1 del cuerpo
 35. **`Intl.NumberFormat es-CL` en Node 22+ emite U+202F** — la Fase 19 añadió regression guards explícitos en `utils.test.ts::formatCLP — hydration safety` (fallan si alguien refactoriza el `.replace`)
+36. **`core.hooksPath` global rompe hooks per-repo** — el usuario tiene `~/.config/git/hooks/pre-commit` global (bloqueo de secretos) vía `core.hooksPath`. Esto hace que `.git/hooks/*` locales NO se ejecuten. Fix: `git config --local core.hooksPath .git/hooks` + **copiar el pre-commit global a `.git/hooks/pre-commit`** (si no, se pierde la protección anti-secretos en este repo). Ver [[agents-workflow#Cómo funciona el hook post-commit]]
+37. **`memory/.pending-notes` es buffer entre commits y `/session-end`** — el hook post-commit escribe ahí cada commit; `/session-end` lo procesa y borra. Si nunca se ejecuta `/session-end`, acumula indefinidamente — no se pierde nada pero la memoria queda desactualizada
 
 ---
 
