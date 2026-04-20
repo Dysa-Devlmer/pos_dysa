@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { SOFT_BADGE, estadoBadge } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
@@ -193,6 +194,22 @@ export function ProductosTable({
             <Plus className="size-4" />
             Nuevo producto
           </Button>
+        }
+        emptyState={
+          <EmptyState
+            illustration="box"
+            title="Aún no tienes productos"
+            description={
+              categorias.length === 0
+                ? "Crea primero una categoría para poder agregar productos."
+                : "Agrega tu primer producto para empezar a vender en la caja."
+            }
+            ctaLabel={
+              categorias.length === 0 ? "Crear categoría" : "Agregar producto"
+            }
+            ctaHref={categorias.length === 0 ? "/categorias" : undefined}
+            ctaOnClick={categorias.length === 0 ? undefined : openCrear}
+          />
         }
       />
 

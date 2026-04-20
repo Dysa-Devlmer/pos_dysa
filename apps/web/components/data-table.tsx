@@ -48,6 +48,8 @@ export interface DataTableProps<TData, TValue> {
   toolbar?: React.ReactNode;
   /** Si true, el header es sticky (útil con tablas largas). */
   stickyHeader?: boolean;
+  /** Empty-state custom a mostrar cuando no hay data y no hay filtro activo. */
+  emptyState?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -59,6 +61,7 @@ export function DataTable<TData, TValue>({
   pageSize = 10,
   toolbar,
   stickyHeader = false,
+  emptyState,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -77,6 +80,13 @@ export function DataTable<TData, TValue>({
   });
 
   const searchColumn = searchKey ? table.getColumn(searchKey) : undefined;
+  const hasActiveFilter = columnFilters.length > 0;
+  const showEmptyState =
+    emptyState !== undefined && data.length === 0 && !hasActiveFilter;
+
+  if (showEmptyState) {
+    return <div className="space-y-3">{emptyState}</div>;
+  }
 
   return (
     <div className="space-y-3">

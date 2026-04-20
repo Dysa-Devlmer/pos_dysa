@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/icon-button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
 import { formatCLP } from "@/lib/utils";
 import { ClienteForm } from "./cliente-form";
 import { eliminarCliente } from "./actions";
@@ -153,6 +154,15 @@ export function ClientesTable({ data }: { data: ClienteRow[] }) {
             <Plus className="size-4" />
             Nuevo cliente
           </Button>
+        }
+        emptyState={
+          <EmptyState
+            illustration="users"
+            title="Aún no tienes clientes"
+            description="Registra tus clientes para asociarles ventas y ver su historial de compras."
+            ctaLabel="Agregar cliente"
+            ctaOnClick={openCrear}
+          />
         }
       />
 

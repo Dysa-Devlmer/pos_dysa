@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Eye, Inbox, Receipt, RotateCcw, User } from "lucide-react";
+import { Eye, Receipt, RotateCcw, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import {
   Table,
@@ -53,19 +54,11 @@ const rowVariants = {
 export function DevolucionesList({ data }: { data: DevolucionRow[] }) {
   if (data.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-muted/20 px-6 py-14 text-center"
-      >
-        <Inbox className="size-10 text-muted-foreground opacity-40" />
-        <h3 className="text-base font-semibold">Sin devoluciones</h3>
-        <p className="max-w-md text-sm text-muted-foreground">
-          No hay devoluciones registradas en el período. Para crear una, abre
-          una venta y usa el botón “Nueva devolución”.
-        </p>
-      </motion.div>
+      <EmptyState
+        illustration="cart"
+        title="Sin devoluciones"
+        description="No hay devoluciones registradas en el período. Para crear una, abre una venta y usa el botón “Nueva devolución”."
+      />
     );
   }
 
