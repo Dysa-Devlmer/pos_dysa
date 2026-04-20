@@ -129,70 +129,7 @@ body {
   color: var(--foreground);
 }
 
-/* ─── Print: solo boleta visible ───
-   El modal de boleta marca su contenido imprimible con #boleta-print.
-   Al imprimir, ocultamos todo salvo ese bloque y liberamos a todos sus
-   ancestros (Radix Portal + DialogContent con overflow/max-h + motion.div
-   con transform) para que el contenido completo se renderice en la página. */
-@media print {
-  html,
-  body {
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  /* Liberar constraints de TODOS los ancestros de #boleta-print:
-     Radix Portal, DialogOverlay, DialogContent (overflow-y-auto max-h-[92vh]),
-     motion.div (transform/opacity inline). */
-  body:has(#boleta-print) [data-slot="dialog-overlay"],
-  body:has(#boleta-print) [data-slot="dialog-content"],
-  body:has(#boleta-print) [data-radix-portal],
-  body:has(#boleta-print) [data-state="open"] {
-    position: static !important;
-    display: block !important;
-    overflow: visible !important;
-    max-height: none !important;
-    height: auto !important;
-    width: auto !important;
-    max-width: none !important;
-    transform: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    inset: auto !important;
-    animation: none !important;
-  }
-
-  #boleta-print,
-  #boleta-print * {
-    visibility: visible !important;
-  }
-
-  #boleta-print {
-    position: absolute !important;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-width: 100%;
-    padding: 0;
-    margin: 0;
-    background: white !important;
-    color: black !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-    overflow: visible !important;
-  }
-
-  @page {
-    margin: 12mm;
-  }
-}
+/* Impresión de boleta: se realiza en una nueva ventana autónoma generada
+   por `handlePrint` en `caja/boleta-modal.tsx` (HTML+CSS self-contained).
+   No se requieren reglas @media print aquí — ese approach fallaba por
+   incompatibilidad con Radix Dialog portal + framer-motion inline transforms. */
