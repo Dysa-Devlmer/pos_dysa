@@ -26,6 +26,11 @@
 **Al cerrar sesión:** ejecutar `/session-end` para actualizar memory/
 con decisiones nuevas y hacer commit.
 
+> ⚡ El hook post-commit captura todos los commits automáticamente
+> en `memory/.pending-notes`. `/session-end` los procesa y los
+> convierte en conocimiento estructurado. Sin este paso final,
+> los commits quedan capturados pero sin procesar.
+
 ---
 
 ## 🚀 Stack Actual
