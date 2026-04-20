@@ -75,6 +75,9 @@ packages/db/prisma/generated/
 __pycache__/
 .deeignore
 
+# Ghost dirs de librerías externas (reaparecen sin razón aparente)
+datatables.net/
+
 # Screenshots y reportes de testing local
 screenshots/
 screenshots-v2/
