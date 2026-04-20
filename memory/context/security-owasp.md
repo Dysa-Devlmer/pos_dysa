@@ -154,6 +154,55 @@ export function warnIfDisabledInProd(operation: string) {
 
 Llamado en `loginAction` y `requireRateLimit` (API helper) cuando Upstash no está configurado.
 
+### QA C1 — Rate limit fallback EN MEMORIA (commit `53c99e6`)
+
+Follow-up de GAP-PROD-2: el warning era visible pero no había protección real. QA marcó **C1 ALTA**: en dev y prod sin Upstash el sistema quedaba sin brute-force protection.
+
+```ts
+// apps/web/lib/rate-limit.ts
+const memStore = new Map<string, { count: number; resetAt: number }>();
+
+export function checkMemoryRateLimit(key: string): { success: boolean; reset: number } {
+  const now = Date.now();
+  const WINDOW_MS = 15 * 60 * 1000;
+  const MAX = 5;
+
+  // Prevenir memory leak limitando el tamaño en memoria
+  if (memStore.size > 5000) {
+    for (const [k, v] of memStore.entries()) if (now > v.resetAt) memStore.delete(k);
+    if (memStore.size > 5000) memStore.clear();
+  }
+
+  const entry = memStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    memStore.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return { success: true, reset: now + WINDOW_MS };
+  }
+  if (entry.count >= MAX) return { success: false, reset: entry.resetAt };
+  entry.count++;
+  return { success: true, reset: entry.resetAt };
+}
+```
+
+Uso en `loginAction`:
+```ts
+if (process.env.UPSTASH_REDIS_REST_URL) {
+  // Upstash (ideal prod)
+} else {
+  warnIfDisabledInProd("login attempt");
+  const { checkMemoryRateLimit } = await import("@/lib/rate-limit");
+  const { success, reset } = checkMemoryRateLimit(`login:${ip}`);
+  if (!success) return { error: `Demasiados intentos. Intenta en ${minutos} minutos.` };
+}
+```
+
+> [!info] Limitaciones del fallback
+> - **No persiste** entre restarts (Map en memoria del proceso)
+> - **No distribuido** entre instancias (cada replica cuenta aparte)
+> - **No sirve para producción serverless** con cold starts frecuentes
+>
+> Para prod real: Upstash sigue siendo la recomendación. Este fallback es para dev + prod self-hosted persistente + emergencias.
+
 ## Audit 5 — Gemini UX audit (commit `2d4f8ce`)
 
 No es security en sentido estricto, pero incluye hardening de UI:

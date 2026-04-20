@@ -141,39 +141,56 @@ declare module "next-auth/jwt" {
 > ```
 > Pattern repetido en: `auth.ts` · `auth.config.ts` · cualquier Server Action que lea `token.rol`.
 
-## Pattern 4 — Login action (Server Action v5)
+## Pattern 4 — Login action (Server Action v5) — catch block canónico
+
+Evolucionó en `d25add8` → `2b90ed8` (Sentry) → **`53c99e6`** (fix A6: NEXT_REDIRECT propagation + unexpected error handling).
 
 ```ts
 // app/login/actions.ts
 "use server";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 
 export async function loginAction(_prev, formData) {
   try {
     await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
+      email, password,
       redirect: false,           // ← CRÍTICO (ver bug abajo)
     });
   } catch (error) {
+    // 1. NEXT_REDIRECT NO es error — es el mecanismo de redirect. Siempre propagar.
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
+      throw error;
+    }
+    // 2. Fallo de credenciales explícito
     if (error instanceof AuthError) {
+      Sentry.captureMessage("login_failure", { level: "warning", extra: { email, ip } });
       return { error: "Email o contraseña incorrectos" };
     }
-    throw error;                  // re-throw NEXT_REDIRECT etc.
+    // 3. Error inesperado — log + Sentry, NUNCA re-throw (rompe cliente)
+    console.error("[loginAction] unexpected:", (error as any)?.constructor?.name, error);
+    Sentry.captureException(error, { extra: { email, ip, context: "login_unexpected" } });
+    return { error: "Error inesperado al iniciar sesión. Por favor intenta de nuevo." };
   }
   redirect("/");                  // ← redirect MANUAL tras success
 }
 ```
 
+> [!danger] Bug A6 (QA report, resuelto en `53c99e6`)
+> El catch anterior hacía `throw error` para cualquier cosa que NO fuera `AuthError`. En NextAuth v5 beta.31 hay casos donde el error lanzado **no pasa correctamente** el `instanceof AuthError` → se propaga al cliente de Next como error no manejado → **crash visible del login**. Síntoma específico: login de cajero crasheaba con response malformada.
+>
+> **Regla canónica del catch**: 3 ramas en orden estricto:
+> 1. `digest?.startsWith("NEXT_REDIRECT")` → `throw` (es el redirect, no error)
+> 2. `instanceof AuthError` → `return {error: "..."}` (credenciales mal)
+> 3. Cualquier otra cosa → `console.error` + `Sentry.captureException` + `return {error: "..."}` **NUNCA `throw`**
+>
+> El cliente **jamás** debe recibir un error re-lanzado.
+
 > [!danger] Bug v5 beta — signIn con `redirectTo`
 > Si usas `redirectTo: "/"` dentro de `signIn`, tanto ÉXITO como FALLO lanzan `NEXT_REDIRECT` (Next.js internal). El catch ve un "error" que no es `AuthError` → no puedes distinguir fallo de credenciales.
 >
-> **Solución**: `redirect: false` + `redirect("/")` manual fuera del try/catch. Ahora:
-> - Success: no throw → llega al `redirect("/")` manual
-> - Fail: lanza `AuthError` → catch lo maneja y retorna `{error}`
->
-> Evolucionado en commits `d25add8` → `2b90ed8` (añade Sentry capture).
+> **Solución**: `redirect: false` + `redirect("/")` manual fuera del try/catch.
 
 ## Pattern 5 — API route handlers
 
