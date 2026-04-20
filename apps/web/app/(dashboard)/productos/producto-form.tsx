@@ -41,7 +41,7 @@ const formSchema = z.object({
   precio: z
     .number()
     .int("Precio debe ser entero (CLP)")
-    .nonnegative("No puede ser negativo"),
+    .min(1, "El precio debe ser mayor a $0"),
   stock: z.number().int().nonnegative("No puede ser negativo"),
   alertaStock: z
     .number()

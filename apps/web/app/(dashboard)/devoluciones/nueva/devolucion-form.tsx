@@ -382,9 +382,20 @@ export function DevolucionForm({ venta }: DevolucionFormProps) {
                       maxLength={255}
                       className="block w-full rounded-md border bg-background px-3 py-2 text-sm shadow-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {motivo.trim().length} / 255
-                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      {motivo.trim().length > 0 &&
+                      motivo.trim().length < 5 ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Faltan {5 - motivo.trim().length} carácter(es) para
+                          alcanzar el mínimo de 5.
+                        </p>
+                      ) : (
+                        <span />
+                      )}
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {motivo.trim().length} / 255
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex justify-between gap-2">

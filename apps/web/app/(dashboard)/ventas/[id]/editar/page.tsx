@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@repo/db";
 
@@ -35,6 +35,14 @@ export default async function EditarVentaPage({
     },
   });
   if (!venta) notFound();
+
+  // Guard: si la venta tiene devoluciones, no permitir editar (mantiene
+  // consistencia stock/contadores). Redirigimos al detalle, donde el botón
+  // de "Editar" ya aparece deshabilitado con tooltip explicativo.
+  const devolucionesCount = await prisma.devolucion.count({
+    where: { ventaId: id },
+  });
+  if (devolucionesCount > 0) redirect(`/ventas/${id}`);
 
   const initialItems: CarritoItem[] = venta.detalles.map((d) => ({
     productoId: d.productoId,

@@ -332,6 +332,20 @@ export async function editarVenta(
     });
     if (!ventaVieja) return { ok: false, error: "Venta no encontrada" };
 
+    // Pre-check defensivo: si la venta tiene devoluciones asociadas, no se puede
+    // editar (revertir/aplicar stock e items rompería la consistencia con
+    // DevolucionItem y los contadores ya ajustados). El UI ya bloquea el botón
+    // y la página de edición redirige; este guard cubre llamadas directas.
+    const devolucionesCount = await prisma.devolucion.count({
+      where: { ventaId: id },
+    });
+    if (devolucionesCount > 0) {
+      return {
+        ok: false,
+        error: `No se puede editar: la venta tiene ${devolucionesCount} devolución(es) asociada(s). Elimina primero las devoluciones.`,
+      };
+    }
+
     const productosIds = Array.from(
       new Set([
         ...items.map((i) => i.productoId),

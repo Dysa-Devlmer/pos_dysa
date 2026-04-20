@@ -96,12 +96,23 @@ export default async function VentaDetallePage({
               </Link>
             </Button>
           ) : null}
-          <Button asChild size="sm">
-            <Link href={`/ventas/${venta.id}/editar`}>
+          {venta.devoluciones.length === 0 ? (
+            <Button asChild size="sm">
+              <Link href={`/ventas/${venta.id}/editar`}>
+                <Pencil className="size-4" />
+                Editar
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              disabled
+              title="No se puede editar: la venta tiene devoluciones asociadas. Elimina las devoluciones primero."
+            >
               <Pencil className="size-4" />
               Editar
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
 
