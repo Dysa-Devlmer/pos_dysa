@@ -11,6 +11,7 @@ import { estadoBadge } from "@/lib/badge-styles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
+import { toast } from "sonner";
 import { CategoriaForm } from "./categoria-form";
 import { eliminarCategoria } from "./actions";
 
@@ -44,7 +45,8 @@ export function CategoriasTable({ data }: { data: CategoriaRow[] }) {
     const res = await eliminarCategoria(deleting.id);
     if (!res.ok) {
       setDeleteError(res.error);
-      throw new Error(res.error);
+      toast.error(res.error);
+      return false;
     }
   };
 

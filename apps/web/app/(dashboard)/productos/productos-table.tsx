@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { SOFT_BADGE, estadoBadge } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
+import { toast } from "sonner";
 import { ProductoForm } from "./producto-form";
 import { eliminarProducto } from "./actions";
 
@@ -56,7 +57,8 @@ export function ProductosTable({
     const res = await eliminarProducto(deleting.id);
     if (!res.ok) {
       setDeleteError(res.error);
-      throw new Error(res.error);
+      toast.error(res.error);
+      return false;
     }
   };
 

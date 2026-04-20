@@ -31,6 +31,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Chart palette — colores distinguibles en light/dark, accesibles. */
+  --chart-1: oklch(0.62 0.18 250);   /* azul */
+  --chart-2: oklch(0.68 0.16 165);   /* emerald */
+  --chart-3: oklch(0.72 0.17 70);    /* ámbar */
+  --chart-4: oklch(0.62 0.22 25);    /* rojo/coral */
+  --chart-5: oklch(0.58 0.22 295);   /* violeta */
 }
 
 .dark {
@@ -60,6 +66,12 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  /* Chart palette (dark) — luminancia más alta para contrastar sobre fondo oscuro. */
+  --chart-1: oklch(0.72 0.17 250);
+  --chart-2: oklch(0.78 0.16 165);
+  --chart-3: oklch(0.82 0.15 70);
+  --chart-4: oklch(0.72 0.20 25);
+  --chart-5: oklch(0.70 0.20 295);
 }
 
 @theme inline {
@@ -93,6 +105,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
 * {
@@ -106,26 +123,67 @@ body {
 
 /* ─── Print: solo boleta visible ───
    El modal de boleta marca su contenido imprimible con #boleta-print.
-   Al imprimir, ocultamos todo salvo ese bloque y lo llevamos al flujo normal
-   para que la página impresa muestre únicamente la boleta. */
+   Al imprimir, ocultamos todo salvo ese bloque y liberamos a todos sus
+   ancestros (Radix Portal + DialogContent con overflow/max-h + motion.div
+   con transform) para que el contenido completo se renderice en la página. */
 @media print {
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
+  /* Liberar constraints de TODOS los ancestros de #boleta-print:
+     Radix Portal, DialogOverlay, DialogContent (overflow-y-auto max-h-[92vh]),
+     motion.div (transform/opacity inline). */
+  body:has(#boleta-print) [data-slot="dialog-overlay"],
+  body:has(#boleta-print) [data-slot="dialog-content"],
+  body:has(#boleta-print) [data-radix-portal],
+  body:has(#boleta-print) [data-state="open"] {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    inset: auto !important;
+    animation: none !important;
+  }
+
   #boleta-print,
   #boleta-print * {
-    visibility: visible;
+    visibility: visible !important;
   }
+
   #boleta-print {
-    position: absolute;
+    position: absolute !important;
     left: 0;
     top: 0;
     width: 100%;
+    max-width: 100%;
     padding: 0;
     margin: 0;
     background: white !important;
     color: black !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
   }
+
   @page {
     margin: 12mm;
   }

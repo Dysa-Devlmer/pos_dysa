@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { formatCLP } from "@/lib/utils";
+import { toast } from "sonner";
 import { ClienteForm } from "./cliente-form";
 import { eliminarCliente } from "./actions";
 
@@ -57,7 +58,8 @@ export function ClientesTable({ data }: { data: ClienteRow[] }) {
     const res = await eliminarCliente(deleting.id);
     if (!res.ok) {
       setDeleteError(res.error);
-      throw new Error(res.error);
+      toast.error(res.error);
+      return false;
     }
   };
 

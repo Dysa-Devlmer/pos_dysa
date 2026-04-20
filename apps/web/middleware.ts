@@ -9,7 +9,9 @@ export const { auth: middleware } = NextAuth(authConfig);
 // — No depende de sesión JWT de NextAuth para permitir acceso B2B
 // — Rate limiting propio por IP vía Upstash (@/lib/rate-limit)
 export const config = {
-  matcher: ["/((?!api/auth|api/health|api/docs|api/v1|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api/auth|api/health|api/docs|api/v1|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192.png|icon-512.png).*)",
+  ],
 };
 
 export default middleware;

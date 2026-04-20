@@ -90,13 +90,13 @@ export function VentasChart({ data }: VentasChartProps) {
                   <linearGradient id="ventasBarGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="0%"
-                      stopColor="var(--primary)"
-                      stopOpacity={0.8}
+                      stopColor="var(--chart-1)"
+                      stopOpacity={0.95}
                     />
                     <stop
                       offset="100%"
-                      stopColor="var(--primary)"
-                      stopOpacity={0.2}
+                      stopColor="var(--chart-1)"
+                      stopOpacity={0.35}
                     />
                   </linearGradient>
                 </defs>

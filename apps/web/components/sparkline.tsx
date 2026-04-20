@@ -37,7 +37,7 @@ export function Sparkline({
       ? "rgb(16 185 129)" /* emerald-500 */
       : tone === "negative"
         ? "rgb(239 68 68)" /* red-500 */
-        : "var(--primary)");
+        : "var(--chart-1)");
 
   // Recharts necesita objetos con una key. Creamos un wrapper mínimo.
   const series = data.map((v, i) => ({ i, v }));

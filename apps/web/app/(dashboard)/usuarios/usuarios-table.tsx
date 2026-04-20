@@ -12,6 +12,7 @@ import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { ROL_BADGE, estadoBadge } from "@/lib/badge-styles";
+import { toast } from "sonner";
 import { UsuarioForm } from "./usuario-form";
 import { eliminarUsuario } from "./actions";
 
@@ -63,7 +64,8 @@ export function UsuariosTable({
     const res = await eliminarUsuario(deleting.id);
     if (!res.ok) {
       setDeleteError(res.error);
-      throw new Error(res.error);
+      toast.error(res.error);
+      return false;
     }
   };
 

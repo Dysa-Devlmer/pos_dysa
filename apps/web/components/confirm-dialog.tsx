@@ -21,7 +21,8 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: "default" | "destructive";
   loading?: boolean;
-  onConfirm: () => void | Promise<void>;
+  /** Retornar `false` explícito evita que el dialog se cierre (útil para errores inline). */
+  onConfirm: () => void | boolean | Promise<void | boolean>;
 }
 
 export function ConfirmDialog({
@@ -40,8 +41,8 @@ export function ConfirmDialog({
 
   const handleConfirm = () => {
     startTransition(async () => {
-      await onConfirm();
-      onOpenChange(false);
+      const result = await onConfirm();
+      if (result !== false) onOpenChange(false);
     });
   };
 

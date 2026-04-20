@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { METODO_PAGO_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
+import { toast } from "sonner";
 import { eliminarVenta } from "./actions";
 
 export interface VentaRow {
@@ -59,7 +60,8 @@ export function VentasTable({
     const res = await eliminarVenta(deleting.id);
     if (!res.ok) {
       setDeleteError(res.error);
-      throw new Error(res.error);
+      toast.error(res.error);
+      return false;
     }
   };
 

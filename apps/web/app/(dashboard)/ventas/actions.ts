@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { customAlphabet } from "nanoid";
-import { prisma, MetodoPago, type Prisma } from "@repo/db";
+import { prisma, MetodoPago, Prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { calcularDesglose } from "@/lib/utils";
 
@@ -233,6 +233,19 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
   try {
     await requireSession();
 
+    // Pre-check: si la venta tiene devoluciones asociadas, no se puede eliminar
+    // (FK constraint `devoluciones_venta_id_fkey`). Mostramos un mensaje claro
+    // en lugar de exponer el error crudo de Postgres.
+    const devolucionesCount = await prisma.devolucion.count({
+      where: { ventaId: id },
+    });
+    if (devolucionesCount > 0) {
+      return {
+        ok: false,
+        error: `No se puede eliminar: la venta tiene ${devolucionesCount} devolución(es) asociada(s). Elimina primero las devoluciones.`,
+      };
+    }
+
     await prisma.$transaction(async (tx) => {
       const venta = await tx.venta.findUnique({
         where: { id },
@@ -278,6 +291,18 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
 
     return { ok: true };
   } catch (err) {
+    // Fallback: capturar FK violations de Prisma con mensaje amigable
+    // (por si se agregaran nuevas relaciones con ON DELETE RESTRICT).
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2003"
+    ) {
+      return {
+        ok: false,
+        error:
+          "No se puede eliminar: la venta tiene registros asociados (devoluciones u otros). Elimínalos primero.",
+      };
+    }
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Error al eliminar venta",
