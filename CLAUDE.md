@@ -5,6 +5,29 @@
 
 ---
 
+## 🧠 Segundo Cerebro — Carga automática obligatoria
+
+**Antes de cualquier tarea, leer SIEMPRE en este orden:**
+
+1. `memory/projects/pos-chile-monorepo.md` — estado completo del proyecto,
+   fases completadas, commits importantes, gotchas acumulados
+2. `memory/context/stack-tech.md` — stack exacto con versiones
+
+**Según la tarea, leer el contexto específico:**
+
+| Si la tarea involucra... | Leer también... |
+|--------------------------|-----------------|
+| Auth, login, sesiones, JWT | `memory/context/auth-patterns.md` |
+| Seguridad, OWASP, headers | `memory/context/security-owasp.md` |
+| Ventas, IVA, RUT, boletas | `memory/context/business-logic.md` |
+| Docker, PostgreSQL, env vars | `memory/context/infra-docker.md` |
+| Agentes, workflow, coordinación | `memory/context/agents-workflow.md` |
+
+**Al cerrar sesión:** ejecutar `/session-end` para actualizar memory/
+con decisiones nuevas y hacer commit.
+
+---
+
 ## 🚀 Stack Actual
 
 | Capa | Tecnología | Versión |
