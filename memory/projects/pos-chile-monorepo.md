@@ -25,6 +25,8 @@ aliases:
 - [[infra-docker]] — Compose, Dockerfile multi-stage, puertos, healthcheck
 - [[agents-workflow]] — roles Cowork/CLI/Worktree/Gemini + protocolo verificación
 
+**Guía externa replicable**: [`OBSIDIAN-CLAUDE-SETUP.md`](../../OBSIDIAN-CLAUDE-SETUP.md) en la raíz del repo — documenta cómo replicar el segundo cerebro en proyectos nuevos (arquitectura + instalación paso a paso + checklist + gotchas + tiempo estimado).
+
 > [!success] Milestone 2026-04-19 — Estado producción 100/100
 > **Proyecto declarado completo y production-ready.**
 > - Build limpio en 2m22s, 68/68 tests en 1.07s, typecheck en 11.8s
@@ -182,6 +184,7 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| afc8439 | docs: guía completa Obsidian + Claude segundo cerebro (replicable) → `OBSIDIAN-CLAUDE-SETUP.md` raíz |
 | b138471 | chore(claude): documentar hook post-commit en Segundo Cerebro |
 | 48f640f | chore(memory): protocolo cierre de fase con /session-end obligatorio |
 | 77ef5a7 | chore(claude): /session-end procesa memory/.pending-notes del hook |
