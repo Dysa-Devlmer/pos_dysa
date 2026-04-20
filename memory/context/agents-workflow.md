@@ -131,6 +131,11 @@ Si el usuario dice "el jueves" o "la semana pasada", Cowork convierte a fecha ab
 | fix-4 | RBAC middleware edge (session callback compartido) | CLI | `81933a5` |
 | audit-4 | GAP-PROD-1 checkEnv + GAP-PROD-2 rate-limit warn | CLI | `3bec5f5` |
 | audit-5 | Gemini UX audit (chart/table/badges/icon-button) | CLI | `2d4f8ce` |
+| 15 | UX Premium — sidebar + KPIs sparkline + skeletons + inputs formato | **Worktree** | `4c158df` |
+| 16 | POS Caja premium — split 60/40 + category pills + shortcuts | **Worktree** | `cb44e3e` |
+| 17 | Pages premium — login + 404/error + empty states + alertas urgency | **Worktree** | `50d047d` |
+| 18 | Production hardening — PWA + metadata + health + README | CLI | `5234212` |
+| 19 | Docs arquitecturales + tests edge (hydration + RUT + boundary) | CLI | `7e7444c` |
 
 ## Gotchas del workflow
 

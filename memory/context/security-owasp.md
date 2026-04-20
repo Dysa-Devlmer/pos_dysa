@@ -191,12 +191,24 @@ No es security en sentido estricto, pero incluye hardening de UI:
 
 ## Tests de seguridad
 
-- `apps/web/lib/__tests__/check-env.test.ts` — **10 tests** (GAP-PROD-1)
-- `apps/web/lib/__tests__/utils.test.ts` — **20 tests** (validarRUT, formatRUT, calcularIVA, formatCLP normalize)
+- `apps/web/lib/__tests__/check-env.test.ts` — **13 tests** (GAP-PROD-1 + boundary 31/32 + placeholder-secret, Fase 19)
+- `apps/web/lib/__tests__/utils.test.ts` — **37 tests** (validarRUT, formatRUT, calcularIVA, formatCLP normalize, hydration safety Fase 19, validarRUT edge cases Fase 19)
 - `apps/web/lib/__tests__/reportes-fecha.test.ts` — **18 tests**
-- `apps/web/lib/__tests__/calcular-desglose.test.ts` — **9 tests** (descuentos)
 
-**Total: 57/57 tests passing**.
+**Total: 68/68 tests passing** (commit `7e7444c` agregó +11 en Fase 19).
+
+### Hydration safety — regression guard (Fase 19)
+
+El bug G3 (formatCLP emitiendo U+202F/U+00A0) ya está resuelto, pero ahora tiene tests dedicados que fallan si alguien refactoriza el `.replace` fuera:
+
+```ts
+// utils.test.ts
+it("no emite U+202F ni U+00A0", () => {
+  for (const n of [0, 1, 1_000, 1_234_567, 10_000_000]) {
+    expect(formatCLP(n)).not.toMatch(/[\u202f\u00a0]/);
+  }
+});
+```
 
 ## Checklist pre-deploy producción
 

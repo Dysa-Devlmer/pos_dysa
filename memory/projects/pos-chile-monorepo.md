@@ -166,6 +166,16 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 7e7444c | docs(fase-19): comentarios arquitecturales + 11 tests edge case + cleanup |
+| 5234212 | feat(prod): Fase 18 — PWA manifest, metadata global, health script, README |
+| 2d0305a | merge(fase-17): pages premium — login, 404/error, empty states, reportes, alertas urgency |
+| 50d047d | feat(fase-17): pages premium — login + error/404 + empty states + reportes + alertas urgency |
+| 49c1625 | merge(fase-16): POS Caja premium — split 60/40, category pills, AnimatePresence, inline flow, shortcuts |
+| cb44e3e | feat(caja-premium): rediseño POS Caja con flujo inline, category pills, AnimatePresence, shortcuts (Fase 16) |
+| 7f9e7ed | merge(fase-15): UX Premium — sidebar premium, KPIs sparkline+counter+trend, skeletons, inputs RUT/CLP, empty states |
+| 4c158df | feat(ux-premium): sidebar rediseñado, KPIs con sparkline+trend+counter, skeletons, inputs RUT/CLP (Fase 15) |
+| dac94cc | chore(claude): agregar comando /session-end para cierre de sesión |
+| 64fab2e | chore(memory): inicializar segundo cerebro — 7 notas con contexto real del proyecto |
 | 81933a5 | fix(auth): RBAC funcional en middleware edge — session callback compartido (ver [[auth-patterns#Pattern 2]]) |
 | 2b90ed8 | feat(security): security headers + Sentry instrumentation (GAP-1, GAP-2 OWASP) |
 | 3bec5f5 | feat(security): checkEnv hardening + warnIfDisabledInProd (GAP-PROD-1/2) |
@@ -229,7 +239,9 @@ $transaction:
 26. **template.tsx (NO layout.tsx)** para transiciones de página Framer Motion — template se remonta en cada ruta
 27. **formatCLP normalize** — `.replace(/[\u202f\u00a0]/g, " ")` obligatorio para evitar hydration mismatch Node 20+ vs browser
 28. **SELECT ... FOR UPDATE NOWAIT** en $transaction devoluciones — primera operación, bloqueo pesimista para concurrencia
-29. **Content-Length check** en rutas de upload (avatar) — pre-filtro ANTES de await request.formData()
+29. **Content-Length check** en rutas de upload (avatar) — pre-filtro ANTES de await request.formData(); el check real es `file.size` después
+30. **`/api/v1` excluido del middleware NextAuth** — usa API Key propia (`requireAuth` en `app/api/v1/_helpers.ts`) + rate-limit Upstash (para acceso B2B sin sesión JWT)
+31. **`Permissions-Policy: usb=()`** deshabilita WebUSB intencionalmente — si se agregan lectores de barras/impresoras fiscales, cambiar a `usb=(self)` y revisar CSP
 
 ---
 
@@ -254,6 +266,11 @@ $transaction:
 | 11 | Descuentos en ventas | Worktree | 33ae07e+4b051e3 | ✅ |
 | 12 | Devoluciones | Worktree | a4830e3+25c6aa7 | ✅ |
 | 13 | UX Pro: dark mode + animaciones globales | Worktree | 30a2065+64fa064 | ✅ |
+| 15 | UX Premium: sidebar, KPIs sparkline+counter+trend, skeletons, inputs RUT/CLP | Worktree | 4c158df+7f9e7ed | ✅ |
+| 16 | POS Caja premium: split 60/40, category pills, AnimatePresence, shortcuts | Worktree | cb44e3e+49c1625 | ✅ |
+| 17 | Pages premium: login, 404/error, empty states, reportes, alertas urgency | Worktree | 50d047d+2d0305a | ✅ |
+| 18 | Production hardening: PWA manifest + metadata + health + README + gitignore | CLI | 5234212 | ✅ |
+| 19 | Docs arquitecturales + tests edge (hydration, RUT, boundary) + cleanup | CLI | 7e7444c | ✅ |
 
 ---
 
@@ -339,6 +356,11 @@ $transaction:
 **Fix crítico post-audit** — RBAC middleware edge (commit `81933a5`):
 El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo ejecutaba → `auth.user.rol` = undefined → `/usuarios` redirigía a `/` incluso para ADMIN. Fix: mover callback `session` a `auth.config.ts` (edge-safe). Validado E2E 4/4 Playwright. Detalle en [[auth-patterns#Pattern 2]].
 
-**Suite de tests final: 57/57 passing** (47 previos + 10 `check-env.test.ts` — commit `3bec5f5`)
+**Suite de tests final: 68/68 passing** (commit `7e7444c` añade +11: 3 boundary checkEnv + 2 hydration safety formatCLP + 6 validarRUT edge cases)
+
+> [!info] 3 falsos positivos verificados contra Gemini (documentados en [[security-owasp]])
+> - **G4** — `cambiarPassword` "timing attack": N/A, opera sobre la sesión propia del usuario.
+> - **G5** — `$queryRaw` "SQL injection": N/A, es template literal parametrizado (comentario aclaratorio en `apps/web/app/(dashboard)/alertas/actions.ts`).
+> - **B3** — "sin índice en `fecha`": el índice `@@index([fecha])` existía desde Fase 1 en `schema.prisma`.
 
 > **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales. Ver [[agents-workflow#3. Cowork verifica independientemente]].
