@@ -67,6 +67,12 @@ export function VentasChart({ data }: VentasChartProps) {
   const ventasPeriodo = data.reduce((a, d) => a + d.cantidad, 0);
   const hayDatos = data.some((d) => d.total > 0);
 
+  // Evita warning "width(-1) height(-1)" de Recharts en SSR:
+  // ResponsiveContainer mide el padre en el primer render; en SSR el tamaño es 0.
+  // Diferimos el mount del chart al efecto cliente.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
   return (
     <Card>
       <CardHeader>
@@ -80,8 +86,9 @@ export function VentasChart({ data }: VentasChartProps) {
       </CardHeader>
       <CardContent>
         {hayDatos ? (
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 w-full" style={{ minWidth: 0, minHeight: 0 }}>
+            {mounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart
                 data={data}
                 margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
@@ -130,6 +137,7 @@ export function VentasChart({ data }: VentasChartProps) {
                 />
               </BarChart>
             </ResponsiveContainer>
+            ) : null}
           </div>
         ) : (
           <div className="flex h-72 items-center justify-center rounded-md border border-dashed bg-muted/10 text-sm text-muted-foreground">

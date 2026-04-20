@@ -39,6 +39,7 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        id="user-menu-trigger"
         className="group flex items-center gap-2 rounded-md px-1.5 py-1 text-sm transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Menú de usuario"
       >
