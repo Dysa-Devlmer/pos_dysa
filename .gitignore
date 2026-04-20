@@ -59,6 +59,7 @@ packages/db/prisma/generated/
 .claude/agents/
 .claude/commands/
 .claude/blueprints/
+.claude/skills/
 .claude/PROJECT_PROFILE.json
 .claude/scripts/
 .claude/mcps/

@@ -7,6 +7,9 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   {
     key: "Permissions-Policy",
+    // USB desactivado intencionalmente. Si en el futuro se conectan
+    // periféricos via WebUSB (lectores de barras, impresoras fiscales),
+    // agregar: usb=(self) y revisar CSP.
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
 ];

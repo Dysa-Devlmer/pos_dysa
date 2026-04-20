@@ -86,6 +86,9 @@ Editar: revertir vieja + aplicar nueva → $transaction
 8. `POS_DATABASE_URL` en PrismaClient (Pierre tiene DATABASE_URL de Supabase en shell)
 9. login action: `redirect: false` + `redirect("/")` manual (v5 beta bug)
 10. client.ts: POS_DATABASE_URL obligatoria (ya no hay hardcoded fallback)
+11. `@tailwindcss/oxide` en `onlyBuiltDependencies` — requerido en pnpm 10 con Tailwind v4
+12. `sharp` en `serverExternalPackages` — necesario para procesamiento de imágenes en Node runtime
+13. Avatar como base64 data URL en DB — no requiere volumen Docker ni filesystem externo
 
 ---
 
@@ -103,6 +106,13 @@ Editar: revertir vieja + aplicar nueva → $transaction
 | 6 | Dashboard: KPIs CLP, Recharts, top productos | Worktree | ✅ bc89c09 |
 | 7 | Reportes: PDF @react-pdf, Excel, filtros fecha | Worktree | ✅ 3c6f96d |
 | 8 | API REST + Security + Vitest + Docker | CLI | ✅ acdcbce |
+| fix | Scalar (reemplaza swagger-ui-react React 19) | CLI | ✅ a3296ec |
+| 14 | Infra Pro: rate limiting Upstash + health + API docs | CLI | ✅ 80543c6 |
+| 9 | Perfil usuario: avatar, datos, password strength, actividad | Worktree | ✅ 825d3e3 |
+| 10 | Alertas stock bajo | Worktree | ✅ a22d15b |
+| 11 | Descuentos en ventas | Worktree | ✅ 4b051e3 |
+| 12 | Devoluciones | Worktree | ✅ 25c6aa7 |
+| 13 | UX Pro: dark mode + animaciones globales | Worktree | ✅ 64fa064 |
 
 ---
 
@@ -129,3 +139,9 @@ pos-pgadmin:  localhost:5050  # admin@pos-chile.cl / pgadmin_secret_2025
 
 > **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales.
 > **Memoria completa:** `memory/projects/pos-chile-monorepo.md` y `memory/context/stack-tech.md`
+
+## Devlmer Ecosystem Engine v3.1
+
+This project has been configured with the Devlmer Ecosystem Engine.
+Skills, MCPs, agents and slash commands are available in `.claude/`.
+Type `/` in Claude Code to see all available slash commands.

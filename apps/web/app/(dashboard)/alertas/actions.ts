@@ -28,8 +28,9 @@ async function requireSession() {
 // ──────────────────────────────────────────────────────────────────────────
 // 1. Productos con stock ≤ alertaStock (ordenados por stock ASC)
 //    Nota: Prisma no permite comparar dos columnas del mismo registro
-//    directamente en `where` sin fieldReference; usamos $queryRawUnsafe
-//    con SQL plano que Postgres resuelve eficientemente con índice en stock.
+//    directamente en `where` sin fieldReference; usamos $queryRaw con
+//    template literal (parametrizado) que Postgres resuelve eficientemente
+//    con índice en stock.
 // ──────────────────────────────────────────────────────────────────────────
 
 export async function obtenerProductosConAlertaStock(): Promise<

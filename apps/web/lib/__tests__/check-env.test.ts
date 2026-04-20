@@ -65,6 +65,23 @@ describe("checkEnv (production)", () => {
     expect(() => checkEnv()).not.toThrow();
   });
 
+  it("boundary: secret de exactamente 31 chars → falla (<32)", () => {
+    process.env.NEXTAUTH_SECRET = "K8sHx2pJQ7mNvR4wT9yU3iO5aS1bC0d"; // 31 chars
+    expect(process.env.NEXTAUTH_SECRET.length).toBe(31);
+    expect(() => checkEnv()).toThrow(/demasiado corta/);
+  });
+
+  it("boundary: secret de exactamente 32 chars → pasa", () => {
+    process.env.NEXTAUTH_SECRET = "K8sHx2pJQ7mNvR4wT9yU3iO5aS1bC0dE"; // 32 chars
+    expect(process.env.NEXTAUTH_SECRET.length).toBe(32);
+    expect(() => checkEnv()).not.toThrow();
+  });
+
+  it("rechaza placeholder con guión: 'placeholder-secret'", () => {
+    process.env.NEXTAUTH_SECRET = "placeholder-secret";
+    expect(() => checkEnv()).toThrow(/placeholder/i);
+  });
+
   it("acepta AUTH_SECRET como alternativa a NEXTAUTH_SECRET", () => {
     delete process.env.NEXTAUTH_SECRET;
     process.env.AUTH_SECRET = "K8sHx2pJQ7mNvR4wT9yU3iO5aS1bC0dE";
