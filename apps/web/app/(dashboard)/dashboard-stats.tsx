@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import {
   AlertTriangle,
   CalendarDays,
@@ -14,6 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SOFT_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
+
+const containerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
+};
 
 export interface DashboardStatsProps {
   ventasHoy: { cantidad: number; total: number; totalAnterior: number };
@@ -51,11 +61,13 @@ function KpiCard({
 }: KpiCardProps) {
   const formatter = format ?? ((v: number) => Math.round(v).toLocaleString("es-CL"));
   return (
+    <motion.div variants={itemVariants} className="h-full">
     <Card
-      className={`relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+      className={`relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-[var(--chart-1)]/40 group ${
         accentBorder ? "border-destructive/40" : ""
       }`}
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--chart-1)]/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -74,6 +86,7 @@ function KpiCard({
         ) : null}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
 
@@ -90,7 +103,12 @@ export function DashboardStats({
       : 0;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    >
       {/* Ventas hoy */}
       <KpiCard
         title="Ventas hoy"
@@ -188,6 +206,6 @@ export function DashboardStats({
           </div>
         }
       />
-    </div>
+    </motion.div>
   );
 }

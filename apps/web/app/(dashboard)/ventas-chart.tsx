@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import {
   Bar,
   BarChart,
@@ -46,13 +47,20 @@ function TooltipContent({
   if (!active || !payload?.length) return null;
   const d = payload[0]!.payload;
   return (
-    <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
+    <motion.div
+      initial={{ opacity: 0, y: 4, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className="rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur-sm ring-1 ring-black/5 dark:ring-white/10"
+    >
       <p className="font-medium">{d.etiqueta}</p>
       <p className="text-muted-foreground">
         {d.cantidad} {d.cantidad === 1 ? "venta" : "ventas"}
       </p>
-      <p className="mt-0.5 tabular-nums font-semibold">{formatCLP(d.total)}</p>
-    </div>
+      <p className="mt-0.5 tabular-nums font-semibold text-foreground">
+        {formatCLP(d.total)}
+      </p>
+    </motion.div>
   );
 }
 
@@ -74,7 +82,12 @@ export function VentasChart({ data }: VentasChartProps) {
   React.useEffect(() => setMounted(true), []);
 
   return (
-    <Card>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+    >
+    <Card className="transition-shadow hover:shadow-md">
       <CardHeader>
         <CardTitle>Ventas últimos 7 días</CardTitle>
         <CardDescription>
@@ -95,16 +108,12 @@ export function VentasChart({ data }: VentasChartProps) {
               >
                 <defs>
                   <linearGradient id="ventasBarGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="0%"
-                      stopColor="var(--chart-1)"
-                      stopOpacity={0.95}
-                    />
-                    <stop
-                      offset="100%"
-                      stopColor="var(--chart-1)"
-                      stopOpacity={0.35}
-                    />
+                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+                  </linearGradient>
+                  <linearGradient id="ventasBarGradientActive" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={1} />
+                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.6} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -127,13 +136,20 @@ export function VentasChart({ data }: VentasChartProps) {
                 />
                 <Tooltip
                   content={<TooltipContent />}
-                  cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                  cursor={{ fill: "color-mix(in oklab, var(--chart-1) 10%, transparent)" }}
+                  wrapperStyle={{ outline: "none" }}
                 />
                 <Bar
                   dataKey="total"
                   fill="url(#ventasBarGradient)"
-                  radius={[6, 6, 0, 0]}
-                  animationDuration={1500}
+                  radius={[8, 8, 0, 0]}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                  activeBar={{
+                    fill: "url(#ventasBarGradientActive)",
+                    stroke: "var(--chart-1)",
+                    strokeWidth: 1.5,
+                  }}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -146,5 +162,6 @@ export function VentasChart({ data }: VentasChartProps) {
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

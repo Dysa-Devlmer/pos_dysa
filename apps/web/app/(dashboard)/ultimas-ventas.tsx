@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ArrowRight, Receipt } from "lucide-react";
 import type { MetodoPago } from "@repo/db";
 
@@ -37,11 +38,16 @@ function formatFechaHora(iso: string): string {
 
 export function UltimasVentas({ data }: UltimasVentasProps) {
   return (
-    <Card>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.35 }}
+    >
+    <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle className="flex items-center gap-2">
-            <Receipt className="size-4" />
+            <Receipt className="size-4 text-[var(--chart-2)]" />
             Últimas ventas
           </CardTitle>
           <CardDescription>
@@ -62,10 +68,13 @@ export function UltimasVentas({ data }: UltimasVentasProps) {
           </p>
         ) : (
           <ul className="divide-y">
-            {data.map((v) => (
-              <li
+            {data.map((v, idx) => (
+              <motion.li
                 key={v.id}
-                className="flex items-center justify-between gap-3 py-3"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 + idx * 0.06, ease: "easeOut" }}
+                className="flex items-center justify-between gap-3 py-3 rounded-md px-2 -mx-2 transition-colors hover:bg-muted/40"
               >
                 <div className="min-w-0 flex-1">
                   <Link
@@ -91,11 +100,12 @@ export function UltimasVentas({ data }: UltimasVentasProps) {
                 <span className="w-24 shrink-0 text-right tabular-nums font-semibold">
                   {formatCLP(v.total)}
                 </span>
-              </li>
+              </motion.li>
             ))}
           </ul>
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
