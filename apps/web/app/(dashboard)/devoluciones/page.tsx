@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { RotateCcw } from "lucide-react";
 
 import {
@@ -13,6 +14,8 @@ import { RangoFechasFiltro } from "./rango-fechas";
 import { listarDevoluciones } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Devoluciones" };
 
 function parseFecha(v: string | undefined): Date | null {
   if (!v) return null;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma, type Prisma } from "@repo/db";
@@ -8,6 +9,8 @@ import { RangoFechasFiltro } from "./rango-fechas";
 import { VentasTable, type VentaRow } from "./ventas-table";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Ventas" };
 
 function parseFecha(v: string | undefined): Date | null {
   if (!v) return null;

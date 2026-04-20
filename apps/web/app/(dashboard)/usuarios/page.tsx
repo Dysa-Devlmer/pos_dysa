@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { UsuariosTable, type UsuarioRow } from "./usuarios-table";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Usuarios" };
 
 export default async function UsuariosPage() {
   const session = await auth();

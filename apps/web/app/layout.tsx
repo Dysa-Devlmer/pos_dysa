@@ -8,8 +8,28 @@ import "./globals.css";
 checkEnv();
 
 export const metadata: Metadata = {
-  title: "POS Chile",
-  description: "Sistema de Punto de Venta para Chile",
+  title: { default: "POS Chile", template: "%s | POS Chile" },
+  description:
+    "Sistema de punto de venta profesional para negocios chilenos",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000",
+  ),
+  applicationName: "POS Chile",
+  openGraph: {
+    title: "POS Chile",
+    description:
+      "Sistema de punto de venta profesional para negocios chilenos",
+    type: "website",
+    locale: "es_CL",
+  },
+  robots: { index: false, follow: false },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: { url: "/icon-192.png", sizes: "192x192" },
+  },
 };
 
 export default function RootLayout({

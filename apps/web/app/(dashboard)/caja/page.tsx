@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { CajaPos, type ProductoCaja, type CategoriaCaja } from "./caja-pos";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Caja" };
 
 export default async function CajaPage() {
   const [productos, categorias] = await Promise.all([

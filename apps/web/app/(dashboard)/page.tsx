@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 
@@ -9,6 +10,8 @@ import { UltimasVentas, type UltimaVentaRow } from "./ultimas-ventas";
 import { VentasChart, type VentasPorDia } from "./ventas-chart";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 const CHILE_TZ = "America/Santiago";
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AlertTriangle, PackageX } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,8 @@ import { AlertasList } from "./alertas-list";
 import { obtenerProductosConAlertaStock } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Alertas de stock" };
 
 export default async function AlertasPage() {
   const productos = await obtenerProductosConAlertaStock();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { MetodoPago } from "@repo/db";
 import { prisma } from "@repo/db";
@@ -26,6 +27,8 @@ import {
 import { ReportesWorkspace } from "./reportes-workspace";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Reportes" };
 
 function formatFechaHora(d: Date): string {
   return new Intl.DateTimeFormat("es-CL", {

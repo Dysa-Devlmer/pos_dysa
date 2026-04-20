@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { KeyRound, Receipt, UserCircle2 } from "lucide-react";
 
@@ -16,6 +17,8 @@ import { PerfilContainer, PerfilItem } from "./page-animations";
 import { obtenerPerfil } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Perfil" };
 
 export default async function PerfilPage() {
   const res = await obtenerPerfil();

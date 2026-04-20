@@ -69,3 +69,18 @@ packages/db/prisma/generated/
 .claude/setup-wizard.sh
 .claude/settings.example.json
 .worktrees/
+
+# Python caches (del install DEE)
+__pycache__/
+.deeignore
+
+# Screenshots y reportes de testing local
+screenshots/
+screenshots-v2/
+test-e2e*.mjs
+test-report.json
+pos*.png
+
+# macOS spotlight / Obsidian
+.metadata_never_index
+.obsidian/

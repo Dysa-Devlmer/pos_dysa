@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { CategoriasTable, type CategoriaRow } from "./categorias-table";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Categorías" };
 
 export default async function CategoriasPage() {
   const categorias = await prisma.categoria.findMany({

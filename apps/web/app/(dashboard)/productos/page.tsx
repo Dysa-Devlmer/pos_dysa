@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@repo/db";
 import { Button } from "@/components/ui/button";
 import { ProductosTable, type ProductoRow } from "./productos-table";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Productos" };
 
 export default async function ProductosPage() {
   const [productos, categorias] = await Promise.all([

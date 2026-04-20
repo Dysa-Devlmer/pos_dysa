@@ -9,7 +9,10 @@
     "db:generate": "turbo run db:generate",
     "db:push": "turbo run db:push",
     "db:migrate": "turbo run db:migrate",
-    "db:studio": "turbo run db:studio"
+    "db:studio": "turbo run db:studio",
+    "test": "turbo run test",
+    "typecheck": "turbo run type-check",
+    "health": "pnpm --filter @repo/web health"
   },
   "devDependencies": {
     "playwright": "^1.59.1",

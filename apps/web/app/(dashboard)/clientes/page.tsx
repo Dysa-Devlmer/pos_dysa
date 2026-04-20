@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { ClientesTable, type ClienteRow } from "./clientes-table";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Clientes" };
 
 export default async function ClientesPage() {
   const clientes = await prisma.cliente.findMany({
