@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -40,6 +41,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -114,6 +116,12 @@
 
 * {
   border-color: var(--border);
+}
+
+/* El background va en html para cubrir el viewport completo
+   (evita flash blanco en los bordes al togglear dark mode). */
+html {
+  background-color: var(--background);
 }
 
 body {

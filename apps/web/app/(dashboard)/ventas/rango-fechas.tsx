@@ -60,11 +60,12 @@ export function RangoFechasFiltro({
             Desde
           </Label>
           <Input
+            key={`desde-${desde ?? "empty"}`}
             id="desde"
             type="date"
             value={desdeV}
             onChange={(e) => setDesdeV(e.target.value)}
-            className="w-auto"
+            className="w-[160px] [color-scheme:light] dark:[color-scheme:dark]"
           />
         </div>
         <div className="space-y-1">
@@ -72,11 +73,12 @@ export function RangoFechasFiltro({
             Hasta
           </Label>
           <Input
+            key={`hasta-${hasta ?? "empty"}`}
             id="hasta"
             type="date"
             value={hastaV}
             onChange={(e) => setHastaV(e.target.value)}
-            className="w-auto"
+            className="w-[160px] [color-scheme:light] dark:[color-scheme:dark]"
           />
         </div>
       </div>

@@ -160,12 +160,13 @@ export function ReportesWorkspace({
               Desde
             </Label>
             <Input
+              key={`desde-${desde}`}
               id="desde"
               type="date"
               value={desdeV}
               onChange={(e) => setDesdeV(e.target.value)}
               max={hastaV || undefined}
-              className="h-9"
+              className="h-9 w-[160px] [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
           <div className="space-y-1">
@@ -173,12 +174,13 @@ export function ReportesWorkspace({
               Hasta
             </Label>
             <Input
+              key={`hasta-${hasta}`}
               id="hasta"
               type="date"
               value={hastaV}
               onChange={(e) => setHastaV(e.target.value)}
               min={desdeV || undefined}
-              className="h-9"
+              className="h-9 w-[160px] [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
         </div>

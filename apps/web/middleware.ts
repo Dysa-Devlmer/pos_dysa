@@ -10,7 +10,7 @@ export const { auth: middleware } = NextAuth(authConfig);
 // — Rate limiting propio por IP vía Upstash (@/lib/rate-limit)
 export const config = {
   matcher: [
-    "/((?!api/auth|api/health|api/docs|api/v1|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192.png|icon-512.png).*)",
+    "/((?!api/auth|api/health|api/docs|api/v1|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|icon-192.png|icon-512.png).*)",
   ],
 };
 

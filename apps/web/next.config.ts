@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      // Algunos browsers / extensiones (PWA installers, Lighthouse audits)
+      // solicitan /manifest.json por convención legacy. Next 15 emite el
+      // manifest en /manifest.webmanifest desde app/manifest.ts. Reescribimos
+      // la ruta .json → .webmanifest para que ambas resuelvan y evitar 404.
+      { source: "/manifest.json", destination: "/manifest.webmanifest" },
+    ];
+  },
 };
 
 export default nextConfig;
