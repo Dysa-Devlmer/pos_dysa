@@ -12,6 +12,7 @@ import { Sparkline } from "@/components/sparkline";
 import { TrendIndicator } from "@/components/trend-indicator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SOFT_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 export interface DashboardStatsProps {
@@ -151,17 +152,11 @@ export function DashboardStats({
         footer={
           <div className="flex items-center gap-2">
             {stockBajo.cantidad > 0 ? (
-              <Badge
-                variant="outline"
-                className="h-5 bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400"
-              >
+              <Badge variant="outline" className={`h-5 ${SOFT_BADGE.destructive}`}>
                 Revisar
               </Badge>
             ) : (
-              <Badge
-                variant="outline"
-                className="h-5 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
-              >
+              <Badge variant="outline" className={`h-5 ${SOFT_BADGE.success}`}>
                 OK
               </Badge>
             )}

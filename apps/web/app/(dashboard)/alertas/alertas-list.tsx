@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SOFT_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 import type { AlertaProductoRow } from "./actions";
@@ -34,12 +35,11 @@ const ORDEN: Record<Urgencia, number> = {
 };
 
 const BADGE_STYLES: Record<Urgencia, string> = {
-  critico:
-    "border-red-300 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300",
+  critico: SOFT_BADGE.destructive,
+  // "bajo" usa orange (entre red y amber) — mantiene gradación visual soft.
   bajo:
-    "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300",
-  advertencia:
-    "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300",
+    "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-transparent",
+  advertencia: SOFT_BADGE.warning,
 };
 
 const ICONS: Record<Urgencia, React.ComponentType<{ className?: string }>> = {

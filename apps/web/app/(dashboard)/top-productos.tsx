@@ -6,6 +6,7 @@ import { AlertTriangle, Package, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SOFT_BADGE } from "@/lib/badge-styles";
 
 export interface TopProductoRow {
   id: number;
@@ -76,14 +77,17 @@ export function TopProductos({ data }: TopProductosProps) {
                           Stock: {p.stock}
                         </span>
                         {sinStock ? (
-                          <Badge variant="destructive" className="gap-1">
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 ${SOFT_BADGE.destructive}`}
+                          >
                             <AlertTriangle className="size-3" />
                             Agotado
                           </Badge>
                         ) : stockBajo ? (
                           <Badge
                             variant="outline"
-                            className="gap-1 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                            className={`gap-1 ${SOFT_BADGE.warning}`}
                           >
                             <AlertTriangle className="size-3" />
                             Bajo

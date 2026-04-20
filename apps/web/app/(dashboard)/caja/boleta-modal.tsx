@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { CheckCircle2, FileText, Printer, Receipt } from "lucide-react";
 import type { MetodoPago } from "@repo/db";
 
@@ -85,7 +86,12 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
         </DialogHeader>
 
         {boleta ? (
-          <>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.22, ease: "easeOut", delay: 0.05 }}
+            className="space-y-4"
+          >
             {/* ─── Vista imprimible ─── */}
             <div
               id="boleta-print"
@@ -268,7 +274,7 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
                 </Button>
               </div>
             </DialogFooter>
-          </>
+          </motion.div>
         ) : null}
       </DialogContent>
     </Dialog>
