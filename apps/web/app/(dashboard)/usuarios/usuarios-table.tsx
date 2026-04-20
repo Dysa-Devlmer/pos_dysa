@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { ROL_BADGE, estadoBadge } from "@/lib/badge-styles";
 import { UsuarioForm } from "./usuario-form";
@@ -153,6 +154,19 @@ export function UsuariosTable({
               Nuevo usuario
             </Button>
           ) : null
+        }
+        emptyState={
+          <EmptyState
+            illustration="users"
+            title="No hay usuarios registrados"
+            description={
+              canManage
+                ? "Crea el primer usuario para que pueda acceder al sistema."
+                : "Solicita a un administrador que cree los usuarios."
+            }
+            ctaLabel={canManage ? "Crear usuario" : undefined}
+            ctaOnClick={canManage ? openCrear : undefined}
+          />
         }
       />
 

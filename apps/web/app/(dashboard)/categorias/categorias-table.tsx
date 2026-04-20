@@ -10,6 +10,7 @@ import { IconButton } from "@/components/icon-button";
 import { estadoBadge } from "@/lib/badge-styles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
 import { CategoriaForm } from "./categoria-form";
 import { eliminarCategoria } from "./actions";
 
@@ -131,6 +132,15 @@ export function CategoriasTable({ data }: { data: CategoriaRow[] }) {
             <Plus className="size-4" />
             Nueva categoría
           </Button>
+        }
+        emptyState={
+          <EmptyState
+            illustration="inbox"
+            title="Aún no tienes categorías"
+            description="Organiza tus productos creando una primera categoría."
+            ctaLabel="Crear categoría"
+            ctaOnClick={openCrear}
+          />
         }
       />
 

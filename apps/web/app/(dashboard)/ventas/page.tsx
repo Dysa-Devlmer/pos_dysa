@@ -114,7 +114,7 @@ export default async function VentasPage({
         </div>
       </div>
 
-      <VentasTable data={rows} />
+      <VentasTable data={rows} hasDateFilter={Boolean(desde || hasta)} />
     </div>
   );
 }

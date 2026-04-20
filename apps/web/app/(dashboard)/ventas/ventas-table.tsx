@@ -9,6 +9,7 @@ import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
 import { METODO_PAGO_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
@@ -42,7 +43,13 @@ function formatFechaHora(iso: string): string {
   }).format(d);
 }
 
-export function VentasTable({ data }: { data: VentaRow[] }) {
+export function VentasTable({
+  data,
+  hasDateFilter = false,
+}: {
+  data: VentaRow[];
+  hasDateFilter?: boolean;
+}) {
   const [deleting, setDeleting] = React.useState<VentaRow | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
@@ -195,6 +202,17 @@ export function VentasTable({ data }: { data: VentaRow[] }) {
         searchKey="numeroBoleta"
         searchPlaceholder="Buscar por nº boleta..."
         emptyMessage="No hay ventas en el rango seleccionado."
+        emptyState={
+          hasDateFilter ? undefined : (
+            <EmptyState
+              illustration="receipt"
+              title="Aún no hay ventas"
+              description="Cuando registres ventas desde la caja, aparecerán aquí con su boleta y detalle."
+              ctaLabel="Ir a la caja"
+              ctaHref="/caja"
+            />
+          )
+        }
       />
 
       <ConfirmDialog

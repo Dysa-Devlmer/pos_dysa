@@ -23,7 +23,7 @@ import {
   primeroDelMesChileISODate,
 } from "@/lib/reportes-fecha";
 
-import { ReporteFiltros } from "./reporte-filtros";
+import { ReportesWorkspace } from "./reportes-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +85,11 @@ export default async function ReportesPage({
         </p>
       </div>
 
-      <ReporteFiltros desde={desdeYMD} hasta={hastaYMD} />
+      <ReportesWorkspace
+        desde={desdeYMD}
+        hasta={hastaYMD}
+        ventasEnPeriodo={totalVentas}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
