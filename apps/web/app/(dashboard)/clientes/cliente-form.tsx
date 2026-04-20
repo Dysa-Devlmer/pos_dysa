@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { RutInput } from "@/components/ui/rut-input";
 import { validarRUT } from "@/lib/utils";
 import { actualizarCliente, crearCliente } from "./actions";
 
@@ -139,10 +140,11 @@ export function ClienteForm({
                 <FormItem>
                   <FormLabel>RUT</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="12.345.678-9"
-                      autoComplete="off"
-                      {...field}
+                    <RutInput
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
                     />
                   </FormControl>
                   <FormMessage />

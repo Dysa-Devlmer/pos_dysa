@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   Select,
   SelectContent,
@@ -217,19 +218,11 @@ export function ProductoForm({
                 <FormItem>
                   <FormLabel>Precio (CLP)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={1}
+                    <MoneyInput
                       name={field.name}
-                      ref={field.ref}
                       onBlur={field.onBlur}
                       value={Number.isFinite(field.value) ? field.value : 0}
-                      onChange={(e) => {
-                        const v = e.target.valueAsNumber;
-                        field.onChange(Number.isFinite(v) ? v : 0);
-                      }}
+                      onValueChange={(v) => field.onChange(v)}
                     />
                   </FormControl>
                   <FormMessage />
