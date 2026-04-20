@@ -236,6 +236,14 @@ await prisma.$transaction(async (tx) => {
 
 **Stock efectivo** al editar: si la venta vieja tenía 5 Producto-A y queda stock 2, puedo editar a 7 Producto-A porque 2 + 5 devolución = 7. La validación debe contemplar esto.
 
+> [!danger] Editar venta con devoluciones está PROHIBIDO
+> Si `venta.devoluciones.length > 0`, **no se puede editar** — `Devolucion` ya consumió `DetalleVenta` y ajustó stock por su cuenta; revertir + re-aplicar produciría stock duplicado/negativo y `compras`/`ultimaCompra` corruptos. Defensa en 3 capas (commit `7d118be`):
+> 1. **UI** (`ventas/[id]/page.tsx`): botón "Editar" `disabled` con `title` explicativo si hay devoluciones.
+> 2. **Page guard** (`ventas/[id]/editar/page.tsx`): `prisma.devolucion.count` post-`notFound` → `redirect(/ventas/${id})`.
+> 3. **Server action** (`editarVenta` en `ventas/actions.ts`): pre-check `count` después de cargar `ventaVieja` → retorna `{ ok: false, error: "...elimina primero las devoluciones" }`.
+>
+> Mismo patrón ya existía para `eliminarVenta` (FK constraint). El flujo correcto si hay que "editar" es: eliminar devolución(es) → editar venta → re-crear devolución si aplica.
+
 ## 8. Descuentos (Fase 11)
 
 Dos tipos soportados: **porcentaje** (0-100) y **monto fijo** (Int CLP). Se aplican al subtotal ANTES del IVA.
