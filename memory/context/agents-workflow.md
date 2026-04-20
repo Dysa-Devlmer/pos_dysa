@@ -104,6 +104,34 @@ Cada feature grande (Fases 3-13) se hizo en un worktree separado. Protocolo:
 
 Si el usuario dice "el jueves" o "la semana pasada", Cowork convierte a fecha absoluta ISO (`2026-04-19`) antes de guardar en memoria. Razón: memoria persiste entre sesiones, fechas relativas pierden sentido.
 
+## Protocolo de cierre de fase (OBLIGATORIO)
+
+Después de cada merge a `main` — sin excepción:
+
+1. El agente que hizo el merge ejecuta `/session-end` inmediatamente
+2. `/session-end` procesa `memory/.pending-notes` (commits acumulados por el hook post-commit)
+3. Actualiza `memory/` con decisiones de la fase
+4. Hace commit `chore(memory): session notes YYYY-MM-DD`
+5. Recién entonces la fase está 100% cerrada
+
+> [!warning] Sin `/session-end`, el conocimiento se pierde
+> Este paso convierte cada merge en un punto de aprendizaje permanente.
+> Los commits quedan capturados automáticamente en `.pending-notes`
+> por el hook, pero sin `/session-end` NO se procesan en conocimiento estructurado.
+
+### Cómo funciona el hook post-commit
+
+`.git/hooks/post-commit` escribe una línea en `memory/.pending-notes` con cada commit:
+
+```
+- [YYYY-MM-DD HH:MM] `<hash>` (<branch>) — <subject>
+```
+
+Requisitos locales del repo:
+- `git config --local core.hooksPath .git/hooks` (override del global)
+- `.git/hooks/pre-commit` copiado del global (preserva protección anti-secretos)
+- `memory/.pending-notes` ignorado en `.gitignore`
+
 ## Plan maestro — qué hizo cada agente
 
 | Fase | Feature | Agente | Commit |
