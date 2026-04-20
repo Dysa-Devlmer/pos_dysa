@@ -103,3 +103,30 @@ body {
   background-color: var(--background);
   color: var(--foreground);
 }
+
+/* ─── Print: solo boleta visible ───
+   El modal de boleta marca su contenido imprimible con #boleta-print.
+   Al imprimir, ocultamos todo salvo ese bloque y lo llevamos al flujo normal
+   para que la página impresa muestre únicamente la boleta. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #boleta-print,
+  #boleta-print * {
+    visibility: visible;
+  }
+  #boleta-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    background: white !important;
+    color: black !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
