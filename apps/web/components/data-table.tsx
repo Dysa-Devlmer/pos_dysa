@@ -12,7 +12,15 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Search,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +46,8 @@ export interface DataTableProps<TData, TValue> {
   pageSize?: number;
   /** Botones/acciones que se colocan a la derecha del buscador (ej. "Crear"). */
   toolbar?: React.ReactNode;
+  /** Si true, el header es sticky (útil con tablas largas). */
+  stickyHeader?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -48,6 +58,7 @@ export function DataTable<TData, TValue>({
   emptyMessage = "Sin resultados.",
   pageSize = 10,
   toolbar,
+  stickyHeader = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -90,19 +101,59 @@ export function DataTable<TData, TValue>({
 
       <div className="rounded-md border bg-background">
         <Table>
-          <TableHeader>
+          <TableHeader
+            className={
+              stickyHeader
+                ? "sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40"
+                : undefined
+            }
+          >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const sortDir = header.column.getIsSorted();
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : canSort ? (
+                        <button
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="inline-flex items-center gap-1.5 -m-1 rounded px-1 py-1 font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`Ordenar por ${String(header.column.id)}`}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          <motion.span
+                            aria-hidden
+                            initial={false}
+                            animate={{
+                              rotate: sortDir === "desc" ? 180 : 0,
+                              opacity: sortDir ? 1 : 0.4,
+                            }}
+                            transition={{ duration: 0.2 }}
+                            className="inline-flex"
+                          >
+                            {sortDir === "asc" ? (
+                              <ArrowUp className="size-3.5" />
+                            ) : sortDir === "desc" ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : (
+                              <ChevronsUpDown className="size-3.5 opacity-60" />
+                            )}
+                          </motion.span>
+                        </button>
+                      ) : (
+                        flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
+                        )
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>

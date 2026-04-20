@@ -20,7 +20,7 @@ export default async function DashboardLayout({
   const [perfil, alertasCount] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: Number(session.user.id) },
-      select: { avatar: true },
+      select: { avatar: true, nombre: true, email: true },
     }),
     contarAlertasStock().catch(() => 0),
   ]);
@@ -28,7 +28,13 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-muted/20">
       <ScrollToTop />
-      <Sidebar rol={session.user.rol} alertasStockCount={alertasCount} />
+      <Sidebar
+        rol={session.user.rol}
+        alertasStockCount={alertasCount}
+        userName={perfil?.nombre ?? session.user.name ?? "Usuario"}
+        userEmail={perfil?.email ?? session.user.email ?? ""}
+        userAvatar={perfil?.avatar ?? null}
+      />
       <div className="flex flex-1 flex-col">
         <Header user={session.user} avatar={perfil?.avatar ?? null} />
         <main className="flex-1 p-6">{children}</main>

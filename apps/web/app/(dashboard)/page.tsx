@@ -64,11 +64,34 @@ export default async function DashboardPage() {
   const hace7 = new Date(hoy);
   hace7.setDate(hace7.getDate() - 6);
 
+  // Ayer (para comparación de ventas hoy)
+  const ayer = new Date(hoy);
+  ayer.setDate(ayer.getDate() - 1);
+
+  // Mes anterior (mismo rango hasta día N-1 del mes anterior)
+  const inicioMesAnterior = new Date(
+    inicioMes.getFullYear(),
+    inicioMes.getMonth() - 1,
+    1,
+  );
+  const finMesAnteriorParcial = new Date(
+    inicioMes.getFullYear(),
+    inicioMes.getMonth() - 1,
+    nowChile.getDate(),
+  );
+
+  // Clientes hace 30 días
+  const hace30 = new Date(hoy);
+  hace30.setDate(hace30.getDate() - 30);
+
   const [
     ventasHoyAgg,
+    ventasAyerAgg,
     ventasMesAgg,
+    ventasMesAnteriorAgg,
     alertasStockCount,
     totalClientes,
+    clientesNuevos30d,
     ventas7dias,
     topProductos,
     ultimasVentas,
@@ -79,12 +102,23 @@ export default async function DashboardPage() {
       _sum: { total: true },
     }),
     prisma.venta.aggregate({
+      where: { fecha: { gte: ayer, lt: hoy } },
+      _count: { _all: true },
+      _sum: { total: true },
+    }),
+    prisma.venta.aggregate({
       where: { fecha: { gte: inicioMes } },
+      _count: { _all: true },
+      _sum: { total: true },
+    }),
+    prisma.venta.aggregate({
+      where: { fecha: { gte: inicioMesAnterior, lt: finMesAnteriorParcial } },
       _count: { _all: true },
       _sum: { total: true },
     }),
     contarAlertasStock().catch(() => 0),
     prisma.cliente.count(),
+    prisma.cliente.count({ where: { createdAt: { gte: hace30 } } }).catch(() => 0),
     prisma.venta.findMany({
       where: { fecha: { gte: hace7 } },
       select: { fecha: true, total: true },
@@ -134,6 +168,9 @@ export default async function DashboardPage() {
     },
   );
 
+  // Serie numérica para sparklines (últimos 7 días)
+  const sparkSerie = seriesChart.map((d) => d.total);
+
   const topRows: TopProductoRow[] = topProductos.map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -167,16 +204,22 @@ export default async function DashboardPage() {
         ventasHoy={{
           cantidad: ventasHoyAgg._count._all,
           total: ventasHoyAgg._sum.total ?? 0,
+          totalAnterior: ventasAyerAgg._sum.total ?? 0,
         }}
         ventasMes={{
           cantidad: ventasMesAgg._count._all,
           total: ventasMesAgg._sum.total ?? 0,
+          totalAnterior: ventasMesAnteriorAgg._sum.total ?? 0,
         }}
         stockBajo={{
           cantidad: alertasStockCount,
           umbral: null,
         }}
-        totalClientes={totalClientes}
+        clientes={{
+          total: totalClientes,
+          nuevos30d: clientesNuevos30d,
+        }}
+        sparkSerie={sparkSerie}
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
