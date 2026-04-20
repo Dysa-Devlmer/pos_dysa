@@ -184,6 +184,7 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| e005238 | fix(ux): boleta impresa completa (print CSS) + chart-colors por tema + FK P2003 friendly + modal persiste en error |
 | afc8439 | docs: guía completa Obsidian + Claude segundo cerebro (replicable) → `OBSIDIAN-CLAUDE-SETUP.md` raíz |
 | b138471 | chore(claude): documentar hook post-commit en Segundo Cerebro |
 | 48f640f | chore(memory): protocolo cierre de fase con /session-end obligatorio |
@@ -276,6 +277,11 @@ $transaction:
 35. **`Intl.NumberFormat es-CL` en Node 22+ emite U+202F** — la Fase 19 añadió regression guards explícitos en `utils.test.ts::formatCLP — hydration safety` (fallan si alguien refactoriza el `.replace`)
 36. **`core.hooksPath` global rompe hooks per-repo** — el usuario tiene `~/.config/git/hooks/pre-commit` global (bloqueo de secretos) vía `core.hooksPath`. Esto hace que `.git/hooks/*` locales NO se ejecuten. Fix: `git config --local core.hooksPath .git/hooks` + **copiar el pre-commit global a `.git/hooks/pre-commit`** (si no, se pierde la protección anti-secretos en este repo). Ver [[agents-workflow#Cómo funciona el hook post-commit]]
 37. **`memory/.pending-notes` es buffer entre commits y `/session-end`** — el hook post-commit escribe ahí cada commit; `/session-end` lo procesa y borra. Si nunca se ejecuta `/session-end`, acumula indefinidamente — no se pierde nada pero la memoria queda desactualizada
+38. **`pnpm dev` puede salir con exit 0 y dejar zombie Node en puerto 3000** — el siguiente `pnpm dev` auto-bumpea a 3001 (Next.js detecta puerto ocupado). Fix: `lsof -i :3000` → `kill <PID>`. Causa común: señal externa (SIGTERM) que el proceso captura como clean-exit sin liberar el socket
+39. **Print CSS para Radix portal + DialogContent + motion transforms**: `@media print` debe liberar `overflow: visible`, `transform: none` y mostrar todos los ancestros. Sin esto, la boleta se imprime truncada sin items/totales (fix en `globals.css` commit `e005238`)
+40. **ConfirmDialog onConfirm retorna `false` → modal queda abierto** — pattern adoptado en `confirm-dialog.tsx` para mostrar error inline + toast sonner sin cerrar. Aplicado en 5 tables (categorias, clientes, productos, usuarios, ventas). Pattern: `onConfirm: () => Promise<boolean | void>` — `false` preserva modal, `true`/`void` cierra
+41. **Prisma `P2003` (FK violation) con mensaje amigable** — catch en `ventas/actions.ts` + pre-check de devoluciones antes de intentar delete. UX: en vez de error técnico, dice "Esta venta tiene devoluciones asociadas, elimínalas primero"
+42. **Chart colors por tema** — `--chart-1..5` en `globals.css` tienen luminancia diferente para light/dark mode. Evita gradient de `--primary` (casi negro en light) en `VentasChart`/`Sparkline`; usa `--chart-1` (azul) por defecto
 
 ---
 
