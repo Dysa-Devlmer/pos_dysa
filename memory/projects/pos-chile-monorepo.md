@@ -25,6 +25,14 @@ aliases:
 - [[infra-docker]] — Compose, Dockerfile multi-stage, puertos, healthcheck
 - [[agents-workflow]] — roles Cowork/CLI/Worktree/Gemini + protocolo verificación
 
+> [!success] Milestone 2026-04-19 — Estado producción 100/100
+> **Proyecto declarado completo y production-ready.**
+> - Build limpio en 2m22s, 68/68 tests en 1.07s, typecheck en 11.8s
+> - 19 fases completadas + 5 audits de seguridad cerrados
+> - PWA manifest + metadata global + health endpoint + README pro
+> - Segundo cerebro Obsidian operativo en `memory/` (7 notas densas)
+> - Último commit: `0f96905 merge(fase-19): polish final — badge consistency, animations, dark mode, loading states`
+
 ---
 
 ## Estructura del monorepo
@@ -166,6 +174,9 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 0f96905 | merge(fase-19): polish final — badge consistency, animations, dark mode, loading states |
+| 02cb8a6 | polish(fase-19): badge consistency, animations, dark mode, loading states |
+| 5ad3bef | chore(memory): session notes 2026-04-19 — fases 15-19 completadas |
 | 7e7444c | docs(fase-19): comentarios arquitecturales + 11 tests edge case + cleanup |
 | 5234212 | feat(prod): Fase 18 — PWA manifest, metadata global, health script, README |
 | 2d0305a | merge(fase-17): pages premium — login, 404/error, empty states, reportes, alertas urgency |
@@ -242,6 +253,10 @@ $transaction:
 29. **Content-Length check** en rutas de upload (avatar) — pre-filtro ANTES de await request.formData(); el check real es `file.size` después
 30. **`/api/v1` excluido del middleware NextAuth** — usa API Key propia (`requireAuth` en `app/api/v1/_helpers.ts`) + rate-limit Upstash (para acceso B2B sin sesión JWT)
 31. **`Permissions-Policy: usb=()`** deshabilita WebUSB intencionalmente — si se agregan lectores de barras/impresoras fiscales, cambiar a `usb=(self)` y revisar CSP
+32. **`.claude/commands/` ignorado pero `session-end.md` se commitea con `git add -f`** — es un comando del proyecto aunque el dir esté gitignored
+33. **Worktrees stale no se auto-limpian al mergear branch** — requiere `git worktree remove` explícito. Nunca `rm -rf` sobre `.worktrees/` porque deja refs zombie en `.git/worktrees/`
+34. **`validarRUT` acepta `"0-0"` como válido** — matemáticamente pasa módulo 11 (cuerpo "0", suma 0, DV esperado 0). No es RUT real pero el comportamiento queda congelado por test. Si se quiere rechazar, añadir length mínima > 1 del cuerpo
+35. **`Intl.NumberFormat es-CL` en Node 22+ emite U+202F** — la Fase 19 añadió regression guards explícitos en `utils.test.ts::formatCLP — hydration safety` (fallan si alguien refactoriza el `.replace`)
 
 ---
 
@@ -270,7 +285,8 @@ $transaction:
 | 16 | POS Caja premium: split 60/40, category pills, AnimatePresence, shortcuts | Worktree | cb44e3e+49c1625 | ✅ |
 | 17 | Pages premium: login, 404/error, empty states, reportes, alertas urgency | Worktree | 50d047d+2d0305a | ✅ |
 | 18 | Production hardening: PWA manifest + metadata + health + README + gitignore | CLI | 5234212 | ✅ |
-| 19 | Docs arquitecturales + tests edge (hydration, RUT, boundary) + cleanup | CLI | 7e7444c | ✅ |
+| 19a | Docs arquitecturales + tests edge (hydration, RUT, boundary) + cleanup | CLI | 7e7444c | ✅ |
+| 19b | Polish final: badge consistency + animations + dark mode + loading states | Worktree | 02cb8a6+0f96905 | ✅ |
 
 ---
 

@@ -197,6 +197,19 @@ No es security en sentido estricto, pero incluye hardening de UI:
 
 **Total: 68/68 tests passing** (commit `7e7444c` agregó +11 en Fase 19).
 
+### Falsos positivos verificados contra Gemini
+
+Tres hallazgos reportados por Gemini fueron verificados y rechazados con justificación técnica explícita. Queden documentados aquí para evitar re-discutirlos en futuros audits:
+
+| ID | Hallazgo Gemini | Por qué es falso positivo |
+|----|-----------------|---------------------------|
+| G4 | `cambiarPassword` timing attack | Opera sobre la sesión del propio usuario (`session.user.id`); no hay oráculo para atacante externo. Timing safe irrelevante |
+| G5 | `$queryRaw` SQL injection / BigInt overflow | Es template literal parametrizado — Prisma escapa los `${}` automáticamente. Sería injection solo con concatenación de strings (no se usa) |
+| B3 | Sin índice en columna `fecha` | El índice `@@index([fecha])` existe desde Fase 1 (commit `253f2c4`) en `packages/db/prisma/schema.prisma`. Gemini no lo vio |
+
+> [!info] Protocolo: cada hallazgo Gemini rechazado requiere justificación reproducible
+> No basta con "no aplica". Cowork exige ubicar la línea exacta y explicar por qué. Si no se puede reproducir el vector de ataque en código real → falso positivo. Esto evita que re-aparezcan en audits futuros.
+
 ### Hydration safety — regression guard (Fase 19)
 
 El bug G3 (formatCLP emitiendo U+202F/U+00A0) ya está resuelto, pero ahora tiene tests dedicados que fallan si alguien refactoriza el `.replace` fuera:

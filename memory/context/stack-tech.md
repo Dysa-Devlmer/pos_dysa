@@ -129,7 +129,7 @@ enum MetodoPago { EFECTIVO DEBITO CREDITO TRANSFERENCIA }
 | Rate limit | @upstash/ratelimit + @upstash/redis | 2.0.8 / 1.37.0 | 14 |
 | Observability | @sentry/nextjs | 10.49.0 | GAP-2 (commit `2b90ed8`) |
 | API docs | @scalar/nextjs-api-reference | 0.10.8 | Fase 8 fix (reemplazó swagger-ui-react por React 19 peer dep) |
-| Testing | vitest | 4.1.4 | Fase 8 (57/57 tests) |
+| Testing | vitest | 4.1.4 | Fase 8 → Fase 19 (**68/68 tests en 1.07s**) |
 
 ## Comandos importantes
 
@@ -151,7 +151,7 @@ docker compose ps         # Ver estado (buscar "healthy")
 # Calidad
 pnpm type-check           # TypeScript sin errores
 pnpm build                # Build producción
-pnpm test                 # Vitest — 57/57 passing
+pnpm test                 # Vitest — 68/68 passing
 ```
 
 ## Gotchas por capa
