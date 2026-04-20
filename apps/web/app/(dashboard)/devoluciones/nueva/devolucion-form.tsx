@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SOFT_BADGE } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 
 import { crearDevolucion } from "../actions";
@@ -277,7 +278,7 @@ export function DevolucionForm({ venta }: DevolucionFormProps) {
                               {l.cantidadYaDevuelta > 0 ? (
                                 <Badge
                                   variant="outline"
-                                  className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                                  className={SOFT_BADGE.warning}
                                 >
                                   Ya devueltas: {l.cantidadYaDevuelta}
                                 </Badge>
@@ -463,14 +464,17 @@ export function DevolucionForm({ venta }: DevolucionFormProps) {
             {cantidadTotalDevolver > 0 ? (
               <div className="pt-1">
                 {esTotalPreview ? (
-                  <Badge variant="destructive" className="gap-1">
+                  <Badge
+                    variant="outline"
+                    className={`gap-1 ${SOFT_BADGE.destructive}`}
+                  >
                     <RotateCcw className="size-3" />
                     Devolución TOTAL
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="gap-1 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                    className={`gap-1 ${SOFT_BADGE.warning}`}
                   >
                     <RotateCcw className="size-3" />
                     Devolución parcial
