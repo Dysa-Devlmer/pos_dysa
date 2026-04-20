@@ -1,23 +1,30 @@
 import { prisma } from "@repo/db";
-import { CajaPos, type ProductoFrecuente } from "./caja-pos";
+import { CajaPos, type ProductoCaja, type CategoriaCaja } from "./caja-pos";
 
 export const dynamic = "force-dynamic";
 
 export default async function CajaPage() {
-  // Productos más vendidos (si hay ventas) o recientes como fallback
-  const topVendidos = await prisma.producto.findMany({
-    where: { activo: true, stock: { gt: 0 } },
-    orderBy: [{ ventas: "desc" }, { updatedAt: "desc" }],
-    take: 12,
-    include: { categoria: { select: { nombre: true } } },
-  });
+  const [productos, categorias] = await Promise.all([
+    prisma.producto.findMany({
+      where: { activo: true },
+      orderBy: [{ ventas: "desc" }, { nombre: "asc" }],
+      take: 120,
+      include: { categoria: { select: { id: true, nombre: true } } },
+    }),
+    prisma.categoria.findMany({
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true },
+    }),
+  ]);
 
-  const frecuentes: ProductoFrecuente[] = topVendidos.map((p) => ({
+  const productosCaja: ProductoCaja[] = productos.map((p) => ({
     id: p.id,
     nombre: p.nombre,
     codigoBarras: p.codigoBarras,
     precio: p.precio,
     stock: p.stock,
+    alertaStock: p.alertaStock,
+    categoriaId: p.categoria.id,
     categoriaNombre: p.categoria.nombre,
   }));
 
@@ -32,7 +39,7 @@ export default async function CajaPage() {
         </div>
       </div>
 
-      <CajaPos productosFrecuentes={frecuentes} />
+      <CajaPos productos={productosCaja} categorias={categorias as CategoriaCaja[]} />
     </div>
   );
 }
