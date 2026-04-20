@@ -18,7 +18,7 @@ describe("checkEnv (production)", () => {
   });
 
   afterEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error NODE_ENV es readonly en los tipos de Node pero en tests necesitamos mutarlo
     process.env.NODE_ENV = originalNodeEnv;
     process.env.NEXTAUTH_SECRET = originalSecret;
     process.env.AUTH_SECRET = originalAuth;
@@ -99,12 +99,12 @@ describe("checkEnv (development)", () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error NODE_ENV es readonly en los tipos de Node pero en tests necesitamos mutarlo
     process.env.NODE_ENV = originalNodeEnv;
   });
 
   it("no valida nada en development (aunque el secret sea placeholder)", () => {
-    // @ts-expect-error
+    // @ts-expect-error NODE_ENV es readonly en los tipos de Node pero en tests necesitamos mutarlo
     process.env.NODE_ENV = "development";
     process.env.NEXTAUTH_SECRET = "cambiar";
     expect(() => checkEnv()).not.toThrow();
