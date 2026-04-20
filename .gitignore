@@ -78,6 +78,9 @@ __pycache__/
 # Ghost dirs de librerías externas (reaparecen sin razón aparente)
 datatables.net/
 
+# Segundo cerebro — notas pendientes capturadas por post-commit hook
+memory/.pending-notes
+
 # Screenshots y reportes de testing local
 screenshots/
 screenshots-v2/
