@@ -18,6 +18,7 @@ export async function loginAction(
 
   // Rate limiting (si Upstash está configurado)
   if (process.env.UPSTASH_REDIS_REST_URL) {
+    // Rate limiting distribuido con Upstash (producción ideal)
     const { loginRatelimit } = await import("@/lib/rate-limit");
     const { success, reset } = await loginRatelimit.limit(ip);
     if (!success) {
@@ -29,9 +30,14 @@ export async function loginAction(
       return { error: `Demasiados intentos. Intenta en ${minutos} minutos.` };
     }
   } else {
-    // En prod sin Upstash: log warning visible en cada login attempt.
-    // En dev: silent.
+    // Rate limiting en memoria (fallback — no persiste entre restarts)
     warnIfDisabledInProd("login attempt");
+    const { checkMemoryRateLimit } = await import("@/lib/rate-limit");
+    const { success, reset } = checkMemoryRateLimit(`login:${ip}`);
+    if (!success) {
+      const minutos = Math.ceil((reset - Date.now()) / 60000);
+      return { error: `Demasiados intentos. Intenta en ${minutos} minutos.` };
+    }
   }
 
   try {
@@ -41,6 +47,10 @@ export async function loginAction(
       redirect: false,
     });
   } catch (error) {
+    // NEXT_REDIRECT no es un error — es el mecanismo de redirect. Siempre propagarlo.
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
+      throw error;
+    }
     if (error instanceof AuthError) {
       Sentry.captureMessage("login_failure", {
         level: "warning",
@@ -48,7 +58,18 @@ export async function loginAction(
       });
       return { error: "Email o contraseña incorrectos" };
     }
-    throw error;
+    // Error inesperado — loguear sin crashear el cliente
+    console.error(
+      "[loginAction] unexpected error type:",
+      (error as { constructor?: { name?: string } })?.constructor?.name,
+      error
+    );
+    Sentry.captureException(error, {
+      extra: { email, ip, context: "login_unexpected" },
+    });
+    return {
+      error: "Error inesperado al iniciar sesión. Por favor intenta de nuevo.",
+    };
   }
 
   redirect("/");

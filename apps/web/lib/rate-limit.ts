@@ -60,3 +60,39 @@ export function warnIfDisabledInProd(context: string): void {
     "Configure Upstash Redis immediately: https://upstash.com"
   );
 }
+
+/**
+ * Rate limiter en memoria (fallback sin Upstash).
+ * No persiste entre restarts. Solo para dev y prod sin Redis.
+ * Límite: 5 intentos por IP en ventana de 15 minutos.
+ */
+const memStore = new Map<string, { count: number; resetAt: number }>();
+
+export function checkMemoryRateLimit(key: string): {
+  success: boolean;
+  reset: number;
+} {
+  const now = Date.now();
+  const WINDOW_MS = 15 * 60 * 1000; // 15 min
+  const MAX = 5;
+
+  // Prevenir memory leak limitando el tamaño en memoria
+  if (memStore.size > 5000) {
+    for (const [k, v] of memStore.entries()) {
+      if (now > v.resetAt) memStore.delete(k);
+    }
+    // Si el prune no fue suficiente, vaciamos agresivamente (fallback defense)
+    if (memStore.size > 5000) memStore.clear();
+  }
+
+  const entry = memStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    memStore.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return { success: true, reset: now + WINDOW_MS };
+  }
+  if (entry.count >= MAX) {
+    return { success: false, reset: entry.resetAt };
+  }
+  entry.count++;
+  return { success: true, reset: entry.resetAt };
+}
