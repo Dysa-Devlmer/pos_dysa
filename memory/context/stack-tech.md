@@ -130,6 +130,7 @@ enum MetodoPago { EFECTIVO DEBITO CREDITO TRANSFERENCIA }
 | Observability | @sentry/nextjs | 10.49.0 | GAP-2 (commit `2b90ed8`) |
 | API docs | @scalar/nextjs-api-reference | 0.10.8 | Fase 8 fix (reemplazó swagger-ui-react por React 19 peer dep) |
 | Testing | vitest | 4.1.4 | Fase 8 → Fase 19 (**68/68 tests en 1.07s**) |
+| Linting | eslint + eslint-config-next | ^9 + ^15.3 | Flat config (`eslint.config.mjs`) — reemplazó `next lint` deprecado (commit `5aa2e95`) |
 
 ## Comandos importantes
 

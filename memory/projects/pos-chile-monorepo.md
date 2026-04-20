@@ -184,6 +184,11 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 4a97a7a | fix(ux): QA report — manifest 404 (rewrite + matcher) + date inputs remount/width/color-scheme + dark mode html bg + color-scheme |
+| 5aa2e95 | chore(lint): migrate de `next lint` deprecado → ESLint flat config (`eslint.config.mjs` + FlatCompat) |
+| 80df790 | chore(memory): gotchas 43-45 post-polish dashboard |
+| 94f5104 | feat(dashboard): polish visual — stagger animations + fix cursor black bug (hsl/oklch fallout) |
+| f8df449 | fix(ux): resolve hydration id mismatch (Radix useId bajo motion) + recharts SSR width(-1) warning |
 | e005238 | fix(ux): boleta impresa completa (print CSS) + chart-colors por tema + FK P2003 friendly + modal persiste en error |
 | afc8439 | docs: guía completa Obsidian + Claude segundo cerebro (replicable) → `OBSIDIAN-CLAUDE-SETUP.md` raíz |
 | b138471 | chore(claude): documentar hook post-commit en Segundo Cerebro |
@@ -285,6 +290,12 @@ $transaction:
 43. **`framer-motion` descuadra `useId` de Radix entre SSR y CSR** — `HeaderActions` (motion.div) envolvía `<DropdownMenu>` del `UserMenu`, el contador auto-generado por Radix divergía entre server y client → React emitía warning "tree hydrated but some attributes…" en cada navegación. Fix: pasar `id` estable manualmente al `DropdownMenuTrigger` (`id="user-menu-trigger"`). Regla general: cuando un tree con `useId`-dependiente vive dentro de un wrapper con transforms/animaciones client-only, pasar `id` estable o diferir el mount
 44. **Recharts `width(-1) height(-1)` en SSR** — `ResponsiveContainer` mide el padre en el primer render; durante SSR el padre aún no tiene dimensiones → warning en consola. Fix (en `VentasChart`): `const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), [])` + gate `{mounted ? <ResponsiveContainer> … : null}`, más `minWidth={0} minHeight={0}` explícitos. Pattern replicable para cualquier chart Recharts
 45. **`hsl(var(--token) / N)` FALLA si el token es `oklch(...)`** — Tailwind v4 + shadcn new-york usa `oklch` para las CSS vars, pero shadcn template original (pre-v4) envolvía en `hsl(var(--muted) / 0.3)`. Resultado: CSS inválido → browser hace fallback a **negro**. Síntoma visto: barra de chart "Sáb 18" fully black + tooltip cursor overlay negro. Fix en `ventas-chart.tsx`: `cursor={{ fill: "color-mix(in oklab, var(--chart-1) 10%, transparent)" }}`. Auditar: ningún `hsl(var(--…) / …)` debe quedar si el var es oklch. Usar `color-mix` o rgba directo
+46. **`next lint` deprecated en Next 15.5** — pide setup interactivo en 15.3 sin config previa. Migrar a `eslint .` con **flat config** (`eslint.config.mjs` usando `FlatCompat` para cargar `next/core-web-vitals` + `next/typescript`). Deps: `eslint@^9`, `eslint-config-next@^15.3`, `@eslint/eslintrc`. Ignorar `.next/`, `node_modules/`, `public/`, `*.d.ts`. Relajar `no-explicit-any` a warn (interop Recharts/framer-motion) y `no-unused-vars` con prefix `_`
+47. **`/manifest.json` 404 por PWA installers legacy** — Next 15 emite PWA manifest en `/manifest.webmanifest` (desde `app/manifest.ts`), pero browsers, Lighthouse y extensions piden `/manifest.json` por convención previa. Fix: `async rewrites()` en `next.config.ts` con `{ source: "/manifest.json", destination: "/manifest.webmanifest" }` + excluir `manifest.json` del matcher del middleware (antes era interceptado y redirigido a `/login`)
+48. **`<input type="date">` no se re-sincroniza con props tras `router.push`** — el valor visual queda congelado aunque el prop cambie. Fix: `key={\`desde-${desde}\`}` fuerza remount del input cuando los props cambian. Más barato y robusto que un `useEffect` que actualice ref. Aplicado en `ventas/rango-fechas.tsx` y `reportes/reportes-workspace.tsx`
+49. **`<input type="date">` con `w-auto` colapsa el widget nativo en Chromium** — el date picker queda visualmente oculto aunque haya valor. Fix: width fijo (ej. 160px). Aplica en cualquier filtro de fecha visible en header/sidebar
+50. **Native widgets (date picker, scrollbars, selects) no respetan dark mode sin `color-scheme`** — `next-themes` setea `<html class="dark">` pero CSS `color-scheme` no se hereda automático. Fix: `color-scheme: light` en `:root`, `color-scheme: dark` en `.dark`. Opcional por-input: `className="[color-scheme:light] dark:[color-scheme:dark]"` para consistencia garantizada
+51. **Flash blanco al togglear dark mode** — si solo pintas `background-color` en `body`, el viewport completo (bordes, overscroll) queda blanco en transición. Fix: agregar `background-color: var(--background)` también en `html`. `next-themes` alterna la clase antes de que el CSS repinte, así que el flash es puramente visual
 
 ---
 
