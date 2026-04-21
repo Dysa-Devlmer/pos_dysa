@@ -149,6 +149,9 @@ declare module "next-auth/jwt" {
 
 ## Pattern 4 — Login action (Server Action v5) — catch block canónico
 
+> [!danger] SUPERSEDED en prod por Pattern 4bis (commit `947cfc0`)
+> El pattern con `signIn("credentials")` funciona en dev pero **FALLA en prod con NextAuth v5 beta.31** con error `MissingCSRF`. Razón: `signIn()` hace fetch server-to-server a `/api/auth/callback/credentials`, que no puede incluir la cookie CSRF del navegador. Ver **Pattern 4bis** abajo para el approach canónico actual.
+
 Evolucionó en `d25add8` → `2b90ed8` (Sentry) → **`53c99e6`** (fix A6: NEXT_REDIRECT propagation + unexpected error handling).
 
 ```ts
@@ -197,6 +200,82 @@ export async function loginAction(_prev, formData) {
 > Si usas `redirectTo: "/"` dentro de `signIn`, tanto ÉXITO como FALLO lanzan `NEXT_REDIRECT` (Next.js internal). El catch ve un "error" que no es `AuthError` → no puedes distinguir fallo de credenciales.
 >
 > **Solución**: `redirect: false` + `redirect("/")` manual fuera del try/catch.
+
+## Pattern 4bis — Login manual con JWT directo (fix MissingCSRF, commit `947cfc0`)
+
+**Usar en prod con NextAuth v5 beta.31**. Bypass completo de `signIn()`:
+
+```ts
+// apps/web/app/login/actions.ts
+"use server";
+import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers";
+import { encode } from "next-auth/jwt";     // ← NO @auth/core/jwt (no existe en v5 beta.31)
+import bcrypt from "bcryptjs";
+import { prisma } from "@repo/db";
+import * as Sentry from "@sentry/nextjs";
+
+const SESSION_COOKIE = "__Secure-authjs.session-token";  // prod con HTTPS
+const CSRF_COOKIE = "__Host-authjs.csrf-token";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;  // 30 días
+
+export async function loginAction(_prev, formData) {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
+    if (!usuario || !usuario.activo) return { error: "Email o contraseña incorrectos" };
+
+    const ok = await bcrypt.compare(password, usuario.password);
+    if (!ok) return { error: "Email o contraseña incorrectos" };
+
+    // Emitir JWT manualmente — salt MUST = cookie name
+    const now = Math.floor(Date.now() / 1000);
+    const jwtToken = await encode({
+      token: {
+        sub: String(usuario.id),
+        id: String(usuario.id),
+        email: usuario.email,
+        name: usuario.nombre,
+        rol: usuario.rol,                    // ← obligatorio para middleware RBAC
+        iat: now,
+        exp: now + SESSION_MAX_AGE,
+        jti: crypto.randomUUID(),
+      },
+      secret: process.env.NEXTAUTH_SECRET!,
+      salt: SESSION_COOKIE,                  // ← NextAuth v5 usa el nombre del cookie como salt
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set({
+      name: SESSION_COOKIE,
+      value: jwtToken,
+      httpOnly: true,
+      secure: true,                          // HTTPS vía Cloudflare → Nginx
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+    });
+    cookieStore.delete(CSRF_COOKIE);         // fuerza regeneración en el próximo request
+  } catch (error) {
+    // Catch canónico (ver Pattern 4): NEXT_REDIRECT → throw, resto → Sentry + return
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
+    Sentry.captureException(error, { extra: { email, context: "login_unexpected" } });
+    return { error: "Error inesperado al iniciar sesión." };
+  }
+  redirect("/");
+}
+```
+
+**Requisitos críticos**:
+- `salt === SESSION_COOKIE` (nombre exacto del cookie — en v5 el salt se usa para derivación criptográfica)
+- Import `encode` de `next-auth/jwt`, **no** de `@auth/core/jwt` (ese path no existe en v5 beta.31)
+- JWT incluye `sub`, `id`, `email`, `name`, `rol`, `iat`, `exp`, `jti` — los callbacks `session()` y `jwt()` en `auth.ts` los consumen; sin `rol` rompe el middleware RBAC
+- `secure: true` fijo en prod + `httpOnly: true` + `sameSite: "lax"`
+- Borrar cookie CSRF para forzar regeneración
+
+**Por qué funciona**: no hay fetch server-to-server → no se invoca el callback que exige CSRF. La verificación de credenciales es directa (bcrypt) y la sesión se establece escribiendo la cookie que NextAuth espera. El resto del sistema (middleware, `session()` callback, `auth()` en API routes) sigue funcionando normal porque lee la cookie estándar.
 
 ## Pattern 5 — API route handlers
 
