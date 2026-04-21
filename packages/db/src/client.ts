@@ -24,6 +24,6 @@ export const prisma =
         : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Singleton en todos los entornos: evita múltiples instancias de PrismaClient
+// en hot-reload (dev) y en re-evaluaciones del módulo (prod).
+globalForPrisma.prisma = prisma;
