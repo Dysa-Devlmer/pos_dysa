@@ -213,8 +213,10 @@ ssh_run "
   # Build de producción
   pnpm install --frozen-lockfile
 
-  # Docker compose
-  docker compose --env-file .env.docker up -d --build --remove-orphans
+  # Docker compose — --force-recreate es OBLIGATORIO: sin esto Compose
+  # puede reutilizar el container viejo si labels/env no cambiaron, aunque
+  # la imagen haya sido reconstruida (gotcha 75)
+  docker compose --env-file .env.docker up -d --build --force-recreate --remove-orphans
 
   echo 'Docker compose iniciado'
 "
