@@ -35,6 +35,12 @@ out/
 .env*.local
 !.env.example
 
+# Credenciales SSH / tokens (NUNCA al repo)
+ssh.md
+token.md
+*.key
+*.pem
+
 # build outputs
 dist/
 build/
