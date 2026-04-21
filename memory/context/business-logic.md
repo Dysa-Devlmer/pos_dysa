@@ -128,6 +128,53 @@ Ejemplo: `B-20260419-A7K3M2PX`.
 - **Unicidad**: columna `numeroBoleta` es `@unique` en Prisma. Si nanoid colisiona (improbable pero posible), el `INSERT` falla y el `$transaction` se aborta.
 - **No es SII**: este no es un folio electrónico ante el SII, es un identificador interno. Integración SII electrónico es fase futura.
 
+### 4.1. Impresión de boleta — ventana autónoma (commit `2fa2477` + `3fdefe9`)
+
+El approach original con `@media print` sobre el `<BoletaModal />` de Radix falló por incompatibilidad con portal + framer-motion transforms. Pattern canónico ahora:
+
+```ts
+// caja/boleta-modal.tsx::handlePrint
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  );
+}
+
+function handlePrint() {
+  const w = window.open("", "_blank", "width=400,height=600");
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8"><title>Boleta ${esc(numeroBoleta)}</title>
+    <style>
+      * { print-color-adjust: exact; -webkit-print-color-adjust: exact; color: #000; font-weight: 500; }
+      @page { size: auto; margin: 0 }
+      @media print and (max-width: 90mm) { body { padding: 3mm } }   /* térmica 58/80mm */
+      @media print and (min-width: 150mm) { body { max-width: 80mm; margin: 0 auto } }  /* A4/Letter */
+      body { font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; line-height: 1.45 }
+      .monto { font-variant-numeric: tabular-nums }
+      .total-box { border-top: 3px double #000; border-bottom: 3px double #000; padding: 4px 0 }
+      /* ... */
+    </style>
+  </head><body>
+    <!-- estructura con esc() en TODO string de datos -->
+  </body></html>`);
+  w.document.close();
+  w.print();
+  w.close();
+}
+```
+
+**Claves del diseño**:
+- **HTML+CSS autónomo** — cero dependencias de Tailwind, React, o el árbol DOM actual. Portable cross-browser, cross-impresora
+- **`print-color-adjust: exact`** — obliga a imprimir colores exactos; sin esto, browsers optimizan grises y la boleta sale borrosa en impresoras B&W
+- **`color: #000` + `font-weight: 500` global** — contraste máximo para tintas débiles
+- **`font-variant-numeric: tabular-nums`** en montos — alinea columnas de precios sin fuentes mono raras
+- **Media queries por ancho de papel** — 58/80mm térmica vs A4/Letter detectadas por el browser según la impresora elegida
+- **`esc()` en TODO string de BD** — `document.write` NO auto-escapa → vector XSS si un nombre/RUT contiene `<script>`. La función esc mapea `& < > " '` a entidades HTML
+- **`@page { size: auto; margin: 0 }`** — margen cero evita que el browser añada headers/footers (fecha, URL) de navegador
+
+Eliminado el bloque `@media print` antes necesario en `globals.css` (commit `e005238` obsoleto, ver gotcha 39).
+
 ## 5. Crear venta — transacción completa
 
 `apps/web/app/(dashboard)/ventas/actions.ts::crearVenta`:
