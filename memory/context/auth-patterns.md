@@ -54,6 +54,7 @@ import authConfig from "./auth.config";
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  trustHost: true,              // ← OBLIGATORIO si hay proxy (Cloudflare/Nginx) — fix ef9ef79
   ...authConfig,
   providers: [Credentials({ ... })],
   callbacks: {
@@ -67,6 +68,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 import authConfig from "./auth.config";
 export const { auth: middleware } = NextAuth(authConfig);
 ```
+
+> [!danger] Bug silencioso en prod con Cloudflare (resuelto en `ef9ef79`)
+> Sin `trustHost: true`, NextAuth v5 rechaza requests cuyo `Host:` header **no coincide literalmente** con `NEXTAUTH_URL`. El proxy de Cloudflare (o Nginx/Caddy) reescribe el header → origin ve IP+puerto internos, no `dy-pos.zgamersa.com`. Resultado: `UntrustedHost` → login rompe en prod aunque el resto esté perfecto (Cookie correcta, SSL OK, DB conectada).
+>
+> **Regla**: cualquier deploy que pase por CDN / reverse proxy necesita `trustHost: true`. En dev local sin proxy se puede omitir, pero mejor dejarlo seteado siempre para evitar sorpresas al migrar ambientes.
 
 ## Pattern 2 — Middleware edge con RBAC (fix commit 81933a5)
 
