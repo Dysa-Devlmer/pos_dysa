@@ -22,7 +22,11 @@ COPY . .
 RUN pnpm --filter @repo/db db:generate
 
 # Build Next.js (standalone)
+# POS_DATABASE_URL dummy durante build — Prisma necesita la var para generar
+# el cliente, no para conectarse. La conexión real ocurre en runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG POS_DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV POS_DATABASE_URL=${POS_DATABASE_URL}
 RUN pnpm --filter @repo/web build
 
 # ─── Runner ──────────────────────────────────────────────────
