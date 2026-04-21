@@ -33,6 +33,44 @@ con decisiones nuevas y hacer commit.
 
 ---
 
+## 🚢 Workflow Deploy — local → `deploy.sh` → prod (OBLIGATORIO)
+
+**Regla**: ningún cambio toca producción sin pasar por `deploy.sh`.
+Cero excepciones — ni "solo un fix rápido", ni "ssh manual al VPS".
+
+### Flujo canónico
+
+1. **Local** — desarrollar + testear con `pnpm dev`
+2. **Verificación** — `pnpm --filter web type-check && pnpm --filter web build`
+3. **Commit + push** — `git commit` (hook auto-captura) + `git push origin main`
+4. **`./deploy.sh`** — script único, 6 fases con rollback automático:
+   - Pre-flight (Docker, SSH, `.env.docker` válido, `NEXTAUTH_SECRET` seteado)
+   - Build local opcional
+   - Confirmación explícita (typear `deploy`)
+   - rsync + scp separado de `.env.docker`
+   - `docker compose up -d --build --force-recreate --remove-orphans` en VPS
+   - Health check 12×10s; rollback auto al último backup si falla
+5. **Verificación prod** — SIEMPRE en browser incógnito (ver gotcha 77 — curl NO es equivalente para Server Actions)
+
+### Prohibido (destruye trazabilidad y atrasa sesiones futuras)
+
+- ❌ `ssh VPS` + editar archivos directo en prod
+- ❌ `docker compose up` en prod sin `--force-recreate` (gotcha 75)
+- ❌ "probar con curl y dar por OK el login" — los Server Actions necesitan browser (gotcha 77)
+- ❌ Cloudflare SSL mode `Flexible` cuando el origin tiene HTTPS — loop infinito (gotcha 76)
+
+### Prerequisitos de la deploy key
+
+El script usa `~/.ssh/pos_deploy_ed25519` (sin passphrase, scope solo para deploy):
+
+```bash
+# Si la key no existe (onboarding nuevo agente/máquina):
+ssh-keygen -t ed25519 -f ~/.ssh/pos_deploy_ed25519 -N "" -C "pos-deploy@system_pos"
+ssh-copy-id -i ~/.ssh/pos_deploy_ed25519.pub root@64.176.21.229
+```
+
+---
+
 ## 🚀 Stack Actual
 
 | Capa | Tecnología | Versión |
