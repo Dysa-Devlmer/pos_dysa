@@ -36,7 +36,15 @@ Relacionado: [[pos-chile-monorepo]] · [[security-owasp]] · [[infra-docker]] ·
 
 ## 🔴 Quick wins (< 30 min, alto valor)
 
-### GAP-01 · Activar `SENTRY_DSN` en prod
+### ~~GAP-01~~ · ✅ Activar `SENTRY_DSN` en prod — cerrado 2026-04-22 (commit `3f3b162`)
+
+Proyecto Sentry creado vía MCP: **dy-company/pos-chile-prod** (ID `4511266051784704`).
+DSN agregada a `.env.docker` (gitignored) + propagada via `docker-compose.yml` con `SENTRY_DSN: ${SENTRY_DSN:-}`.
+Verificación end-to-end: 2 eventos de prueba (`login_failure` + `login_rate_limited`) enviados via HTTP API raw de Sentry desde el VPS → aparecieron como issues `POS-CHILE-PROD-1` y `POS-CHILE-PROD-2` en dashboard. **Bonus**: detectados 6 `login_failure` reales preexistentes (bots scanning).
+
+---
+
+#### Brief original (histórico)
 
 - **Estado**: Sentry instrumentado (gotchas GAP-2, login_failure + login_rate_limited) pero env var `SENTRY_DSN` vacía en `.env.docker` → `enabled: false` → eventos se descartan silenciosamente
 - **Agente recomendado**: Pierre (manual — crear proyecto en sentry.io) + CLI (agregar a `.env.docker` VPS + restart container)
@@ -47,7 +55,17 @@ Relacionado: [[pos-chile-monorepo]] · [[security-owasp]] · [[infra-docker]] ·
 - **Criterio de completitud**: hacer 6 logins fallidos consecutivos en prod → evento `login_rate_limited` visible en Sentry dashboard en < 1 min
 - **Bloquea**: observability pobre dificulta debugging de incidentes
 
-### GAP-02 · Healthcheck en container `pos-web`
+### ~~GAP-02~~ · ✅ Healthcheck en container `pos-web` — cerrado 2026-04-22 (commits `c0f4687` + `49a91a2`)
+
+Healthcheck agregado con `wget -q -O /dev/null http://127.0.0.1:3000/api/health` (interval 30s, timeout 10s, retries 3, start_period 40s). Post-deploy: `docker ps` muestra `pos-web: Up (healthy)` tras 50s.
+
+**Descubrimientos durante la verificación** → gotchas 83 y 84 en [[pos-chile-monorepo#Gotchas]]:
+- Alpine resuelve `localhost` a IPv6, Next.js escucha solo IPv4 → usar `127.0.0.1` explícito
+- Alpine minimal no trae `curl`, `wget` BusyBox sí (flags distintos a curl)
+
+---
+
+#### Brief original (histórico)
 
 - **Estado**: `docker-compose.yml` tiene healthcheck en `pos-postgres` (`pg_isready`) pero NO en `pos-web`. Si Next.js cuelga internamente, `docker ps` sigue marcando el container como "Up" aunque no responda
 - **Agente recomendado**: CLI
@@ -178,19 +196,19 @@ Relacionado: [[pos-chile-monorepo]] · [[security-owasp]] · [[infra-docker]] ·
 
 ## Resumen para Cowork/Worktree
 
-| # | Gap | Agente | Esfuerzo | Dependencias |
-|---|-----|--------|----------|--------------|
-| 01 | Sentry DSN prod | Pierre + CLI | 5 min | — |
-| 02 | Healthcheck pos-web | CLI | 5 min | — |
-| 03 | Backup Postgres | CLI | 10 min | — |
-| 04 | pnpm audit pre-deploy | CLI | 15 min | — |
-| 05 | GitHub Actions CI/CD | Worktree | 1 h | GAP-04 |
-| 06 | Playwright E2E | Worktree | 30 min | — |
-| 07 | ABC analysis reporte | Worktree | 1 h | — |
-| 08 | Integration tests DB | Worktree | 1 h | — |
-| 09 | Barcode scanner | Worktree | 2-3 h | — |
-| 10 | MFA/2FA ADMIN | Worktree | 2 h | — |
-| 11 | Image registry GHCR | Worktree | 1-2 h | GAP-05 |
+| # | Gap | Agente | Esfuerzo | Dependencias | Estado |
+|---|-----|--------|----------|--------------|--------|
+| 01 | Sentry DSN prod | Pierre + CLI | 5 min | — | ✅ `3f3b162` |
+| 02 | Healthcheck pos-web | CLI | 5 min | — | ✅ `49a91a2` (+ gotchas 83/84) |
+| 03 | Backup Postgres | CLI | 10 min | — | ⏳ next |
+| 04 | pnpm audit pre-deploy | CLI | 15 min | — | ⏳ |
+| 05 | GitHub Actions CI/CD | Worktree | 1 h | GAP-04 | ⏳ |
+| 06 | Playwright E2E | Worktree | 30 min | — | ⏳ |
+| 07 | ABC analysis reporte | Worktree | 1 h | — | ⏳ |
+| 08 | Integration tests DB | Worktree | 1 h | — | ⏳ |
+| 09 | Barcode scanner | Worktree | 2-3 h | — | ⏳ |
+| 10 | MFA/2FA ADMIN | Worktree | 2 h | — | ⏳ |
+| 11 | Image registry GHCR | Worktree | 1-2 h | GAP-05 | ⏳ |
 
 **Orden sugerido de ejecución**:
 1. Bloque quick-wins (01, 02, 03, 04) → todo en una sesión CLI (~35 min)
