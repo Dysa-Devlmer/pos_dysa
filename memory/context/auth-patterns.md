@@ -215,8 +215,16 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@repo/db";
 import * as Sentry from "@sentry/nextjs";
 
-const SESSION_COOKIE = "__Secure-authjs.session-token";  // prod con HTTPS
-const CSRF_COOKIE = "__Host-authjs.csrf-token";
+// Cookie name DEPENDE del scheme del sitio (commit 6334025):
+// HTTPS → prefix __Secure-/__Host- obligatorio, secure:true
+// HTTP local → sin prefix, secure:false (browser rechaza __Secure- en HTTP)
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+const SESSION_COOKIE = USE_SECURE_COOKIES
+  ? "__Secure-authjs.session-token"
+  : "authjs.session-token";
+const CSRF_COOKIE = USE_SECURE_COOKIES
+  ? "__Host-authjs.csrf-token"
+  : "authjs.csrf-token";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;  // 30 días
 
 export async function loginAction(_prev, formData) {
@@ -252,7 +260,7 @@ export async function loginAction(_prev, formData) {
       name: SESSION_COOKIE,
       value: jwtToken,
       httpOnly: true,
-      secure: true,                          // HTTPS vía Cloudflare → Nginx
+      secure: USE_SECURE_COOKIES,            // dinámico según scheme de NEXTAUTH_URL
       sameSite: "lax",
       path: "/",
       maxAge: SESSION_MAX_AGE,
@@ -272,7 +280,8 @@ export async function loginAction(_prev, formData) {
 - `salt === SESSION_COOKIE` (nombre exacto del cookie — en v5 el salt se usa para derivación criptográfica)
 - Import `encode` de `next-auth/jwt`, **no** de `@auth/core/jwt` (ese path no existe en v5 beta.31)
 - JWT incluye `sub`, `id`, `email`, `name`, `rol`, `iat`, `exp`, `jti` — los callbacks `session()` y `jwt()` en `auth.ts` los consumen; sin `rol` rompe el middleware RBAC
-- `secure: true` fijo en prod + `httpOnly: true` + `sameSite: "lax"`
+- **Cookie name + `secure` flag dinámicos según scheme** (gotcha 81): `__Secure-` + `secure:true` solo si `NEXTAUTH_URL` es HTTPS; en dev HTTP local se usan sin prefix
+- `httpOnly: true` + `sameSite: "lax"` siempre
 - Borrar cookie CSRF para forzar regeneración
 
 **Por qué funciona**: no hay fetch server-to-server → no se invoca el callback que exige CSRF. La verificación de credenciales es directa (bcrypt) y la sesión se establece escribiendo la cookie que NextAuth espera. El resto del sistema (middleware, `session()` callback, `auth()` en API routes) sigue funcionando normal porque lee la cookie estándar.
