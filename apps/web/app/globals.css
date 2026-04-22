@@ -3,77 +3,133 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ════════════════════════════════════════════════════════════════════
+   POS CHILE — SystemQR Palette
+   Naranja primario (#f97316) · Ámbar acento · Emerald success
+   Light: ivory cálido (#f5f1ea) · Dark: negro profundo (#0a0a0a)
+   ════════════════════════════════════════════════════════════════════ */
+
 :root {
   color-scheme: light;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --radius: 0.75rem;
+
+  /* Fondos ivory cálido (inspirado en panel derecho de SystemQR) */
+  --background: oklch(0.97 0.008 80);      /* #f5f1ea ivory */
+  --foreground: oklch(0.22 0 0);           /* #171717 near-black */
+  --card: oklch(1 0 0);                     /* blanco puro */
+  --card-foreground: oklch(0.22 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  /* Chart palette — colores distinguibles en light/dark, accesibles. */
-  --chart-1: oklch(0.62 0.18 250);   /* azul */
-  --chart-2: oklch(0.68 0.16 165);   /* emerald */
-  --chart-3: oklch(0.72 0.17 70);    /* ámbar */
-  --chart-4: oklch(0.62 0.22 25);    /* rojo/coral */
-  --chart-5: oklch(0.58 0.22 295);   /* violeta */
+  --popover-foreground: oklch(0.22 0 0);
+
+  /* Naranja primario — hero del sistema */
+  --primary: oklch(0.71 0.18 45);          /* #f97316 orange-500 */
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secundario: crema sutil para acciones suaves */
+  --secondary: oklch(0.95 0.012 80);       /* ivory-200 */
+  --secondary-foreground: oklch(0.22 0 0);
+
+  /* Muted: crema más tenue */
+  --muted: oklch(0.94 0.012 80);
+  --muted-foreground: oklch(0.45 0 0);
+
+  /* Accent: ámbar cálido */
+  --accent: oklch(0.93 0.06 80);           /* amber-100 ivory */
+  --accent-foreground: oklch(0.42 0.14 55); /* amber-800 */
+
+  /* Destructive: rojo clásico */
+  --destructive: oklch(0.62 0.23 25);      /* #ef4444 */
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Bordes e inputs */
+  --border: oklch(0.88 0.01 80);           /* ivory-300 */
+  --input: oklch(0.92 0.008 80);
+  --ring: oklch(0.71 0.18 45);             /* orange ring */
+
+  /* Sidebar: ivory profundo como rail diferenciado */
+  --sidebar: oklch(0.93 0.012 80);         /* ivory-deep #ece7de */
+  --sidebar-foreground: oklch(0.22 0 0);
+  --sidebar-primary: oklch(0.71 0.18 45);  /* orange */
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.012 80);
+  --sidebar-accent-foreground: oklch(0.22 0 0);
+  --sidebar-border: oklch(0.86 0.01 80);
+  --sidebar-ring: oklch(0.71 0.18 45);
+
+  /* Chart palette — naranja + ámbar + emerald + coral + violet */
+  --chart-1: oklch(0.71 0.18 45);          /* orange */
+  --chart-2: oklch(0.72 0.16 75);          /* amber */
+  --chart-3: oklch(0.7 0.14 165);          /* emerald */
+  --chart-4: oklch(0.74 0.14 20);          /* coral */
+  --chart-5: oklch(0.62 0.18 280);         /* violeta */
+
+  /* Tokens custom POS (no shadcn) */
+  --success: oklch(0.7 0.14 165);          /* #10b981 emerald */
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.78 0.16 75);          /* amber-500 */
+  --warning-foreground: oklch(0.22 0 0);
+
+  /* Tints para KPI warm (ámbar suave) y success */
+  --tint-warm: oklch(0.95 0.08 85);        /* amber-100 */
+  --tint-warm-foreground: oklch(0.42 0.14 55);
+  --tint-success: oklch(0.93 0.08 165);    /* emerald-100 */
+  --tint-success-foreground: oklch(0.3 0.1 165);
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-  /* Chart palette (dark) — luminancia más alta para contrastar sobre fondo oscuro. */
-  --chart-1: oklch(0.72 0.17 250);
-  --chart-2: oklch(0.78 0.16 165);
-  --chart-3: oklch(0.82 0.15 70);
-  --chart-4: oklch(0.72 0.20 25);
-  --chart-5: oklch(0.70 0.20 295);
+
+  /* Fondos oscuros (dashboard SystemQR) */
+  --background: oklch(0.155 0 0);          /* #0a0a0a */
+  --foreground: oklch(0.98 0 0);           /* #fafafa */
+  --card: oklch(0.2 0 0);                   /* #141414 */
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.22 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+
+  --primary: oklch(0.72 0.18 45);          /* orange-500 (ligeramente elevado) */
+  --primary-foreground: oklch(0.15 0 0);
+
+  --secondary: oklch(0.26 0 0);             /* gris elevado */
+  --secondary-foreground: oklch(0.98 0 0);
+
+  --muted: oklch(0.24 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+
+  --accent: oklch(0.32 0.08 50);           /* amber-900 tint */
+  --accent-foreground: oklch(0.9 0.1 80);  /* amber-300 */
+
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.28 0 0);               /* #262626 */
+  --input: oklch(0.3 0 0);
+  --ring: oklch(0.72 0.18 45);
+
+  --sidebar: oklch(0.18 0 0);              /* #141414 */
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.72 0.18 45);
+  --sidebar-primary-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.25 0 0);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.25 0 0);
+  --sidebar-ring: oklch(0.72 0.18 45);
+
+  --chart-1: oklch(0.78 0.18 45);          /* orange elevado */
+  --chart-2: oklch(0.82 0.15 75);          /* amber elevado */
+  --chart-3: oklch(0.78 0.14 165);         /* emerald elevado */
+  --chart-4: oklch(0.78 0.16 20);
+  --chart-5: oklch(0.68 0.2 280);
+
+  --success: oklch(0.74 0.14 165);
+  --success-foreground: oklch(0.15 0 0);
+  --warning: oklch(0.82 0.15 75);
+  --warning-foreground: oklch(0.15 0 0);
+
+  --tint-warm: oklch(0.3 0.08 55);         /* dark amber tint */
+  --tint-warm-foreground: oklch(0.88 0.12 80);
+  --tint-success: oklch(0.28 0.08 165);
+  --tint-success-foreground: oklch(0.88 0.12 160);
 }
 
 @theme inline {
@@ -112,14 +168,24 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-tint-warm: var(--tint-warm);
+  --color-tint-warm-foreground: var(--tint-warm-foreground);
+  --color-tint-success: var(--tint-success);
+  --color-tint-success-foreground: var(--tint-success-foreground);
+  --font-sans: var(--font-geist), -apple-system, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), "Fraunces", Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), "SF Mono", monospace;
 }
 
 * {
   border-color: var(--border);
 }
 
-/* El background va en html para cubrir el viewport completo
-   (evita flash blanco en los bordes al togglear dark mode). */
+/* Background en html para evitar flash blanco al togglear dark */
 html {
   background-color: var(--background);
 }
@@ -127,9 +193,49 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Impresión de boleta: se realiza en una nueva ventana autónoma generada
-   por `handlePrint` en `caja/boleta-modal.tsx` (HTML+CSS self-contained).
-   No se requieren reglas @media print aquí — ese approach fallaba por
-   incompatibilidad con Radix Dialog portal + framer-motion inline transforms. */
+/* Scrollbar custom thin + hover naranja */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--primary) 40%, transparent);
+  background-clip: padding-box;
+}
+
+/* Focus ring naranja consistente */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Utility: display font serif */
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Utility: gradient text naranja→ámbar */
+.text-gradient-brand {
+  background: linear-gradient(100deg, var(--primary) 0%, var(--warning) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Utility: tabular numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Impresión de boleta: ver caja/boleta-modal.tsx (HTML self-contained) */

@@ -1,9 +1,30 @@
 import type { Metadata } from "next";
+import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { checkEnv } from "@/lib/check-env";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 checkEnv();
 
@@ -38,8 +59,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${geist.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

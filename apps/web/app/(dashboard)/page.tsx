@@ -192,18 +192,30 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+    <div className="space-y-8">
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+          Panel · Tiempo real
+        </p>
+        <h1 className="font-display text-4xl leading-[1.05] tracking-tight">
+          Hola,{" "}
+          <span className="italic text-gradient-brand">
+            {user?.name?.split(" ")[0] ?? "invitado"}
+          </span>
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Hola <span className="font-medium">{user?.name ?? "invitado"}</span>,
-          aquí está el resumen del negocio en tiempo real.
+          Resumen del negocio, ventas recientes y productos con mejor
+          desempeño.
         </p>
       </div>
 
       <AlertasBanner count={alertasStockCount} />
 
-      <DashboardStats
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+          Indicadores clave
+        </h2>
+        <DashboardStats
         ventasHoy={{
           cantidad: ventasHoyAgg._count._all,
           total: ventasHoyAgg._sum.total ?? 0,
@@ -224,13 +236,24 @@ export default async function DashboardPage() {
         }}
         sparkSerie={sparkSerie}
       />
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <VentasChart data={seriesChart} />
-        <TopProductos data={topRows} />
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+          Tendencia · Top productos
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <VentasChart data={seriesChart} />
+          <TopProductos data={topRows} />
+        </div>
+      </section>
 
-      <UltimasVentas data={ultimasRows} />
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+          Actividad reciente
+        </h2>
+        <UltimasVentas data={ultimasRows} />
+      </section>
     </div>
   );
 }
