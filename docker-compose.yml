@@ -41,8 +41,10 @@ services:
     networks:
       - pos-network
     healthcheck:
-      # alpine minimal no trae curl; wget sí está en /usr/bin/wget (GAP-02)
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/api/health || exit 1"]
+      # alpine minimal no trae curl; wget sí está en /usr/bin/wget (GAP-02).
+      # Usar 127.0.0.1 explícito (NO "localhost") — alpine resuelve localhost
+      # a ::1 IPv6 y Next.js escucha solo en IPv4 0.0.0.0 → Connection refused.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
