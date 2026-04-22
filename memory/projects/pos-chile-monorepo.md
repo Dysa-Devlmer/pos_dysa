@@ -27,6 +27,8 @@ aliases:
 
 **Guía externa replicable**: [`OBSIDIAN-CLAUDE-SETUP.md`](../../OBSIDIAN-CLAUDE-SETUP.md) en la raíz del repo — documenta cómo replicar el segundo cerebro en proyectos nuevos (arquitectura + instalación paso a paso + checklist + gotchas + tiempo estimado).
 
+**Roadmap post-prod**: [[roadmap]] — 11 gaps priorizados del audit 2026-04-21 (4 quick-wins + 4 esfuerzo medio + 3 nice-to-have). Cada ítem tiene agente sugerido + dependencias + criterio de completitud.
+
 > [!success] Milestone 2026-04-19 — Estado producción 100/100
 > **Proyecto declarado completo y production-ready.**
 > - Build limpio en 2m22s, 68/68 tests en 1.07s, typecheck en 11.8s
