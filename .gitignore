@@ -84,6 +84,10 @@ __pycache__/
 # Ghost dirs de librerías externas (reaparecen sin razón aparente)
 datatables.net/
 
+# Artifacts del script dev.sh (log + pid del pnpm dev en background)
+.dev-server.log
+.dev-server.pid
+
 # Segundo cerebro — notas pendientes capturadas por post-commit hook
 memory/.pending-notes
 
