@@ -189,8 +189,7 @@ rsync -avz --progress \
   --exclude='memory/' \
   --exclude='zip/' \
   --exclude='screenshots/' \
-  --exclude='screenshots-v2/' \
-  --exclude='design-preview.html' \
+  --exclude='docs/' \
   --exclude='vultr-mcp-server/' \
   --exclude='cloudflare-mcp-server/' \
   --exclude='datatables.net/' \

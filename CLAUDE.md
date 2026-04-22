@@ -1,7 +1,7 @@
 # CLAUDE.md — POS Chile Monorepo (Next.js 15)
 
 > **⚠️ LEER AL INICIO DE CADA SESIÓN — reglas absolutas del proyecto**
-> El stack PHP anterior fue migrado a un monorepo Next.js 15. Todo lo relativo al stack viejo queda en `zip/`.
+> El stack PHP anterior fue migrado a un monorepo Next.js 15. El legacy PHP fue eliminado del repo (`zip/` borrado — estaba en `.gitignore` y nunca fue commiteado).
 
 ---
 
@@ -33,9 +33,9 @@ con decisiones nuevas y hacer commit.
 
 ---
 
-## 🚢 Workflow Deploy — local → `deploy.sh` → prod (OBLIGATORIO)
+## 🚢 Workflow Deploy — local → `scripts/deploy.sh` → prod (OBLIGATORIO)
 
-**Regla**: ningún cambio toca producción sin pasar por `deploy.sh`.
+**Regla**: ningún cambio toca producción sin pasar por `scripts/deploy.sh`.
 Cero excepciones — ni "solo un fix rápido", ni "ssh manual al VPS".
 
 ### Flujo canónico
@@ -43,7 +43,7 @@ Cero excepciones — ni "solo un fix rápido", ni "ssh manual al VPS".
 1. **Local** — desarrollar + testear con `pnpm dev`
 2. **Verificación** — `pnpm --filter web type-check && pnpm --filter web build`
 3. **Commit + push** — `git commit` (hook auto-captura) + `git push origin main`
-4. **`./deploy.sh`** — script único, 6 fases con rollback automático:
+4. **`./scripts/deploy.sh`** — script único, 6 fases con rollback automático:
    - Pre-flight (Docker, SSH, `.env.docker` válido, `NEXTAUTH_SECRET` seteado)
    - Build local opcional
    - Confirmación explícita (typear `deploy`)
@@ -54,7 +54,7 @@ Cero excepciones — ni "solo un fix rápido", ni "ssh manual al VPS".
 
 ### Prohibido (destruye trazabilidad y atrasa sesiones futuras)
 
-- ❌ `ssh VPS` + editar archivos directo en prod
+- ❌ `ssh VPS` + editar archivos directo en prod (usar `./scripts/deploy.sh`)
 - ❌ `docker compose up` en prod sin `--force-recreate` (gotcha 75)
 - ❌ "probar con curl y dar por OK el login" — los Server Actions necesitan browser (gotcha 77)
 - ❌ Cloudflare SSL mode `Flexible` cuando el origin tiene HTTPS — loop infinito (gotcha 76)
