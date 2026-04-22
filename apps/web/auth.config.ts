@@ -3,6 +3,7 @@ import type { NextAuthConfig, Session } from "next-auth";
 const adminRoutes = ["/usuarios"];
 
 export default {
+  trustHost: true,
   pages: {
     signIn: "/login",
   },

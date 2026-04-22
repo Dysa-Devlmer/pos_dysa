@@ -8,10 +8,16 @@ import { prisma } from "@repo/db";
 import * as Sentry from "@sentry/nextjs";
 import { getClientIP, warnIfDisabledInProd } from "@/lib/rate-limit";
 
-// NextAuth v5 cookie names en producción (con X-Forwarded-Proto: https → Secure prefix)
-// El salt DEBE coincidir con el nombre del cookie que NextAuth v5 usa internamente.
-const SESSION_COOKIE = "__Secure-authjs.session-token";
-const CSRF_COOKIE = "__Host-authjs.csrf-token";
+// NextAuth v5 cookie names: __Secure- prefix requiere HTTPS.
+// Detectamos por NEXTAUTH_URL (fuente de verdad del scheme real del sitio),
+// no por NODE_ENV — `pnpm start` local es production pero sirve sobre HTTP.
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+const SESSION_COOKIE = USE_SECURE_COOKIES
+  ? "__Secure-authjs.session-token"
+  : "authjs.session-token";
+const CSRF_COOKIE = USE_SECURE_COOKIES
+  ? "__Host-authjs.csrf-token"
+  : "authjs.csrf-token";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 días en segundos
 
 export async function loginAction(
@@ -96,7 +102,7 @@ export async function loginAction(
       name: SESSION_COOKIE,
       value: jwtToken,
       httpOnly: true,
-      secure: true,      // HTTPS vía Cloudflare → Nginx (X-Forwarded-Proto: https)
+      secure: USE_SECURE_COOKIES, // HTTPS vía Cloudflare → Nginx en prod; HTTP local
       sameSite: "lax",
       path: "/",
       maxAge: SESSION_MAX_AGE,

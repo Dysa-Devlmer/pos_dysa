@@ -8,8 +8,7 @@ import authConfig from "./auth.config";
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
-  trustHost: true,
-  ...authConfig,
+  ...authConfig, // trustHost se define en auth.config.ts (también lo lee el middleware edge)
   providers: [
     Credentials({
       credentials: {
