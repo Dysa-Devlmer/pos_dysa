@@ -35,9 +35,13 @@ export default async function DashboardLayout({
         userEmail={perfil?.email ?? session.user.email ?? ""}
         userAvatar={perfil?.avatar ?? null}
       />
-      <div className="flex flex-1 flex-col">
-        <Header user={session.user} avatar={perfil?.avatar ?? null} />
-        <main className="flex-1 p-6">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header
+          user={session.user}
+          avatar={perfil?.avatar ?? null}
+          alertasStockCount={alertasCount}
+        />
+        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

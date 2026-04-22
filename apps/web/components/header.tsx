@@ -3,17 +3,24 @@ import { signOut } from "@/auth";
 import { HeaderActions } from "@/components/header-actions";
 import { SignOutInline, UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MobileNav } from "@/components/mobile-nav";
 
 export function Header({
   user,
   avatar,
+  alertasStockCount = 0,
 }: {
   user: Session["user"];
   avatar: string | null;
+  alertasStockCount?: number;
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
-      <div className="md:hidden text-base font-bold">POS Chile</div>
+      {/* Mobile: hamburger + brand */}
+      <div className="flex items-center gap-3 md:hidden">
+        <MobileNav rol={user.rol} alertasStockCount={alertasStockCount} />
+        <span className="text-base font-bold">POS Chile</span>
+      </div>
 
       <div className="ml-auto">
         <HeaderActions>

@@ -3,17 +3,17 @@
 # dev.sh — Control del entorno local de POS Chile
 #
 # Uso:
-#   ./dev.sh start    Levanta postgres (docker) + pnpm dev (http://localhost:3000)
-#   ./dev.sh stop     Detiene pnpm dev; deja postgres corriendo
-#   ./dev.sh stop --all   Detiene pnpm dev + contenedores docker
-#   ./dev.sh status   Muestra estado de docker + puerto 3000
-#   ./dev.sh logs     Sigue los logs de pnpm dev en vivo
-#   ./dev.sh restart  stop + start
+#   ./scripts/dev.shstart    Levanta postgres (docker) + pnpm dev (http://localhost:3000)
+#   ./scripts/dev.shstop     Detiene pnpm dev; deja postgres corriendo
+#   ./scripts/dev.shstop --all   Detiene pnpm dev + contenedores docker
+#   ./scripts/dev.shstatus   Muestra estado de docker + puerto 3000
+#   ./scripts/dev.shlogs     Sigue los logs de pnpm dev en vivo
+#   ./scripts/dev.shrestart  stop + start
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 LOG_FILE="$ROOT_DIR/.dev-server.log"
@@ -46,8 +46,8 @@ action_start() {
   fi
 
   # 2. Puerto 3000
-  if port_busy "$PORT"; then
-    warn "Puerto $PORT ya ocupado — no se levanta pnpm dev"
+  if port_busy "${PORT}"; then
+    warn "Puerto ${PORT} ya ocupado — no se levanta pnpm dev"
     warn "Usa './dev.sh stop' primero o './dev.sh restart'"
     return 1
   fi
@@ -62,11 +62,11 @@ action_start() {
   log "Esperando arranque de Next.js…"
   for _ in $(seq 1 30); do
     if grep -q "Ready in" "$LOG_FILE" 2>/dev/null; then
-      ok "Next.js listo → http://localhost:$PORT"
+      ok "Next.js listo → http://localhost:${PORT}"
       echo
       printf "  pnpm dev PID: %s\n" "$(cat "$PID_FILE")"
-      printf "  Logs:         ./dev.sh logs\n"
-      printf "  Detener:      ./dev.sh stop\n"
+      printf "  Logs:         ./scripts/dev.sh logs\n"
+      printf "  Detener:      ./scripts/dev.sh stop\n"
       return 0
     fi
     if grep -qE "(EADDRINUSE|Error:)" "$LOG_FILE" 2>/dev/null; then
@@ -97,9 +97,9 @@ action_stop() {
   fi
 
   # 2. Limpiar puerto 3000 (por si quedó algo huérfano)
-  if port_busy "$PORT"; then
-    log "Liberando puerto $PORT…"
-    lsof -ti:"$PORT" | xargs kill -9 2>/dev/null || true
+  if port_busy "${PORT}"; then
+    log "Liberando puerto ${PORT}…"
+    lsof -ti:"${PORT}" | xargs kill -9 2>/dev/null || true
   fi
   ok "Next.js detenido"
 
@@ -120,12 +120,12 @@ action_status() {
   docker ps --filter "name=pos-" --format "    {{.Names}}\t{{.Status}}" | column -t -s $'\t'
   echo
 
-  printf "  ${c_bold}Next.js (puerto $PORT):${c_reset}\n"
-  if port_busy "$PORT"; then
+  printf "  ${c_bold}Next.js (puerto ${PORT}):${c_reset}\n"
+  if port_busy "${PORT}"; then
     local pids
-    pids="$(lsof -ti:"$PORT" | tr '\n' ' ')"
+    pids="$(lsof -ti:"${PORT}" | tr '\n' ' ')"
     ok "Corriendo — PID(s): $pids"
-    printf "    URL: http://localhost:$PORT\n"
+    printf "    URL: http://localhost:${PORT}\n"
   else
     warn "No corriendo"
   fi
@@ -152,14 +152,14 @@ case "${1:-}" in
 ${c_bold}POS Chile — entorno local${c_reset}
 
 Uso:
-  ./dev.sh start              Levanta postgres + pnpm dev
-  ./dev.sh stop               Detiene pnpm dev (deja postgres)
-  ./dev.sh stop --all         Detiene pnpm dev + docker
-  ./dev.sh restart            stop + start
-  ./dev.sh status             Estado de docker + puerto 3000
-  ./dev.sh logs               Sigue los logs de pnpm dev
+  ./scripts/dev.shstart              Levanta postgres + pnpm dev
+  ./scripts/dev.shstop               Detiene pnpm dev (deja postgres)
+  ./scripts/dev.shstop --all         Detiene pnpm dev + docker
+  ./scripts/dev.shrestart            stop + start
+  ./scripts/dev.shstatus             Estado de docker + puerto 3000
+  ./scripts/dev.shlogs               Sigue los logs de pnpm dev
 
-URL: http://localhost:$PORT
+URL: http://localhost:${PORT}
 EOF
     ;;
 esac
