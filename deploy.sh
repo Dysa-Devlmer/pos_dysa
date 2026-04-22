@@ -40,7 +40,9 @@ header()  { echo -e "\n${BOLD}${BLUE}═══ $* ═══${NC}\n"; }
 die()     { error "$*"; exit 1; }
 
 ssh_run() {
-  ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
+  # -n desactiva stdin: evita que ssh consuma el stdin del script parent.
+  # Sin esto, los `read` interactivos del script reciben EOF y set -e aborta.
+  ssh -n -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
       -o ConnectTimeout=10 "${VPS_USER}@${VPS_HOST}" "$@"
 }
 
@@ -104,7 +106,7 @@ success ".env.docker válido"
 
 # Conectividad SSH al VPS
 log "Verificando conexión SSH a ${VPS_HOST}..."
-if ! ssh -i "$SSH_KEY" -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+if ! ssh -n -i "$SSH_KEY" -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
         -o BatchMode=yes "${VPS_USER}@${VPS_HOST}" "echo ok" &>/dev/null; then
   die "No se puede conectar al VPS. Verifica SSH key y que el servidor esté activo."
 fi
@@ -171,17 +173,37 @@ ssh_run "
 success "Backup: ${VPS_DIR}.backup_${BACKUP_TAG}"
 
 # rsync — excluir lo que no necesita el VPS
+# Estrategia: respetar .gitignore (filter :-) + excludes explícitos para
+# archivos versionados pero dev-only (memory/, docs internos, MCPs locales).
+# Sin esto, rsync transferiría zip/ (1.3 GB PHP legacy), node_modules raíz
+# via pnpm symlinks, screenshots/, etc → llenaba el disco del VPS.
 log "Transfiriendo archivos al VPS (rsync)..."
 rsync -avz --progress \
+  --filter=':- .gitignore' \
   --exclude='.git/' \
-  --exclude='node_modules/' \
-  --exclude='apps/web/node_modules/' \
-  --exclude='packages/*/node_modules/' \
-  --exclude='.next/' \
-  --exclude='apps/web/.next/' \
+  --exclude='.gitignore' \
+  --exclude='.claude/' \
+  --exclude='.obsidian/' \
+  --exclude='.worktrees/' \
+  --exclude='.DS_Store' \
+  --exclude='memory/' \
+  --exclude='zip/' \
+  --exclude='screenshots/' \
+  --exclude='screenshots-v2/' \
+  --exclude='design-preview.html' \
+  --exclude='vultr-mcp-server/' \
+  --exclude='cloudflare-mcp-server/' \
+  --exclude='datatables.net/' \
+  --exclude='ssh.md' \
+  --exclude='token.md' \
+  --exclude='apikey.md' \
+  --exclude='*.key' \
+  --exclude='*.pem' \
   --exclude='*.log' \
-  --exclude='.env.local' \
   --exclude='deploy.log' \
+  --exclude='.env' \
+  --exclude='.env.local' \
+  --exclude='.env.docker' \
   -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=accept-new" \
   . "${VPS_USER}@${VPS_HOST}:${VPS_DIR}/"
 
