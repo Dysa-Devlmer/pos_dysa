@@ -53,6 +53,19 @@ aliases:
 > - **Bloqueantes pre-deploy**: generar NEXTAUTH_SECRET · verificar SSL mode Cloudflare = Full (strict) · instalar Docker en VPS
 > - **Script de deploy listo**: `deploy.sh` en raíz (commit `be71aa5`) — 6 fases con rollback automático. Uso: `./deploy.sh` desde local tras setear NEXTAUTH_SECRET en `.env.docker`
 
+> [!success] Milestone 2026-04-21 — Reorganización raíz + fixes VPS/SSL/CORS
+> **Limpieza completa del repo y producción 100% estable.**
+> - **Repo reorganizado** (commit `85ebcf2`): `deploy.sh`/`dev.sh` → `scripts/`, `design-preview.html` → `docs/design/`, `OBSIDIAN-CLAUDE-SETUP.md` → `docs/setup/`, `screenshots-v2/` → `docs/design/screenshots/`
+> - **1.7 GB liberados**: `zip/` (PHP legacy) + `screenshots/` v1 eliminados del working tree (ya eran gitignored)
+> - **Deploy path actualizado**: `./scripts/deploy.sh` (CLAUDE.md y rsync excludes actualizados)
+> - **Raíz ≤13 entradas visibles** — monorepo limpio
+> - **VPS fixes aplicados**:
+>   - Login producción reparado (rebuild Docker con JWT-based `actions.ts` correcto — stale build era la causa)
+>   - `systemqr.zgamersa.com`: SSL 526 → Let's Encrypt instalado (válido 2026-07-20, auto-renueva)
+>   - `apiqr.zgamersa.com`: SSL 526 → Let's Encrypt instalado (válido 2026-07-20, auto-renueva) + CORS headers añadidos en nginx con `proxy_hide_header` para evitar duplicados
+>   - Todos los subdominios del VPS ahora tienen Let's Encrypt (aprobi, dy-pos, expenseflow, systemqr, apiqr)
+> - **Cloudflare**: acceso MCP confirmado (account `fa2fd1592fea9c324d39fe5d765d9cd5`)
+
 > [!success] Milestone 2026-04-21 22:21 UTC-3 — **PROYECTO EN PRODUCCIÓN** 🚀
 > **Deploy real ejecutado y verificado.**
 > - Container `pos-web` arriba en VPS Vultr (`64.176.21.229:3000`)
@@ -99,6 +112,15 @@ system_pos/
 │   │   └── src/client.ts + index.ts
 │   ├── ui/                         ← @repo/ui — componentes compartidos
 │   └── typescript-config/          ← tsconfig base/nextjs/react-library
+├── scripts/                        ← ← NUEVO (commit 85ebcf2)
+│   ├── deploy.sh                   ← Deploy al VPS — ejecutar como ./scripts/deploy.sh
+│   └── dev.sh                      ← Wrapper dev local
+├── docs/                           ← ← NUEVO (commit 85ebcf2)
+│   ├── design/
+│   │   ├── preview.html            ← Prototipo UI histórico
+│   │   └── screenshots/            ← UX audit capturas (ex screenshots-v2/)
+│   └── setup/
+│       └── obsidian-claude.md      ← Guía segundo cerebro (ex OBSIDIAN-CLAUDE-SETUP.md)
 ├── docker-compose.yml              ← postgres:16-alpine + pgadmin (sin version:)
 ├── turbo.json                      ← usa "tasks" (NO "pipeline")
 ├── pnpm-workspace.yaml
@@ -207,6 +229,9 @@ $transaction:
 | Hash | Descripción |
 |------|-------------|
 | 7d118be | fix(qa): 6 hallazgos adversariales — **C5** bloqueo edición venta con devoluciones (UI + guard server + action) · **C4** precio mínimo $1 (era nonnegative) · **C7** helper text motivo devolución < 5 chars · **A3** `/devoluciones/[id]` 404 limpio |
+| 85ebcf2 | chore(repo): reorganize root — `scripts/`, `docs/`, elimina `zip/` (1.7GB) + `screenshots/` (gitignored, ahora fuera de disco) |
+| c06f9f9 | chore(design): mockup HTML `design-preview.html` (1668 líneas) — movido luego a `docs/design/preview.html` |
+| 7a89ea8 | feat(tooling): `dev.sh` para control del entorno local (start/stop/status/logs) — movido luego a `scripts/dev.sh` |
 | 70a084f | fix(deploy): `ssh -n` (stdin stealing) + rsync `--filter=':- .gitignore'` + excludes completos — primer deploy exitoso a prod |
 | 6334025 | fix(auth): cookie name + trustHost alineados para dev HTTP local (USE_SECURE_COOKIES basado en NEXTAUTH_URL scheme) |
 | e664915 | feat(ui): adopt SystemQR palette — naranja primario + ámbar + emerald + serif Instrument Serif + sidebar colapsable con localStorage |
@@ -369,6 +394,7 @@ $transaction:
 58. **Editar venta con devoluciones rompe invariantes** — `editarVenta` revierte stock/contadores y re-aplica detalles, pero `Devolucion` ya consumió esos detalles vía `DevolucionItem` y ajustó stock por su cuenta. Editar produce stock duplicado/negativo y `compras`/`ultimaCompra` inconsistentes. **Defensa en 3 capas (commit `7d118be`)**: (a) UI: botón "Editar" `disabled` con tooltip si `venta.devoluciones.length > 0` en `ventas/[id]/page.tsx`; (b) Page guard: `prisma.devolucion.count` post-`notFound` en `ventas/[id]/editar/page.tsx` → `redirect(/ventas/${id})`; (c) Server action: pre-check en `editarVenta` después de cargar `ventaVieja` → retorna `{ ok: false, error }`. Mismo patrón ya existía para `eliminarVenta` (FK constraint) — ahora cubre edición también
 59. **`Collecting build traces` ENOENT `.nft.json` es bug pre-existente Next 15.5 + Sentry/OpenTelemetry** — síntoma: `next build` compila ✅, types ✅, genera 12/12 páginas ✅, falla en serialización NFT con `ENOENT … _not-found/page.js.nft.json` (o ruta similar). Reproducible en `main` limpio sin cambios locales. **No bloquea deploy** — el bundle existe. Causa probable: interacción `serverExternalPackages` + instrumentación OTel que altera el grafo de dependencias trace. Workaround: ignorar el error de trace si compile + page-gen pasaron. Investigar upgrade Sentry SDK o `outputFileTracingIncludes`/`Excludes` cuando moleste en CI
 60. **`<input type="number">` con `.nonnegative()` permite $0** — en formularios de precio (CLP) eso es venta gratis silenciosa. Usar `.min(1, "El precio debe ser mayor a $0")` en zod schema. Aplicado en `productos/producto-form.tsx`. Aplica también a precios de catálogo, fees, montos mínimos en general — `nonnegative` solo debe usarse para campos donde 0 sea semánticamente válido (stock inicial, descuento opcional, etc.)
+82. **Build Docker obsoleto tras cambios en `actions.ts` da falso "código desplegado"** — síntoma observado en prod post-deploy (2026-04-21): login reportaba errores que **ya estaban corregidos en `actions.ts` local** desde commits atrás. Causa: `docker compose up -d --build` reutilizó cache de build intermedio; el container corría código viejo del Server Action. Complementa gotcha 75 pero específico para cambios en Server Actions (que Next.js compila fuera del bundle principal, más expuestos al cache). **Regla obligatoria**: tras cualquier modificación en `app/**/actions.ts` o archivos del flujo auth (`auth.ts`, `auth.config.ts`, `login/actions.ts`), el deploy **DEBE** incluir `--force-recreate` + idealmente `docker compose build --no-cache web` antes del `up`. `scripts/deploy.sh` ya incluye `--force-recreate` (commit `734fca8`); si el problema persiste con solo ese flag, agregar `--no-cache` manualmente al build. Validación del deploy: `docker exec pos-web grep -rE "<patrón esperado>" /app/apps/web/.next/server/` para confirmar que el binario tiene el código correcto.
 
 ---
 
