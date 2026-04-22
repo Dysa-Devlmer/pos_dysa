@@ -297,4 +297,40 @@ pnpm db:seed
 #   2-3 clientes demo
 ```
 
+## Backups Postgres en prod (GAP-03 cerrado 2026-04-22)
+
+**Schedule**: `/etc/cron.daily/pos-backup` en VPS — corre automáticamente a las **06:25 UTC** (≈ 03:25 Chile local) vía fallback en `/etc/crontab`:
+
+```
+25 6 * * * root test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }
+```
+
+Ubuntu 24.04 **no instala anacron por default**, así que el `test -x /usr/sbin/anacron` falla y dispara `run-parts /etc/cron.daily`, que ejecuta todos los scripts ejecutables del directorio (incluyendo `pos-backup`).
+
+**Script** (`/etc/cron.daily/pos-backup`):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+docker exec pos-postgres pg_dump -U pos_admin pos_chile_db \
+  | gzip > /root/backups/pos-$(date +%Y%m%d).sql.gz
+find /root/backups -name "*.sql.gz" -mtime +30 -delete
+```
+
+**Características**:
+- **Formato**: `pos-YYYYMMDD.sql.gz` (14-20 KB actual, crece con el uso)
+- **Retention**: 30 días (`find -mtime +30 -delete`)
+- **Storage**: `/root/backups/`
+- **Restore manual**: `gunzip -c /root/backups/pos-20260422.sql.gz | docker exec -i pos-postgres psql -U pos_admin pos_chile_db`
+
+**Validación del backup**:
+```bash
+gunzip -t /root/backups/pos-$(date +%Y%m%d).sql.gz && echo "✅ OK"
+zcat /root/backups/pos-$(date +%Y%m%d).sql.gz | grep -c "^CREATE TABLE"  # Debe ser 12+
+```
+
+> [!warning] Limitaciones actuales
+> - Backups residen en el mismo disco del VPS → si se pierde el disco, se pierden los backups. Para prod seria: rsync a S3/R2/Backblaze semanal (TODO futuro)
+> - No hay alerta si `pg_dump` falla → considerar wrapear en script que mande email o Sentry si exit != 0 (TODO futuro)
+
 Archivo: `packages/db/prisma/seed.ts`. Idempotente (usa `upsert`).

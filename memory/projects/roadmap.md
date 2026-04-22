@@ -83,7 +83,19 @@ Healthcheck agregado con `wget -q -O /dev/null http://127.0.0.1:3000/api/health`
 - **Criterio**: post-deploy `docker ps --filter name=pos-web` muestra `(healthy)` en la columna Status
 - **Cuidado**: `wget` existe en alpine; si no hay curl/wget ver si `node -e` funciona
 
-### GAP-03 · Backup automático Postgres (pg_dump + retention 7 días)
+### ~~GAP-03~~ · ✅ Backup automático Postgres — cerrado 2026-04-22
+
+Solo config en VPS, sin commit de código. Ver [[infra-docker#Backups Postgres en prod]] para detalles completos.
+
+**Resumen**:
+- Script: `/etc/cron.daily/pos-backup` ejecuta `pg_dump | gzip > /root/backups/pos-YYYYMMDD.sql.gz`
+- Schedule: 06:25 UTC diario vía fallback de `/etc/crontab` (Ubuntu 24.04 sin anacron)
+- Retention: 30 días (find -mtime +30 -delete)
+- Verificado: primer backup (14 KB) íntegro, 12 `CREATE TABLE`, 6 bloques `COPY` con data
+
+---
+
+#### Brief original (histórico)
 
 - **Estado**: Zero backup automatizado. Si el disco del VPS falla, se pierde toda la data de ventas
 - **Agente recomendado**: CLI
@@ -200,7 +212,7 @@ Healthcheck agregado con `wget -q -O /dev/null http://127.0.0.1:3000/api/health`
 |---|-----|--------|----------|--------------|--------|
 | 01 | Sentry DSN prod | Pierre + CLI | 5 min | — | ✅ `3f3b162` |
 | 02 | Healthcheck pos-web | CLI | 5 min | — | ✅ `49a91a2` (+ gotchas 83/84) |
-| 03 | Backup Postgres | CLI | 10 min | — | ⏳ next |
+| 03 | Backup Postgres | CLI | 10 min | — | ✅ 2026-04-22 (VPS config only) |
 | 04 | pnpm audit pre-deploy | CLI | 15 min | — | ⏳ |
 | 05 | GitHub Actions CI/CD | Worktree | 1 h | GAP-04 | ⏳ |
 | 06 | Playwright E2E | Worktree | 30 min | — | ⏳ |
