@@ -211,7 +211,28 @@ No es security en sentido estricto, pero incluye hardening de UI:
 - Badges soft con opacity bg-* /10
 - Icon-buttons con tooltips accesibles (a11y)
 
-## Cookies `__Secure-` — bug aceptado (NO corregible)
+## Audit 6 — `pnpm audit` pre-deploy (GAP-04, 2026-04-22)
+
+Script agregado al `package.json` raíz:
+```json
+"audit:check": "pnpm audit --audit-level=high"
+```
+
+Ejecución baseline (`pnpm audit --audit-level=low`):
+
+| Package | Severity | Path | CVE / Advisory |
+|---------|----------|------|----------------|
+| `uuid<14.0.0` | MODERATE | `apps/web > exceljs@4.4.0 > uuid@8.3.2` | [GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) Missing buffer bounds check en v3/v5/v6 cuando `buf` es provisto |
+
+**Zero HIGH / CRITICAL.** `pnpm audit:check` pasa con exit 0.
+
+### Hallazgo aceptado como tolerable — 2026-04-22
+
+**`uuid@8.3.2` (MODERATE) vía `exceljs@4.4.0`**: el CVE requiere que código nuestro pase un `Buffer` pre-alocado como 4° argumento a `uuid.v3/v5/v6`. Nuestro uso de `exceljs` es solo para generar reportes Excel (`/reportes/excel`), donde exceljs usa `uuid` internamente SIN exponer la API vulnerable a input externo. No hay path de explotación desde nuestro código.
+
+**Mitigación sin upgrade**: ninguna necesaria. Confirmar reevaluando cuando exceljs publique release que use `uuid@14+` (monitor: `pnpm why uuid` periódicamente o en `audit:check` si bajamos el threshold).
+
+**Política**: si surge cualquier HIGH/CRITICAL → `audit:check` fallaría → bloquea merge via CI (GAP-05 cuando se active).
 
 > [!danger] Imposible testear container Docker prod sobre HTTP
 > Con `NODE_ENV=production` y `NEXTAUTH_URL=http://localhost:3000`, NextAuth emite cookie `__Secure-authjs.session-token` que Chromium **rechaza sobre HTTP**. El login aparenta funcionar (Server Action redirige) pero la cookie no se persiste → 401 en siguientes requests.

@@ -12,7 +12,8 @@
     "db:studio": "turbo run db:studio",
     "test": "turbo run test",
     "typecheck": "turbo run type-check",
-    "health": "pnpm --filter @repo/web health"
+    "health": "pnpm --filter @repo/web health",
+    "audit:check": "pnpm audit --audit-level=high"
   },
   "devDependencies": {
     "playwright": "^1.59.1",
