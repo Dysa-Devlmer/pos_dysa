@@ -106,7 +106,20 @@ Solo config en VPS, sin commit de código. Ver [[infra-docker#Backups Postgres e
 - **Criterio**: tras 24h ver archivo `2026-04-22.sql.gz` en `/opt/backups/pos-chile/`
 - **Bonus**: mencionar en [[infra-docker]] como pattern canónico
 
-### GAP-04 · `npm audit` / `trivy` en pre-deploy
+### ~~GAP-04~~ · ✅ `pnpm audit` pre-deploy — cerrado 2026-04-22 (commit `5cb5feb`)
+
+Script agregado al `package.json` raíz:
+```json
+"audit:check": "pnpm audit --audit-level=high"
+```
+
+Baseline: **0 HIGH/CRITICAL**, 1 MODERATE aceptado (`uuid<14` vía `exceljs`). Detalle técnico + razón de aceptación en [[security-owasp#Audit 6 — pnpm audit pre-deploy]].
+
+Política futura: `audit:check` como gate en CI (GAP-05 cuando se active) — cualquier HIGH/CRITICAL bloquea merge.
+
+---
+
+#### Brief original (histórico)
 
 - **Estado**: sin scan de vulnerabilidades en dependencies. Último audit de supply chain fue xlsx → exceljs (commit `04d32f7`) pero reactivo, no programático
 - **Agente recomendado**: CLI
@@ -213,7 +226,7 @@ Solo config en VPS, sin commit de código. Ver [[infra-docker#Backups Postgres e
 | 01 | Sentry DSN prod | Pierre + CLI | 5 min | — | ✅ `3f3b162` |
 | 02 | Healthcheck pos-web | CLI | 5 min | — | ✅ `49a91a2` (+ gotchas 83/84) |
 | 03 | Backup Postgres | CLI | 10 min | — | ✅ 2026-04-22 (VPS config only) |
-| 04 | pnpm audit pre-deploy | CLI | 15 min | — | ⏳ |
+| 04 | pnpm audit pre-deploy | CLI | 15 min | — | ✅ 2026-04-22 `5cb5feb` |
 | 05 | GitHub Actions CI/CD | Worktree | 1 h | GAP-04 | ⏳ |
 | 06 | Playwright E2E | Worktree | 30 min | — | ⏳ |
 | 07 | ABC analysis reporte | Worktree | 1 h | — | ⏳ |

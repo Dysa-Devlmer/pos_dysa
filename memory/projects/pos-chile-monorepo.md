@@ -242,6 +242,7 @@ $transaction:
 | cdb2b24 | fix(docker): `POS_DATABASE_URL` dummy en build stage — Prisma requiere la var para generar el cliente, no para conectarse |
 | be71aa5 | feat(deploy): `deploy.sh` con rollback automático — rsync + scp `.env.docker` + backup VPS + health check + rollback |
 | c9c662b | chore(security): gitignore `ssh.md`, `token.md`, `*.key`, `*.pem` (cierra brecha del pre-commit hook global) |
+| 5cb5feb | fix(security): `audit:check` script + MODERATE uuid CVE aceptado (GAP-04) |
 | 49a91a2 | fix(infra): healthcheck usa `127.0.0.1` — alpine resuelve `localhost` a IPv6, Next.js standalone escucha IPv4 (GAP-02 final) |
 | c0f4687 | fix(infra): healthcheck `pos-web` en compose con `wget -q` (GAP-02 inicial) |
 | 3f3b162 | fix(infra): `SENTRY_DSN` propagado via compose env vars al container (GAP-01) |
