@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>POS Chile · Design Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ═════════════════════════════════════════════════════════════════
+       SYSTEMQR PALETTE — adoptada desde systemqr.zgamersa.com
+       Orange primary · Amber accent · Emerald success · Deep black bg
+       + ivory warm para superficies claras (login)
+    ═════════════════════════════════════════════════════════════════ */
+    :root {
+      /* Naranja primario (hero del sistema) */
+      --primary:          #f97316;           /* orange-500 */
+      --primary-hover:    #ea580c;           /* orange-600 */
+      --primary-soft:     rgba(249, 115, 22, 0.12);
+      --primary-glow:     #fb923c;           /* orange-400 */
+      --primary-deep:     #9a3412;           /* orange-800 — para headings tinted */
+
+      /* Ámbar (gradiente display + KPI warm) */
+      --accent:           #f59e0b;           /* amber-500 */
+      --accent-soft:      rgba(245, 158, 11, 0.14);
+      --accent-tint:      #fef3c7;           /* amber-100 para bg warm */
+
+      /* Verde esmeralda (success / QR activos) */
+      --success:          #10b981;           /* emerald-500 */
+      --success-soft:     rgba(16, 185, 129, 0.14);
+      --success-tint:     #064e3b;           /* emerald-900 */
+
+      /* Coral (peach CTA soft + critical) */
+      --coral:            #f5b79d;           /* peach CTA login */
+      --coral-hover:      #eda98a;
+      --critical:         #ef4444;
+      --critical-soft:    rgba(239, 68, 68, 0.14);
+
+      /* Fondos oscuros (dashboard) */
+      --bg:               #0a0a0a;
+      --bg-deep:          #000000;
+      --surface:          #141414;
+      --surface-elevated: #1c1c1c;
+      --surface-tint-warm:    #2a1f15;       /* KPI warm bg (cream-on-black feel) */
+      --surface-tint-success: #052e22;       /* KPI success bg */
+
+      /* Fondos claros (login derecho) */
+      --ivory:            #f5f1ea;
+      --ivory-elevated:   #ffffff;
+      --ivory-input:      #eef1f7;
+
+      --border-ghost:     rgba(255, 255, 255, 0.06);
+      --border-subtle:    rgba(255, 255, 255, 0.1);
+      --border-ivory:     rgba(10, 10, 10, 0.08);
+
+      --text:             #fafafa;
+      --text-muted:       #a3a3a3;
+      --text-dim:         #525252;
+      --text-ivory:       #171717;
+      --text-ivory-muted: #737373;
+
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+
+      --font: 'Geist', -apple-system, system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', 'Fraunces', Georgia, serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    }
+
+    /* ═════════════════════════════════════════════════════════════════
+       LIGHT MODE — ivory cálido (inspirado en el panel derecho de SystemQR)
+       Naranja primario se mantiene; fondos se invierten a crema/blanco.
+    ═════════════════════════════════════════════════════════════════ */
+    [data-theme="light"] {
+      --bg:               #f5f1ea;      /* ivory base */
+      --bg-deep:          #ece7de;      /* ivory deep (sidebar) */
+      --surface:          #ffffff;      /* card blanco puro */
+      --surface-elevated: #fafaf7;      /* hover/elevated */
+      --surface-tint-warm:    #fef3c7;  /* KPI warm (amber-100) */
+      --surface-tint-success: #d1fae5;  /* KPI success (emerald-100) */
+
+      --border-ghost:     rgba(10, 10, 10, 0.06);
+      --border-subtle:    rgba(10, 10, 10, 0.1);
+
+      --text:             #171717;      /* near-black */
+      --text-muted:       #525252;
+      --text-dim:         #a3a3a3;
+
+      --primary-soft:     rgba(249, 115, 22, 0.1);
+      --accent-soft:      rgba(245, 158, 11, 0.14);
+      --success-soft:     rgba(16, 185, 129, 0.12);
+      --critical-soft:    rgba(239, 68, 68, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-feature-settings: "ss01", "cv11";
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Ambient animated glow (fondo vivo) ─── */
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+      will-change: transform;
+    }
+    body::before {
+      width: 45vw; height: 45vw;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.22), transparent 70%);
+      top: -15vw; right: -10vw;
+      animation: drift-a 18s ease-in-out infinite;
+    }
+    body::after {
+      width: 40vw; height: 40vw;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.16), transparent 70%);
+      bottom: -15vw; left: -10vw;
+      animation: drift-b 22s ease-in-out infinite;
+    }
+    @keyframes drift-a {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-5vw, 5vw) scale(1.1); }
+    }
+    @keyframes drift-b {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(5vw, -5vw) scale(1.15); }
+    }
+
+    /* ─── Top Tab Nav (solo en preview) ─── */
+    .preview-nav {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 4px;
+      padding: 5px;
+      background: rgba(20, 25, 32, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-ghost);
+      border-radius: 999px;
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+    }
+    .preview-nav button {
+      appearance: none;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 8px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .preview-nav button:hover { color: var(--text); }
+    .preview-nav button.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: var(--bg-deep);
+      box-shadow: 0 4px 20px -5px var(--primary);
+    }
+
+    /* ─── Screens ─── */
+    .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+    .screen.active { display: block; animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════ LOGIN SCREEN ═══════════════ */
+    .login {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 20px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 460px;
+      padding: 48px 40px;
+      background: rgba(22, 27, 34, 0.55);
+      backdrop-filter: blur(28px) saturate(1.4);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius-lg);
+      box-shadow:
+        0 30px 60px -20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, var(--primary) 0%, transparent 40%, transparent 60%, var(--accent) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .brand-mark {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 32px;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--primary), #b45309);
+      box-shadow: 0 8px 24px -8px var(--primary), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .brand-icon svg { width: 22px; height: 22px; color: var(--bg-deep); stroke-width: 2.5; }
+    .brand-name { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+    .brand-tag { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+    h1.headline {
+      font-family: var(--font-serif);
+      font-size: 3rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.02;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+    h1.headline .accent-word {
+      font-style: italic;
+      background: linear-gradient(100deg, var(--primary-glow) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .headline-sub {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .field input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .field input::placeholder { color: var(--text-dim); }
+    .field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+
+    /* ─── Primary button con magnetic + glow ─── */
+    .btn-primary {
+      position: relative;
+      width: 100%;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.005em;
+      color: var(--bg-deep);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  box-shadow 0.3s ease;
+      box-shadow: 0 10px 30px -10px var(--primary),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      margin-top: 8px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .btn-primary::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
+                  rgba(255, 255, 255, 0.3), transparent 50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+    .btn-primary:hover::before { opacity: 1; }
+    .btn-primary:hover {
+      box-shadow: 0 18px 40px -10px var(--primary),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .login-footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .login-footer strong { color: var(--text-muted); font-weight: 600; }
+
+    /* ═══════════════ DASHBOARD SCREEN ═══════════════ */
+    .app {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: rgba(16, 20, 26, 0.6);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border-ghost);
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .sidebar.collapsed { width: 72px; }
+    .sidebar.collapsed .nav-label,
+    .sidebar.collapsed .brand-text { display: none; }
+    .sidebar.collapsed .brand-mini { justify-content: center; }
+
+    .sidebar-toggle {
+      position: absolute;
+      top: 28px;
+      right: -14px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: all 0.25s ease;
+      z-index: 10;
+    }
+    .sidebar-toggle:hover {
+      background: var(--primary);
+      color: var(--bg-deep);
+      border-color: var(--primary);
+    }
+    .sidebar-toggle svg { width: 14px; height: 14px; transition: transform 0.3s ease; }
+    .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+
+    .brand-mini {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; margin-bottom: 20px;
+    }
+    .brand-mini .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
+    .brand-mini .brand-icon svg { width: 16px; height: 16px; }
+    .brand-text { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-item:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+    .nav-item.active {
+      background: linear-gradient(135deg, var(--primary-soft), transparent);
+      color: var(--primary-glow);
+      border-color: var(--primary-soft);
+    }
+    .nav-item.active::before {
+      content: "";
+      position: absolute;
+      left: -14px; top: 25%; bottom: 25%;
+      width: 3px;
+      background: var(--primary);
+      border-radius: 0 4px 4px 0;
+      box-shadow: 0 0 12px var(--primary);
+    }
+    .nav-label { white-space: nowrap; }
+
+    /* Main content */
+    .main {
+      padding: 32px 40px;
+      overflow-y: auto;
+    }
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px;
+    }
+    .page-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    .page-subtitle { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+
+    .user-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px 8px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-ghost);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .user-chip:hover { border-color: var(--border-subtle); }
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--primary));
+      display: grid; place-items: center;
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--bg-deep);
+    }
+    .user-name { font-size: 0.82rem; font-weight: 600; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .kpi-card {
+      position: relative;
+      padding: 22px;
+      background: rgba(22, 27, 34, 0.5);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 0.3s ease;
+      cursor: pointer;
+    }
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 50%),
+                  rgba(52, 211, 153, 0.08), transparent 50%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .kpi-card:hover { transform: translateY(-2px); border-color: var(--border-subtle); }
+    .kpi-card:hover::before { opacity: 1; }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .kpi-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: grid; place-items: center;
+      background: var(--primary-soft);
+    }
+    .kpi-icon svg { width: 14px; height: 14px; color: var(--primary-glow); }
+    .kpi-icon.accent { background: var(--accent-soft); }
+    .kpi-icon.accent svg { color: var(--accent); }
+    .kpi-icon.critical { background: var(--critical-soft); }
+    .kpi-icon.critical svg { color: var(--critical); }
+
+    .kpi-value {
+      font-family: var(--font);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-trend {
+      margin-top: 10px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .kpi-trend.up { color: var(--primary-glow); }
+    .kpi-trend.down { color: var(--critical); }
+
+    .sparkline {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 40px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* Content rows */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 20px;
+    }
+    .panel {
+      padding: 24px;
+      background: rgba(22, 27, 34, 0.5);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius);
+    }
+    .panel-title {
+      font-size: 1rem; font-weight: 700;
+      margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Activity list */
+    .activity { display: flex; flex-direction: column; gap: 12px; }
+    .activity-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px; border-radius: var(--radius-sm);
+      transition: background 0.2s ease;
+    }
+    .activity-item:hover { background: rgba(255,255,255,0.03); }
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 12px var(--primary);
+      flex-shrink: 0;
+    }
+    .activity-dot.accent { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+    .activity-dot.critical { background: var(--critical); box-shadow: 0 0 12px var(--critical); }
+    .activity-text { flex: 1; font-size: 0.85rem; }
+    .activity-text strong { font-weight: 600; }
+    .activity-time { color: var(--text-dim); font-size: 0.75rem; }
+
+    /* ═══════════════ CAJA SCREEN ═══════════════ */
+    .caja-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+      height: calc(100vh - 120px);
+    }
+    .caja-products { display: flex; flex-direction: column; gap: 16px; }
+    .search-bar {
+      position: relative;
+    }
+    .search-bar input {
+      width: 100%;
+      padding: 16px 20px 16px 48px;
+      background: rgba(22, 27, 34, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.25s ease;
+    }
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+    .search-bar svg {
+      position: absolute; left: 18px; top: 50%;
+      transform: translateY(-50%);
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .product-card {
+      padding: 14px;
+      background: rgba(22, 27, 34, 0.5);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .product-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--primary-soft), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .product-card:hover { transform: translateY(-2px); border-color: var(--primary-soft); }
+    .product-card:hover::after { opacity: 1; }
+    .product-card:active { transform: scale(0.98); }
+    .product-name { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; line-height: 1.2; }
+    .product-price {
+      font-family: var(--font);
+      font-size: 1rem; font-weight: 700; color: var(--primary-glow);
+      font-variant-numeric: tabular-nums;
+    }
+    .product-stock { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
+
+    /* Cart panel */
+    .cart {
+      display: flex; flex-direction: column;
+      background: rgba(22, 27, 34, 0.55);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-ghost);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .cart-header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border-ghost);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .cart-count {
+      padding: 3px 10px;
+      background: var(--primary-soft);
+      color: var(--primary-glow);
+      border-radius: 999px;
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .cart-items {
+      flex: 1;
+      padding: 10px 12px;
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cart-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      transition: background 0.2s ease;
+    }
+    .cart-item:hover { background: rgba(255,255,255,0.03); }
+    .qty-pill {
+      padding: 3px 9px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-ghost);
+      border-radius: 999px;
+      font-size: 0.7rem; font-weight: 700; font-family: var(--font-mono);
+      color: var(--text);
+    }
+    .cart-item-name { flex: 1; font-size: 0.85rem; }
+    .cart-item-subtotal {
+      font-size: 0.88rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+
+    .cart-total {
+      padding: 20px 22px;
+      border-top: 1px solid var(--border-ghost);
+      background: rgba(0,0,0,0.2);
+    }
+    .total-row {
+      display: flex; justify-content: space-between;
+      margin-bottom: 8px; font-size: 0.82rem; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .total-row.grand {
+      margin-top: 12px; padding-top: 14px;
+      border-top: 1px dashed var(--border-subtle);
+      font-size: 1.3rem;
+      font-weight: 800; color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .total-row.grand .amount {
+      background: linear-gradient(135deg, var(--primary-glow), var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .cart-actions {
+      padding: 0 22px 22px;
+    }
+    .cart-actions .btn-primary { margin-top: 0; }
+
+    /* Utility: tabular figures */
+    .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* Shimmer (bonus demo) */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+
+    /* Stagger entrance */
+    .stagger > * {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: riseIn 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .stagger > *:nth-child(1) { animation-delay: 0.05s; }
+    .stagger > *:nth-child(2) { animation-delay: 0.12s; }
+    .stagger > *:nth-child(3) { animation-delay: 0.19s; }
+    .stagger > *:nth-child(4) { animation-delay: 0.26s; }
+    .stagger > *:nth-child(5) { animation-delay: 0.33s; }
+    .stagger > *:nth-child(6) { animation-delay: 0.40s; }
+    .stagger > *:nth-child(7) { animation-delay: 0.47s; }
+    .stagger > *:nth-child(8) { animation-delay: 0.54s; }
+    @keyframes riseIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      .two-col, .caja-layout { grid-template-columns: 1fr; }
+      .caja-layout { height: auto; }
+      .sidebar { display: none; }
+      .app { grid-template-columns: 1fr; }
+      .main { padding: 20px; }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════
+       UX/UI POLISH — v2
+       Sections labels, stock bars, chips, empty states, focus rings,
+       scrollbars, keyboard shortcut badges, activity icons.
+    ═════════════════════════════════════════════════════════════════ */
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary-soft); }
+
+    /* Focus ring global — naranja suave */
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    button:focus-visible, input:focus-visible { outline: none; }
+
+    /* Sidebar: section labels */
+    .nav-section {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      padding: 18px 14px 6px;
+      margin-top: 4px;
+    }
+    .sidebar.collapsed .nav-section { display: none; }
+
+    /* Sidebar footer mini-stat */
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 14px 12px;
+      border-top: 1px solid var(--border-ghost);
+    }
+    .sidebar-stat {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px;
+      background: var(--primary-soft);
+      border: 1px solid var(--primary-soft);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+    }
+    .sidebar-stat-label { color: var(--text-muted); font-weight: 500; }
+    .sidebar-stat-value { color: var(--primary-glow); font-weight: 700; font-variant-numeric: tabular-nums; }
+    [data-theme="light"] .sidebar-stat-value { color: var(--primary-hover); }
+    .sidebar.collapsed .sidebar-stat { padding: 10px; justify-content: center; }
+    .sidebar.collapsed .sidebar-stat-label { display: none; }
+
+    /* Page title accent underline */
+    .page-title {
+      position: relative;
+      display: inline-block;
+    }
+    .page-title::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -6px;
+      width: 32px; height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    /* User chip: online dot */
+    .user-chip { position: relative; }
+    .user-chip::after {
+      content: "";
+      position: absolute;
+      top: 8px; left: 30px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--success);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 8px var(--success);
+    }
+    [data-theme="light"] .user-chip::after { border-color: var(--surface); }
+
+    /* KPI: delta pill */
+    .kpi-trend {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--success-soft);
+      color: var(--success) !important;
+      width: fit-content;
+      margin-top: 14px !important;
+      font-size: 0.74rem !important;
+    }
+    .kpi-trend.down { background: var(--critical-soft); color: var(--critical) !important; }
+
+    /* Chart: grid lines + axis */
+    .chart-grid line {
+      stroke: var(--border-ghost);
+      stroke-dasharray: 3 4;
+    }
+    [data-theme="light"] .chart-grid line { stroke: var(--border-ivory); }
+    .chart-axis text {
+      fill: var(--text-dim);
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+
+    /* Activity feed: icon circles replacing dots */
+    .activity-dot {
+      width: 32px !important; height: 32px !important;
+      border-radius: 10px !important;
+      background: var(--primary-soft) !important;
+      box-shadow: none !important;
+      display: grid; place-items: center;
+      position: relative;
+    }
+    .activity-dot::after {
+      content: "";
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+    }
+    .activity-dot.accent { background: var(--accent-soft) !important; }
+    .activity-dot.accent::after { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .activity-dot.critical { background: var(--critical-soft) !important; }
+    .activity-dot.critical::after { background: var(--critical); box-shadow: 0 0 10px var(--critical); }
+
+    /* Product card v2: category + stock bar + add button */
+    .product-card { padding: 14px 14px 44px !important; }
+    .product-cat {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--border-ghost);
+      padding: 3px 8px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    [data-theme="light"] .product-cat { background: rgba(10,10,10,0.06); }
+    .product-stock-bar {
+      position: absolute;
+      left: 14px; right: 14px; bottom: 34px;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border-ghost);
+      overflow: hidden;
+    }
+    [data-theme="light"] .product-stock-bar { background: rgba(10,10,10,0.08); }
+    .product-stock-bar > span {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, var(--success), var(--success));
+      border-radius: 2px;
+      transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .product-stock-bar.warn > span { background: var(--accent); }
+    .product-stock-bar.low  > span { background: var(--critical); }
+    .product-stock-meta {
+      position: absolute;
+      left: 14px; bottom: 12px;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .product-add {
+      position: absolute;
+      right: 10px; bottom: 8px;
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: grid; place-items: center;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 6px 18px -4px var(--primary);
+    }
+    .product-add svg { width: 14px; height: 14px; stroke-width: 3; }
+    .product-card:hover .product-add { opacity: 1; transform: translateY(0); }
+
+    /* Search bar: kbd badge + icon bg */
+    .search-kbd {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; gap: 4px;
+    }
+    .search-kbd kbd {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 7px;
+      background: var(--border-ghost);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      color: var(--text-muted);
+    }
+    [data-theme="light"] .search-kbd kbd {
+      background: rgba(10,10,10,0.04);
+      border-color: rgba(10,10,10,0.1);
+    }
+    .search-bar input { padding-right: 90px !important; }
+
+    /* Cart: quick actions */
+    .cart-quick {
+      display: flex; gap: 6px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-ghost);
+    }
+    .cart-quick button {
+      flex: 1;
+      appearance: none;
+      background: transparent;
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 9px 6px;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .cart-quick button:hover {
+      color: var(--primary);
+      border-color: var(--primary-soft);
+      background: var(--primary-soft);
+      border-style: solid;
+    }
+    .cart-quick svg { width: 13px; height: 13px; }
+
+    /* Cart empty state */
+    .cart-empty {
+      flex: 1;
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .cart-empty-icon {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      display: grid; place-items: center;
+      color: var(--primary-glow);
+      margin-bottom: 4px;
+    }
+    [data-theme="light"] .cart-empty-icon { color: var(--primary-hover); }
+    .cart-empty-title { font-size: 0.92rem; font-weight: 700; }
+    .cart-empty-sub { font-size: 0.78rem; color: var(--text-muted); max-width: 220px; line-height: 1.4; }
+
+    /* Trash button on cart item */
+    .cart-item-remove {
+      opacity: 0;
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      display: grid; place-items: center;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .cart-item-remove:hover { background: var(--critical-soft); color: var(--critical); }
+    .cart-item-remove svg { width: 14px; height: 14px; }
+    .cart-item:hover .cart-item-remove { opacity: 1; }
+
+    /* Stock status chip on dashboard */
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .status-chip::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ═════════════════════════════════════════════════════════════════
+       LIGHT MODE OVERRIDES — mapear rgba oscuros hardcodeados a ivory
+    ═════════════════════════════════════════════════════════════════ */
+    [data-theme="light"] .preview-nav {
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 10px 40px -10px rgba(10, 10, 10, 0.15);
+    }
+    [data-theme="light"] .preview-nav button.active {
+      color: #fff;
+      box-shadow: 0 4px 20px -5px var(--primary);
+    }
+    [data-theme="light"] .login-card,
+    [data-theme="light"] .kpi-card,
+    [data-theme="light"] .panel,
+    [data-theme="light"] .product-card,
+    [data-theme="light"] .cart {
+      background: var(--surface) !important;
+      border-color: var(--border-ivory) !important;
+      box-shadow:
+        0 8px 24px -12px rgba(10, 10, 10, 0.10),
+        0 2px 6px -2px rgba(10, 10, 10, 0.04) !important;
+    }
+    [data-theme="light"] .sidebar {
+      background: var(--bg-deep) !important;
+      border-right: 1px solid var(--border-ivory);
+    }
+    [data-theme="light"] .login-card::before { opacity: 0.35; }
+    [data-theme="light"] h1.headline { color: var(--text); }
+    [data-theme="light"] .brand-icon svg,
+    [data-theme="light"] .btn-primary,
+    [data-theme="light"] .cobrar-btn {
+      color: #fff !important;
+    }
+    [data-theme="light"] input,
+    [data-theme="light"] .search-bar input {
+      background: #f3f0ea !important;
+      color: var(--text) !important;
+      border-color: var(--border-subtle) !important;
+    }
+    /* Numeros grandes y labels muted en light */
+    [data-theme="light"] .kpi-value,
+    [data-theme="light"] .cart-total,
+    [data-theme="light"] .total-amount { color: var(--text) !important; }
+    [data-theme="light"] .kpi-label,
+    [data-theme="light"] .chart-sub,
+    [data-theme="light"] .activity-time,
+    [data-theme="light"] .cart-qty-label,
+    [data-theme="light"] .subtotal-label,
+    [data-theme="light"] .product-stock { color: var(--text-muted) !important; }
+    /* KPI tints — warm / success backgrounds distintivos como SystemQR */
+    [data-theme="light"] .kpi-card:nth-child(1),
+    [data-theme="light"] .kpi-card:nth-child(2) {
+      background: var(--surface-tint-warm) !important;
+    }
+    [data-theme="light"] .kpi-card:nth-child(3) {
+      background: var(--surface-tint-success) !important;
+    }
+    [data-theme="light"] input::placeholder { color: var(--text-dim); }
+    [data-theme="light"] .nav-item:hover { background: rgba(10, 10, 10, 0.04); }
+    [data-theme="light"] .activity-item:hover,
+    [data-theme="light"] .cart-item:hover { background: rgba(10, 10, 10, 0.03); }
+    [data-theme="light"] .qty-btn,
+    [data-theme="light"] .remove-btn { background: rgba(10, 10, 10, 0.05); color: var(--text); }
+    [data-theme="light"] .cart-total {
+      background: var(--surface-tint-warm) !important;
+      border-top-color: var(--border-ivory) !important;
+    }
+    [data-theme="light"] .total-row.grand {
+      border-top-color: var(--border-subtle) !important;
+      color: var(--text) !important;
+    }
+    /* Botón cobrar / primary visibles en light */
+    [data-theme="light"] .btn-primary,
+    [data-theme="light"] .cobrar-btn,
+    [data-theme="light"] .preview-nav button.active { color: #fff !important; }
+    [data-theme="light"] .skeleton {
+      background: linear-gradient(90deg, transparent, rgba(10,10,10,0.06), transparent) !important;
+    }
+    /* Ambient glows más sutiles en light */
+    [data-theme="light"] body::before { opacity: 0.55; }
+    [data-theme="light"] body::after  { opacity: 0.45; }
+
+    /* Toggle switch del preview-nav */
+    .theme-toggle {
+      width: 38px; height: 38px;
+      margin-left: 8px;
+      border-radius: 999px;
+      display: grid; place-items: center;
+      background: transparent;
+      border: 1px solid var(--border-ghost);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .3s cubic-bezier(.4,0,.2,1);
+    }
+    .theme-toggle:hover { color: var(--text); border-color: var(--border-subtle); transform: rotate(15deg); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .icon-sun  { display: none; }
+    [data-theme="light"] .theme-toggle .icon-moon { display: none; }
+    [data-theme="light"] .theme-toggle .icon-sun  { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ PREVIEW NAV ═══════════════ -->
+<nav class="preview-nav">
+  <button data-tab="login" class="active">Login</button>
+  <button data-tab="dashboard">Dashboard</button>
+  <button data-tab="caja">Caja</button>
+  <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button>
+</nav>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<section class="screen active" id="screen-login">
+  <div class="login">
+    <div class="login-card">
+      <div class="brand-mark">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 2 L13 2 L13 8 L19 8 L19 16 L13 16 L13 22 L11 22 L11 16 L5 16 L5 8 L11 8 Z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">POS Chile</div>
+          <div class="brand-tag">Punto de venta inteligente</div>
+        </div>
+      </div>
+
+      <h1 class="headline">Tu negocio,<br/><span class="accent-word">tus reglas.</span></h1>
+      <p class="headline-sub">Inicia sesión para continuar operando tu tienda.</p>
+
+      <form id="loginForm" autocomplete="off">
+        <div class="field">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" placeholder="admin@pos-chile.cl" value="admin@pos-chile.cl" />
+        </div>
+        <div class="field">
+          <label for="pwd">Contraseña</label>
+          <input type="password" id="pwd" placeholder="••••••••" value="admin123" />
+        </div>
+        <button type="button" class="btn-primary" id="loginBtn">
+          Iniciar sesión
+        </button>
+      </form>
+
+      <p class="login-footer">
+        <strong>Acceso restringido</strong> · Solo administradores y cajeros autorizados
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<section class="screen" id="screen-dashboard">
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
+      <div class="brand-mini">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
+            <path d="M11 2 L13 2 L13 8 L19 8 L19 16 L13 16 L13 22 L11 22 L11 16 L5 16 L5 8 L11 8 Z"/>
+          </svg>
+        </div>
+        <span class="brand-text">POS Chile</span>
+      </div>
+      <div class="nav-section"><span class="nav-label">Principal</span></div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 9 6l4 4 8-8"/><path d="M21 6v6h-6"/></svg>
+        <span class="nav-label">Dashboard</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+        <span class="nav-label">Caja</span>
+      </div>
+      <div class="nav-section"><span class="nav-label">Gestión</span></div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 L12 3 L4 7 l8 4 Z"/><path d="M4 7v10l8 4 8-4V7"/></svg>
+        <span class="nav-label">Productos</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        <span class="nav-label">Clientes</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 3-3 3 3 5-5"/></svg>
+        <span class="nav-label">Reportes</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m7 8 4-4 4 4"/><path d="M11 4v16"/></svg>
+        <span class="nav-label">Devoluciones</span>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-stat">
+          <span class="sidebar-stat-label">Ventas hoy</span>
+          <span class="sidebar-stat-value">$1.2M</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Resumen de hoy</h1>
+          <p class="page-subtitle">Martes, 21 de abril · 14:32</p>
+        </div>
+        <div class="user-chip">
+          <div class="user-avatar">AE</div>
+          <span class="user-name">Admin</span>
+        </div>
+      </header>
+
+      <div class="kpi-grid stagger">
+        <div class="kpi-card magnetic">
+          <div class="kpi-label">
+            <span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            Ventas hoy
+          </div>
+          <div class="kpi-value count" data-target="1247500" data-prefix="$">$0</div>
+          <div class="kpi-trend up">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+            +18,4% vs ayer
+          </div>
+          <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <defs><linearGradient id="spark1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f97316" stop-opacity="0.6"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,30 L20,25 L40,28 L60,20 L80,22 L100,15 L120,18 L140,10 L160,12 L180,6 L200,8 L200,40 L0,40 Z" fill="url(#spark1)"/>
+            <path d="M0,30 L20,25 L40,28 L60,20 L80,22 L100,15 L120,18 L140,10 L160,12 L180,6 L200,8" stroke="#f97316" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="kpi-card magnetic">
+          <div class="kpi-label">
+            <span class="kpi-icon accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+            Boletas emitidas
+          </div>
+          <div class="kpi-value count" data-target="87">0</div>
+          <div class="kpi-trend up">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+            +12 vs ayer
+          </div>
+        </div>
+
+        <div class="kpi-card magnetic">
+          <div class="kpi-label">
+            <span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 7 L12 3 L4 7 l8 4 Z"/><path d="M4 7v10l8 4 8-4V7"/></svg></span>
+            Ticket promedio
+          </div>
+          <div class="kpi-value count" data-target="14339" data-prefix="$">$0</div>
+          <div class="kpi-trend up">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+            +4,1%
+          </div>
+        </div>
+
+        <div class="kpi-card magnetic">
+          <div class="kpi-label">
+            <span class="kpi-icon critical"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+            Stock bajo
+          </div>
+          <div class="kpi-value count" data-target="7">0</div>
+          <div class="kpi-trend down">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m18 9-6 6-6-6"/></svg>
+            Requiere atención
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col stagger">
+        <div class="panel">
+          <div class="panel-title">
+            Últimos 7 días
+            <span style="font-size:0.75rem;color:var(--text-muted);font-weight:500">Total: $8,4M</span>
+          </div>
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:200px">
+            <defs>
+              <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#f97316" stop-opacity="0.35"/>
+                <stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g class="chart-grid">
+              <line x1="0" y1="40"  x2="600" y2="40"/>
+              <line x1="0" y1="80"  x2="600" y2="80"/>
+              <line x1="0" y1="120" x2="600" y2="120"/>
+              <line x1="0" y1="160" x2="600" y2="160"/>
+            </g>
+            <path d="M0,140 L85,110 L170,125 L255,80 L340,95 L425,60 L510,70 L600,40 L600,180 L0,180 Z" fill="url(#chartFill)"/>
+            <path d="M0,140 L85,110 L170,125 L255,80 L340,95 L425,60 L510,70 L600,40" stroke="#f97316" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <g fill="#f97316">
+              <circle cx="85" cy="110" r="3"/>
+              <circle cx="170" cy="125" r="3"/>
+              <circle cx="255" cy="80" r="3"/>
+              <circle cx="340" cy="95" r="3"/>
+              <circle cx="425" cy="60" r="3"/>
+              <circle cx="510" cy="70" r="3"/>
+            </g>
+            <circle cx="600" cy="40" r="5" fill="#fb923c">
+              <animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <g class="chart-axis">
+              <text x="0" y="196">lun</text>
+              <text x="95" y="196">mar</text>
+              <text x="190" y="196">mié</text>
+              <text x="285" y="196">jue</text>
+              <text x="380" y="196">vie</text>
+              <text x="475" y="196">sáb</text>
+              <text x="570" y="196">dom</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Actividad reciente</div>
+          <div class="activity">
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-text"><strong>Venta B-20260421-K72M</strong><div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">$34.990 · 4 items</div></div>
+              <div class="activity-time">hace 2m</div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot accent"></div>
+              <div class="activity-text"><strong>Stock bajo</strong><div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">Coca-Cola 1.5L · quedan 6 unidades</div></div>
+              <div class="activity-time">hace 8m</div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-text"><strong>Venta B-20260421-K71X</strong><div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">$12.500 · 2 items</div></div>
+              <div class="activity-time">hace 15m</div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot critical"></div>
+              <div class="activity-text"><strong>Devolución aprobada</strong><div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">D-20260421-A3 · $8.990</div></div>
+              <div class="activity-time">hace 22m</div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-text"><strong>Nuevo cliente registrado</strong><div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">María González · 12.345.678-9</div></div>
+              <div class="activity-time">hace 34m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ═══════════════ CAJA ═══════════════ -->
+<section class="screen" id="screen-caja">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand-mini">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
+            <path d="M11 2 L13 2 L13 8 L19 8 L19 16 L13 16 L13 22 L11 22 L11 16 L5 16 L5 8 L11 8 Z"/>
+          </svg>
+        </div>
+        <span class="brand-text">POS Chile</span>
+      </div>
+      <div class="nav-section"><span class="nav-label">Principal</span></div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 9 6l4 4 8-8"/><path d="M21 6v6h-6"/></svg>
+        <span class="nav-label">Dashboard</span>
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+        <span class="nav-label">Caja</span>
+      </div>
+      <div class="nav-section"><span class="nav-label">Gestión</span></div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 L12 3 L4 7 l8 4 Z"/><path d="M4 7v10l8 4 8-4V7"/></svg>
+        <span class="nav-label">Productos</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        <span class="nav-label">Clientes</span>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-stat">
+          <span class="sidebar-stat-label">Items en carro</span>
+          <span class="sidebar-stat-value">3</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Nueva venta</h1>
+          <p class="page-subtitle">Caja · Turno iniciado a las 08:00</p>
+        </div>
+        <div class="user-chip">
+          <div class="user-avatar">CJ</div>
+          <span class="user-name">Cajero</span>
+        </div>
+      </header>
+
+      <div class="caja-layout">
+        <div class="caja-products">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" placeholder="Buscar por nombre, código o SKU…" />
+            <div class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+          </div>
+          <div class="product-grid stagger" id="productGrid"></div>
+        </div>
+
+        <aside class="cart">
+          <div class="cart-header">
+            <div style="font-weight:700">Carrito</div>
+            <div class="cart-count" id="cartCount">3 items</div>
+          </div>
+          <div class="cart-quick">
+            <button title="Asociar cliente">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+              Cliente
+            </button>
+            <button title="Aplicar descuento">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12 12 4Z"/><path d="M8 12h8"/></svg>
+              Descuento
+            </button>
+            <button title="Agregar nota">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              Nota
+            </button>
+          </div>
+          <div class="cart-items" id="cartItems">
+            <div class="cart-item">
+              <span class="qty-pill">2×</span>
+              <span class="cart-item-name">Coca-Cola 1.5L</span>
+              <span class="cart-item-subtotal">$3.980</span>
+              <button class="cart-item-remove" aria-label="Eliminar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+            <div class="cart-item">
+              <span class="qty-pill">1×</span>
+              <span class="cart-item-name">Pan batido (kg)</span>
+              <span class="cart-item-subtotal">$2.190</span>
+              <button class="cart-item-remove" aria-label="Eliminar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+            <div class="cart-item">
+              <span class="qty-pill">3×</span>
+              <span class="cart-item-name">Chocolate Sahne-Nuss</span>
+              <span class="cart-item-subtotal">$4.770</span>
+              <button class="cart-item-remove" aria-label="Eliminar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="cart-total">
+            <div class="total-row"><span>Subtotal</span><span class="mono">$9.193</span></div>
+            <div class="total-row"><span>IVA 19%</span><span class="mono">$1.747</span></div>
+            <div class="total-row grand">
+              <span>Total</span>
+              <span class="amount mono count" data-target="10940" data-prefix="$">$0</span>
+            </div>
+          </div>
+          <div class="cart-actions">
+            <button class="btn-primary">
+              Cobrar · F4
+            </button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</section>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   JS — TAB SWITCH, COUNT-UP, MAGNETIC, CURSOR-GLOW, PRODUCT GEN
+═══════════════════════════════════════════════════════════════════ */
+
+// Theme toggle (light/dark)
+const themeToggle = document.getElementById('themeToggle');
+const saved = localStorage.getItem('pos-preview-theme');
+if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+themeToggle.addEventListener('click', () => {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('pos-preview-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('pos-preview-theme', 'light');
+  }
+});
+
+// Tabs
+const tabs = document.querySelectorAll('.preview-nav button[data-tab]');
+const screens = document.querySelectorAll('.screen');
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  screens.forEach(s => s.classList.remove('active'));
+  t.classList.add('active');
+  const scr = document.getElementById('screen-' + t.dataset.tab);
+  scr.classList.add('active');
+  // Re-trigger animations
+  scr.querySelectorAll('.stagger').forEach(el => {
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  });
+  runCountUp(scr);
+}));
+
+// Count-up
+function runCountUp(scope = document) {
+  scope.querySelectorAll('.count').forEach(el => {
+    const target = parseInt(el.dataset.target || '0', 10);
+    const prefix = el.dataset.prefix || '';
+    const duration = 1100;
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = Math.round(target * eased);
+      el.textContent = prefix + val.toLocaleString('es-CL');
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// Magnetic + cursor-glow on cards
+function bindInteractions() {
+  document.querySelectorAll('.kpi-card, .product-card, .btn-primary').forEach(el => {
+    el.addEventListener('mousemove', e => {
+      const rect = el.getBoundingClientRect();
+      const mx = ((e.clientX - rect.left) / rect.width) * 100;
+      const my = ((e.clientY - rect.top) / rect.height) * 100;
+      el.style.setProperty('--mx', mx + '%');
+      el.style.setProperty('--my', my + '%');
+    });
+  });
+
+  // Magnetic button
+  document.querySelectorAll('.btn-primary').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const rect = btn.getBoundingClientRect();
+      const x = (e.clientX - rect.left - rect.width / 2) * 0.15;
+      const y = (e.clientY - rect.top - rect.height / 2) * 0.15;
+      btn.style.transform = `translate(${x}px, ${y}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = '';
+    });
+  });
+}
+
+// Sidebar toggle
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+// Product grid generator — con categoría + stock bar
+const PRODUCTS = [
+  ['Coca-Cola 1.5L', 1990, 24, 'Bebidas'],
+  ['Pan batido (kg)', 2190, 12, 'Panadería'],
+  ['Sahne-Nuss 150g', 1590, 8, 'Confites'],
+  ['Lay\'s Clásica', 890, 45, 'Snacks'],
+  ['Agua Cachantun 1.5L', 890, 30, 'Bebidas'],
+  ['Yogurt Soprole', 690, 22, 'Lácteos'],
+  ['Queso Colun 250g', 3490, 6, 'Lácteos'],
+  ['Jamón PF 150g', 2790, 10, 'Fiambres'],
+  ['Pilsen Cristal 1L', 1490, 18, 'Cervezas'],
+  ['Confort 4 rollos', 3990, 7, 'Higiene'],
+  ['Arroz Tucapel 1kg', 1690, 15, 'Abarrotes'],
+  ['Aceite Chef 900ml', 2290, 11, 'Abarrotes'],
+];
+const grid = document.getElementById('productGrid');
+const STOCK_MAX = 50;
+PRODUCTS.forEach(([name, price, stock, cat]) => {
+  const pct = Math.min(100, (stock / STOCK_MAX) * 100);
+  const state = stock <= 8 ? 'low' : stock <= 15 ? 'warn' : '';
+  const card = document.createElement('div');
+  card.className = 'product-card';
+  card.innerHTML = `
+    <div class="product-cat">${cat}</div>
+    <div class="product-name">${name}</div>
+    <div class="product-price">$${price.toLocaleString('es-CL')}</div>
+    <div class="product-stock-bar ${state}"><span style="width:${pct}%"></span></div>
+    <div class="product-stock-meta">Stock: ${stock}</div>
+    <div class="product-add">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+// Login "submit" fake
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const btn = document.getElementById('loginBtn');
+  btn.style.transform = 'scale(0.97)';
+  btn.textContent = 'Verificando…';
+  setTimeout(() => {
+    btn.textContent = '✓ Acceso concedido';
+    setTimeout(() => {
+      document.querySelector('[data-tab="dashboard"]').click();
+      btn.style.transform = '';
+      btn.textContent = 'Iniciar sesión';
+    }, 600);
+  }, 800);
+});
+
+// Initial runs
+bindInteractions();
+runCountUp();
+</script>
+</body>
+</html>
