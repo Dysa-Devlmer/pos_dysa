@@ -10,6 +10,24 @@
 
 ---
 
+## 🎯 Alcance actual: MLV (Mínimo Legal Viable)
+
+> **Revisión Cowork 2026-04-23** — el plan original estaba calibrado para contexto que no es el actual:
+> - **Pre-PMF + sin presupuesto**: no hay Apple Developer ($99/año) ni Play Developer ($25). M7 pivotó a distribución APK directa (link de descarga).
+> - **Sin usuarios reales todavía**: el riesgo regulatorio hoy es cero; lo que importa es estar listo cuando llegue el primer cliente pagando.
+>
+> **Decisión**: ejecutar solo Fase A esta semana. Fases B-E quedan documentadas pero **DEFERRED** hasta que haya (a) primer cliente pagando, o (b) submission real a stores. Construir AuditLog/ARCOP+/consent banner/DPAs ahora = infra que probablemente cambia cuando llegue el primer caso real.
+
+### Entregables activos (Fase A — MLV)
+
+1. **Reporte de PII** del codebase actual (baseline auditable)
+2. **Helper `pseudonymize()`** para scrubbing de logs/Sentry/PostHog antes de activarlos
+3. **Política de privacidad pública** en `/privacidad` como JSX estático (sin fs.readFile)
+
+### Entregables deferidos (Fases B-E)
+
+Documentados en su sección pero **sin ejecutar hasta trigger**. Triggers listados en cada fase abajo.
+
 ## 📋 Resumen ejecutivo
 
 Dividimos el trabajo en **5 fases** paralelizables donde se pueda. Cada fase tiene tareas numeradas, agente responsable, prerequisitos y criterio de verificación. El resultado final es:
@@ -157,33 +175,94 @@ python3 .claude/skills/privacy-compliance/scripts/privacy_policy_validator.py \
 # Objetivo: score ≥ 90
 ```
 
-3. **Crear página Next.js**:
+3. **Crear página Next.js — JSX estático, NO fs.readFile**:
+
+> ⚠️ **Bug evitado** (flagged por Cowork): el approach inicial con `fs.readFile(path.join(process.cwd(), "../../docs/..."))` **NO funciona en producción**. Razones: Next.js 15 standalone output (usado en el Dockerfile) NO copia `docs/` al bundle; `process.cwd()` en el container apunta a `/app`, no a la raíz del monorepo. Decisión: renderizar el contenido como JSX estático en el propio `page.tsx`. Sin dependencias de runtime, sin archivos externos.
+
 ```tsx
 // apps/web/app/privacidad/page.tsx
 import type { Metadata } from "next";
-import { promises as fs } from "fs";
-import path from "path";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Política de Privacidad — POS Chile",
-  description: "Política de Privacidad y tratamiento de datos personales de POS Chile",
+  description:
+    "Política de Privacidad y tratamiento de datos personales de POS Chile",
   robots: { index: true, follow: true },
 };
 
-export default async function PrivacidadPage() {
-  const draftPath = path.join(process.cwd(), "../../docs/privacy/privacidad-v1.0-draft.md");
-  // En producción el markdown se importa estáticamente o vía lector de fs
-  // Alternativa: contenido hardcoded como JSX para evitar dependencia fs
-  // ...
+// Datos parametrizables — centralizar para un solo punto de edición cuando
+// Pierre/legal Dysa confirmen valores reales. Mientras tanto, los placeholders
+// entre corchetes son VISIBLES en la página para que el usuario sepa que está
+// en revisión legal.
+const DYSA = {
+  razonSocial: "[Dysa SpA — pendiente confirmación legal]",
+  rut: "[XX.XXX.XXX-X — pendiente]",
+  domicilio: "[Dirección legal pendiente]",
+  contactoGeneral: "contacto@dysa.cl",
+  emailDPO: "privacidad@dysa.cl",
+  telefonoDPO: "[teléfono pendiente]",
+  version: "1.0-draft",
+  ultimaActualizacion: "23 de abril de 2026",
+};
+
+export default function PrivacidadPage() {
   return (
     <article className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl px-4 py-12">
-      {/* Markdown renderizado — usar react-markdown o contenido directo */}
+      {/* Banner visible — NO remover hasta que abogado Dysa apruebe versión final */}
+      <aside className="not-prose mb-8 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+        <p className="text-sm text-amber-700 dark:text-amber-400">
+          <strong>Borrador en revisión legal.</strong> Los campos entre{" "}
+          <code>[corchetes]</code> están pendientes de confirmación por el
+          equipo legal de Dysa antes de la publicación oficial. Versión actual:{" "}
+          <strong>{DYSA.version}</strong>. Para consultas{" "}
+          <a href={`mailto:${DYSA.emailDPO}`}>{DYSA.emailDPO}</a>.
+        </p>
+      </aside>
+
+      <h1>Política de Privacidad — POS Chile</h1>
+
+      <p>
+        <strong>Versión:</strong> {DYSA.version}
+        <br />
+        <strong>Última actualización:</strong> {DYSA.ultimaActualizacion}
+      </p>
+
+      <section>
+        <h2>1. Responsable del tratamiento</h2>
+        <ul>
+          <li>
+            <strong>Razón social:</strong> {DYSA.razonSocial}
+          </li>
+          <li>
+            <strong>RUT:</strong> {DYSA.rut}
+          </li>
+          <li>
+            <strong>Domicilio:</strong> {DYSA.domicilio}
+          </li>
+          <li>
+            <strong>Contacto general:</strong>{" "}
+            <a href={`mailto:${DYSA.contactoGeneral}`}>{DYSA.contactoGeneral}</a>
+          </li>
+        </ul>
+      </section>
+
+      {/* ... 14 secciones más, usar contenido de
+          .claude/skills/privacy-compliance/templates/privacy-policy.es-CL.md
+          transcrito a JSX semántico con h2, p, ul, table, etc.
+          Referencias al objeto DYSA en los placeholders.                      */}
+
+      <hr />
+      <p className="text-sm text-muted-foreground">
+        Última actualización: {DYSA.ultimaActualizacion} · Versión{" "}
+        {DYSA.version}
+      </p>
     </article>
   );
 }
 ```
 
-**Alternativa recomendada**: convertir el MD a JSX estático para evitar dependencia en `fs` (ver `references/store-policies-apple-google.md#ubicación-en-app-store-connect`).
+**Regla**: contenido ENTERO como JSX en el archivo `page.tsx`. Si crece mucho, partir en sub-componentes dentro del mismo dir (`components/Seccion1.tsx`, etc.) pero siempre importados, nunca leídos del fs en runtime.
 
 4. **Middleware**: asegurar que `/privacidad` sea pública:
 ```typescript
@@ -225,9 +304,19 @@ docker compose up -d --force-recreate
 
 ---
 
-## Fase B — Backend compliance (2-3 días)
+## Fase B — Backend compliance (2-3 días) · ⏸️ DEFERRED
 
-**Objetivo**: endpoints ARCOP+ operativos + migration AuditLog.
+> **Estado**: DEFERRED hasta que ocurra UNO de estos triggers:
+> - (a) Primer cliente B2B pagando que exija compliance formal en su contrato.
+> - (b) Primera solicitud ARCOP+ real recibida por privacidad@dysa.cl.
+> - (c) Submission formal a Apple App Store o Google Play Store.
+> - (d) Auditoría de la Agencia de Protección de Datos (no aplica hasta Dic 2026 mínimo).
+>
+> **Razón**: construir `AuditLog` + `/me/data-export` + `/me/erase` + `/me/consent` en ausencia de usuarios reales es trabajo que probablemente tenga que cambiar cuando llegue el primer caso concreto (e.g. el schema del RAT se ajusta al primer cliente, el erase flow cambia con el primer abuso real). Pseudonymize + policy pública ya cubren el riesgo legal básico con ~1 día de trabajo.
+>
+> **Pre-work que SÍ vale la pena hacer ahora**: tener diseñado el schema `AuditLog` y el contrato de endpoints documentados aquí abajo, para que cuando se active la fase el arranque sea inmediato.
+
+**Objetivo (cuando se active)**: endpoints ARCOP+ operativos + migration AuditLog.
 
 ### B.1 — Migration Prisma `AuditLog`
 
@@ -309,19 +398,31 @@ curl -H "Authorization: Bearer $JWT" http://localhost:3000/api/v1/me/data-export
   | jq .data | head -20
 ```
 
-### B.4 — Endpoint `DELETE /api/v1/me/erase`
+### B.4 — Endpoint `DELETE /api/v1/me/erase` · ⚠️ NO implementar como un POST simple
 
-- **Agente**: CLI
-- **Esfuerzo**: 1.5h (incluye lógica de pseudonimización con SII 6 años)
-- **Entregable**: endpoint + test integración + documentación inline
+> **Flag de seguridad (Cowork)**: el endpoint descrito inicialmente (`DELETE → ejecuta delete inmediato`) es un **vector de ataque crítico**. Un CSRF exitoso, una sesión robada, o un bug de autorización destruyen la cuenta del usuario sin vuelta atrás. **NO implementar** sin:
+>
+> 1. **Re-autenticación con password** antes de aceptar la solicitud (prompt pidiendo password actual, verificar con bcrypt).
+> 2. **Email de confirmación** con token de un solo uso, TTL **24 horas**, firmado. La deleción NO ejecuta hasta que el usuario click el link.
+> 3. **Grace period** de **7-30 días** (soft delete + cron job que hace hard delete al cumplir el plazo). Permite cancelar si fue un error o si hubo takeover.
+> 4. **Audit trail obligatorio** en `AuditLog` con: IP hasheada, user agent, timestamp, `actorUserId`, token usado, resultado.
+> 5. **Rate limit estricto**: máximo 1 solicitud de erase por usuario por 24h (Upstash sliding window).
+> 6. **Notificación de seguridad** al email del usuario cada vez que se solicita o cancela un erase (alertar de cualquier intento no iniciado por el titular).
+>
+> **Cuando se active B.4**: abrir issue separado "Design — Account erasure flow" con diagrama de estados (`REQUESTED → EMAIL_SENT → CONFIRMED → GRACE_PERIOD → FINALIZED | CANCELLED`) antes de escribir código. Revisión con abogado Dysa del flujo de SII retention (6 años) ANTES de merge.
 
-Ver implementación en `data-subject-rights.md#53-cancelación--supresión-art-8`.
+- **Agente (futuro)**: CLI + design review con Cowork + abogado
+- **Esfuerzo reestimado**: 1-2 días (no 1.5h como estaba originalmente — esa estimación era para un endpoint naive)
+- **Entregables**:
+  - Migration adicional: tabla `ErasureRequest` (status, tokens, grace_period_ends_at)
+  - Email template de confirmación (plain text + HTML)
+  - Cron job hard-delete
+  - Endpoint `POST /api/v1/me/erase/request` (inicia el flow, requiere re-auth)
+  - Endpoint `POST /api/v1/me/erase/confirm?token=...` (activa grace period)
+  - Endpoint `POST /api/v1/me/erase/cancel?token=...` (cancela durante grace)
+  - Tests integración cubriendo happy path + CSRF + token expiration + doble confirmación
 
-**Verificación Cowork**: no se debe poder borrar ventas asociadas (SII retention). Confirmar que después del DELETE:
-- `Cliente.nombre = "[Eliminado por solicitud del titular]"` si había ventas
-- `Cliente` se elimina si no había ventas
-- `Usuario` se desactiva o elimina según ventasAsociadas
-- Entry en `audit_logs` con status=FULFILLED
+Ver material de apoyo en `data-subject-rights.md#53-cancelación--supresión-art-8` — **considerarlo guía conceptual, no código production-ready tal como está**.
 
 ### B.5 — Endpoint `POST /api/v1/me/consent`
 
@@ -364,9 +465,11 @@ export async function POST(request: Request) {
 
 ---
 
-## Fase C — Frontend integration (2 días, paralelizable con B)
+## Fase C — Frontend integration (2 días, paralelizable con B) · ⏸️ DEFERRED
 
-**Objetivo**: consent banner visible + privacy link en lugares clave.
+> **Estado**: DEFERRED con los mismos triggers que Fase B. Sin analytics/Sentry activos, no hay nada que gating con consent banner. Privacy link en login/footer es quick-win pero se hace al final de Fase A junto con la página `/privacidad`.
+
+**Objetivo (cuando se active)**: consent banner visible + privacy link en lugares clave.
 
 ### C.1 — Consent banner en layout web
 
@@ -419,9 +522,12 @@ Ver componente en `templates/consent-banner.tsx` (está al final del archivo).
 
 ---
 
-## Fase D — Governance + legal (1-2 semanas, con Pierre)
+## Fase D — Governance + legal (1-2 semanas, con Pierre) · ⏸️ DEFERRED
 
-**Objetivo**: artefactos de gobernanza que requieren input humano / legal.
+> **Estado**: DEFERRED. RAT obligatorio por Ley 21.719 a partir de **Dic 2026** — no antes. DPO solo obligatorio con "tratamiento masivo"; POS Chile pre-PMF no califica. DPAs con Sentry/PostHog solo tienen sentido cuando esos servicios estén activos (no es el caso aún).
+> **Excepción**: la revisión legal de la policy (D.2) sí puede arrancar ni bien Pierre tenga el draft de Fase A.3, porque la política pública no debería quedar con placeholders en corchetes por mucho tiempo.
+
+**Objetivo (cuando se active)**: artefactos de gobernanza que requieren input humano / legal.
 
 ### D.1 — RAT inicial
 
@@ -473,9 +579,13 @@ Ver código completo en `subprocessors-dpa.md#sentry--el-más-expuesto-a-pii-acc
 
 ---
 
-## Fase E — Store compliance (día de M7)
+## Fase E — Store compliance (día de M7) · ⏸️ DEFERRED
 
-**Objetivo**: llenar App Privacy (iOS) + Data Safety (Android) con los declaraciones correctas. **Bloqueante del submit.**
+> **Estado**: DEFERRED indefinidamente. M7 pivotó a distribución **APK directa** (no stores) por falta de budget para Apple Dev ($99/año) y Play Dev ($25). Sin submission a stores, no hay App Privacy ni Data Safety que llenar. Privacy Manifest iOS (`PrivacyInfo.xcprivacy`) tampoco aplica en distribución APK directa.
+>
+> **Re-activar cuando**: Pierre/CEO apruebe presupuesto para cuentas de stores — el trigger no es temporal, es económico.
+
+**Objetivo (cuando se active)**: llenar App Privacy (iOS) + Data Safety (Android) con los declaraciones correctas. **Bloqueante del submit.**
 
 ### E.1 — App Privacy iOS
 
