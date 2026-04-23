@@ -142,3 +142,41 @@ export const HealthResponseSchema = z.object({
   version: z.string(),
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
+
+// ─── Dashboard (M3 mobile) ──────────────────────────────────────────────────
+
+export const DashboardVentaDiaSchema = z.object({
+  fecha: z.string(),        // "YYYY-MM-DD" en zona Chile
+  etiqueta: z.string(),     // "Lun 22" para eje del chart
+  total: z.number().int(),  // CLP acumulado del día
+  transacciones: z.number().int(),
+});
+export type DashboardVentaDia = z.infer<typeof DashboardVentaDiaSchema>;
+
+export const DashboardStockCriticoItemSchema = z.object({
+  id: z.number().int(),
+  nombre: z.string(),
+  stock: z.number().int(),
+  alertaStock: z.number().int(),
+});
+export type DashboardStockCriticoItem = z.infer<
+  typeof DashboardStockCriticoItemSchema
+>;
+
+export const DashboardSchema = z.object({
+  ventasHoy: z.object({
+    total: z.number().int(),
+    transacciones: z.number().int(),
+  }),
+  stockCritico: z.object({
+    count: z.number().int(),
+    productos: z.array(DashboardStockCriticoItemSchema),
+  }),
+  ventas7dias: z.array(DashboardVentaDiaSchema),
+});
+export type Dashboard = z.infer<typeof DashboardSchema>;
+
+export const DashboardResponseSchema = z.object({
+  data: DashboardSchema,
+});
+export type DashboardResponse = z.infer<typeof DashboardResponseSchema>;
