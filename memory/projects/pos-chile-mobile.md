@@ -44,7 +44,7 @@ App nativa iOS + Android con **paridad funcional 100% respecto al web POS Chile*
 
 | Capa | Tecnología | Versión / Notas |
 |------|-----------|-----------------|
-| Framework | Expo | SDK 52 — managed workflow |
+| Framework | Expo | SDK 54 — managed workflow (plan decía 52, CLI usó 54 stable — correcto) |
 | Lenguaje | TypeScript | strict mode (igual que web) |
 | CSS/Styling | NativeWind | v4 — Tailwind en RN, tokens shadcn portados |
 | ORM offline | Drizzle ORM | + expo-sqlite (SQLite local) |
@@ -112,8 +112,8 @@ packages:
 
 | Fase | Contenido | Agente | Duración est. | Estado |
 |------|-----------|--------|---------------|--------|
-| M1 | Foundation: scaffold apps/mobile/, packages/api-client, packages/domain, NativeWind + theme tokens | CLI | 2-3 días | ⏳ pendiente |
-| M2 | Auth: endpoint /api/v1/auth/login stateless, JWT en expo-secure-store, refresh, route guards | CLI | 1-2 días | ⏳ pendiente |
+| M1 | Foundation: scaffold apps/mobile/, packages/api-client, packages/domain, NativeWind + theme tokens | CLI | 2-3 días | ✅ f4310a2 + 3321414 |
+| M2 | Auth: endpoint /api/v1/auth/login stateless, JWT en expo-secure-store, refresh, route guards | CLI | 1-2 días | 🔄 en progreso |
 | M3 | Navegación + Dashboard: bottom tabs (Caja/Ventas/Dashboard/Más), KPIs Victory Native | Worktree | 2 días | ⏳ pendiente |
 | M4 | POS Caja nativo: scanner expo-camera, carrito, IVA, métodos pago, impresión ESC/POS BT, cash drawer | Worktree | 3-4 días | ⏳ pendiente |
 | M5 | Offline-first: expo-sqlite + Drizzle, sync queue, conflict resolution (server-wins stock) | Worktree | 3 días | ⏳ pendiente |
