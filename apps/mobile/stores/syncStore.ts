@@ -8,6 +8,7 @@ import {
   getLastSync,
   type FlushResult,
 } from "@/db/sync";
+import { syncProductosCache } from "@/db/productos-cache";
 
 /**
  * Sync store — estado global de conectividad y queue offline (M5).
@@ -42,6 +43,7 @@ type SyncState = {
   bootstrap: () => Promise<void>;
   refreshCounts: () => Promise<void>;
   syncNow: () => Promise<FlushResult | "skipped" | "offline">;
+  refreshProductosCache: () => Promise<void>;
 };
 
 function isOnlineFromState(state: NetInfoState): boolean {
@@ -89,6 +91,27 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     // Contar pendientes iniciales + lastSync del meta.
     await get().refreshCounts();
+
+    // M6: refrescar caché de productos si hay red. Fire-and-forget —
+    // errores se loggean y no bloquean el arranque (modo degradado:
+    // scanner online funciona aunque el cache esté vacío).
+    if (get().isOnline) {
+      void get().refreshProductosCache();
+    }
+  },
+
+  refreshProductosCache: async () => {
+    try {
+      const result = await syncProductosCache();
+      if (!result.ok) {
+        console.warn(
+          "[syncStore] productos-cache refresh failed:",
+          result.error,
+        );
+      }
+    } catch (e) {
+      console.warn("[syncStore] refreshProductosCache error:", e);
+    }
   },
 
   refreshCounts: async () => {

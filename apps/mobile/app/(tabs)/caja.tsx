@@ -31,6 +31,7 @@ import { apiClient } from "@/stores/authStore";
 import { useCartStore, type CartItem } from "@/stores/cartStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { enqueueVenta } from "@/db/sync";
+import { buscarEnCache, toProducto } from "@/db/productos-cache";
 
 /**
  * Caja POS mobile — M4.
@@ -58,15 +59,35 @@ import { enqueueVenta } from "@/db/sync";
 
 // ─── Fetchers ────────────────────────────────────────────────────────────
 
+/**
+ * Busca un producto por código de barras. Estrategia dual (M6):
+ *   1. Si hay conexión → hit al server (fuente de verdad).
+ *   2. Si falla la red O estamos offline → fallback a SQLite cache.
+ *   3. Si ni el cache tiene match → retorna null (UI muestra "no
+ *      encontrado o no disponible offline").
+ *
+ * Intencional: NO dejamos que el caller decida cuándo usar cache —
+ * unificar aquí mantiene el comportamiento consistente entre scanner y
+ * búsqueda manual por código.
+ */
 async function buscarPorCodigoBarras(
   codigoBarras: string,
 ): Promise<Producto | null> {
-  const { data } = await apiClient.get(
-    "/api/v1/productos",
-    ProductosListSchema,
-    { codigoBarras },
-  );
-  return data[0] ?? null;
+  try {
+    const { data } = await apiClient.get(
+      "/api/v1/productos",
+      ProductosListSchema,
+      { codigoBarras },
+    );
+    return data[0] ?? null;
+  } catch (err) {
+    // Fallback a cache local si la request murió por red — útil en
+    // zonas rurales de bodega o túneles de warehouse donde NetInfo
+    // todavía reporta online pero el request falla con timeout.
+    const cached = await buscarEnCache(codigoBarras);
+    if (cached) return toProducto(cached);
+    throw err;
+  }
 }
 
 async function buscarPorNombre(search: string): Promise<Producto[]> {

@@ -1,0 +1,172 @@
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { z } from "zod";
+
+import {
+  ApiClientError,
+  CambiarPasswordRequestSchema,
+  UsuarioSchema,
+} from "@repo/api-client";
+
+import { ScreenHeader } from "@/components/screen-header";
+import { apiClient } from "@/stores/authStore";
+import { useAuth } from "@/hooks/useAuth";
+
+/**
+ * Mi perfil — M6.
+ *
+ * Shows: nombre/email/rol (read-only desde GET /usuarios/me).
+ * Accion crítica: cambiar contraseña (PUT /usuarios/me/password).
+ * Logout queda también acá como shortcut rápido.
+ *
+ * El cambio de nombre/email no se expone por ahora — el caso de uso real
+ * en mobile es bajo (los usuarios editan perfil desde la web) y simplifica
+ * la UI. Si se pide, el backend PUT /me ya está listo.
+ */
+
+const PerfilResp = z.object({ data: UsuarioSchema });
+
+async function fetchPerfil() {
+  const { data } = await apiClient.get("/api/v1/usuarios/me", PerfilResp);
+  return data;
+}
+
+export default function PerfilScreen() {
+  const { logout } = useAuth();
+  const query = useQuery({ queryKey: ["perfil", "me"], queryFn: fetchPerfil });
+
+  const [actual, setActual] = useState("");
+  const [nueva, setNueva] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleCambiarPassword = async () => {
+    if (nueva !== confirmar) {
+      Alert.alert("No coinciden", "La nueva contraseña y su confirmación no coinciden");
+      return;
+    }
+    const parsed = CambiarPasswordRequestSchema.safeParse({ actual, nueva });
+    if (!parsed.success) {
+      Alert.alert("Datos inválidos", parsed.error.issues[0]?.message ?? "");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await apiClient.put(
+        "/api/v1/usuarios/me/password",
+        parsed.data,
+        z.object({ data: z.object({ updated: z.boolean() }) }),
+      );
+      Alert.alert("Contraseña actualizada", "El cambio se aplicó con éxito");
+      setActual("");
+      setNueva("");
+      setConfirmar("");
+    } catch (err) {
+      const msg =
+        err instanceof ApiClientError ? err.message : "Error inesperado";
+      Alert.alert("No se pudo cambiar", msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SafeAreaView className="bg-background flex-1" edges={["top"]}>
+      <ScreenHeader title="Mi perfil" />
+      <ScrollView contentContainerClassName="p-4 gap-4 pb-8">
+        {query.isLoading ? (
+          <ActivityIndicator size="large" color="#f97316" />
+        ) : query.data ? (
+          <View className="bg-card border-border rounded-xl border p-4">
+            <Text className="text-foreground text-lg font-semibold">
+              {query.data.nombre}
+            </Text>
+            <Text className="text-muted-foreground text-sm">
+              {query.data.email}
+            </Text>
+            <View className="bg-primary/10 mt-2 self-start rounded-full px-2 py-0.5">
+              <Text className="text-primary text-[11px] font-semibold uppercase tracking-wider">
+                {query.data.rol}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        <View className="bg-card border-border rounded-xl border p-4">
+          <Text className="text-foreground text-base font-semibold">
+            Cambiar contraseña
+          </Text>
+
+          <Text className="text-muted-foreground mt-3 mb-1 text-xs font-semibold uppercase tracking-wider">
+            Actual
+          </Text>
+          <TextInput
+            value={actual}
+            onChangeText={setActual}
+            placeholder="••••••"
+            placeholderTextColor="#a3a3a3"
+            secureTextEntry
+            className="bg-background border-border text-foreground rounded-xl border px-3 py-3 text-base"
+          />
+
+          <Text className="text-muted-foreground mt-3 mb-1 text-xs font-semibold uppercase tracking-wider">
+            Nueva
+          </Text>
+          <TextInput
+            value={nueva}
+            onChangeText={setNueva}
+            placeholder="Mínimo 6 caracteres"
+            placeholderTextColor="#a3a3a3"
+            secureTextEntry
+            className="bg-background border-border text-foreground rounded-xl border px-3 py-3 text-base"
+          />
+
+          <Text className="text-muted-foreground mt-3 mb-1 text-xs font-semibold uppercase tracking-wider">
+            Confirmar
+          </Text>
+          <TextInput
+            value={confirmar}
+            onChangeText={setConfirmar}
+            placeholder="Repetir nueva"
+            placeholderTextColor="#a3a3a3"
+            secureTextEntry
+            className="bg-background border-border text-foreground rounded-xl border px-3 py-3 text-base"
+          />
+
+          <TouchableOpacity
+            onPress={handleCambiarPassword}
+            disabled={submitting}
+            activeOpacity={0.8}
+            className={`${submitting ? "opacity-60" : ""} bg-primary mt-4 items-center rounded-xl px-4 py-3`}
+          >
+            <Text className="font-semibold text-white">
+              {submitting ? "Guardando…" : "Cambiar contraseña"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => {
+            void logout();
+          }}
+          activeOpacity={0.8}
+          className="border-destructive flex-row items-center justify-center gap-2 rounded-xl border px-4 py-3"
+        >
+          <MaterialIcons name="logout" size={20} color="#dc2626" />
+          <Text className="text-destructive font-semibold">Cerrar sesión</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

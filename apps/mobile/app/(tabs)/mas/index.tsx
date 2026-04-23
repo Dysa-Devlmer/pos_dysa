@@ -1,18 +1,21 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Link } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Más — menú de módulos secundarios + sesión del usuario.
+ * Menú del tab "Más" — M6.
  *
- * Mobile replica la navegación "avanzada" del sidebar web en esta pantalla:
- * productos, clientes, categorías, alertas, reportes, etc. Cada entry es
- * un placeholder hasta que la fase correspondiente entregue la vista.
+ * Estructura alineada con la sidebar del /web:
+ *   - Catálogo: productos, categorías, clientes
+ *   - Operación: alertas, descuentos, devoluciones
+ *   - Cuenta: perfil, logout
  *
- * El bloque de sesión (avatar + logout) vive acá porque no hay "user menu"
- * persistente en un tab bar — este es el punto natural.
+ * `disabled` se usa sólo para entries que requieren rol ADMIN (usuarios)
+ * cuando el user no es admin, para que la navegación no explote en el
+ * server con 403.
  */
 
 type ItemProps = {
@@ -20,16 +23,16 @@ type ItemProps = {
   label: string;
   hint?: string;
   disabled?: boolean;
+  href?: string;
   onPress?: () => void;
 };
 
-function Item({ icon, label, hint, disabled, onPress }: ItemProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}
-      className="border-border bg-card flex-row items-center gap-3 border-b px-4 py-4"
+function Item({ icon, label, hint, disabled, href, onPress }: ItemProps) {
+  const body = (
+    <View
+      className={`border-border bg-card flex-row items-center gap-3 border-b px-4 py-4 ${
+        disabled ? "opacity-60" : ""
+      }`}
     >
       <View className="bg-muted h-10 w-10 items-center justify-center rounded-full">
         <MaterialIcons
@@ -40,9 +43,7 @@ function Item({ icon, label, hint, disabled, onPress }: ItemProps) {
       </View>
       <View className="flex-1">
         <Text
-          className={`text-base font-medium ${
-            disabled ? "text-muted-foreground" : "text-foreground"
-          }`}
+          className={`text-base font-medium ${disabled ? "text-muted-foreground" : "text-foreground"}`}
         >
           {label}
         </Text>
@@ -51,12 +52,30 @@ function Item({ icon, label, hint, disabled, onPress }: ItemProps) {
         ) : null}
       </View>
       <MaterialIcons name="chevron-right" size={22} color="#a3a3a3" />
+    </View>
+  );
+
+  if (href && !disabled) {
+    return (
+      <Link href={href as never} asChild>
+        <TouchableOpacity activeOpacity={0.7}>{body}</TouchableOpacity>
+      </Link>
+    );
+  }
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      disabled={disabled}
+      onPress={onPress}
+    >
+      {body}
     </TouchableOpacity>
   );
 }
 
-export default function MasScreen() {
+export default function MasMenu() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.rol === "ADMIN";
 
   return (
     <SafeAreaView className="bg-background flex-1" edges={["top"]}>
@@ -82,21 +101,50 @@ export default function MasScreen() {
         <Text className="text-muted-foreground px-4 pb-2 pt-6 text-xs font-semibold uppercase tracking-wider">
           Catálogo
         </Text>
-        <Item icon="inventory-2" label="Productos" hint="M4" disabled />
-        <Item icon="category" label="Categorías" hint="M4" disabled />
-        <Item icon="people" label="Clientes" hint="M5" disabled />
+        <Item
+          icon="inventory-2"
+          label="Productos"
+          href="/(tabs)/mas/productos"
+        />
+        <Item
+          icon="category"
+          label="Categorías"
+          href="/(tabs)/mas/categorias"
+        />
+        <Item icon="people" label="Clientes" href="/(tabs)/mas/clientes" />
 
         <Text className="text-muted-foreground px-4 pb-2 pt-6 text-xs font-semibold uppercase tracking-wider">
           Operación
         </Text>
-        <Item icon="warning" label="Alertas de stock" hint="M6" disabled />
-        <Item icon="local-offer" label="Descuentos" hint="M6" disabled />
-        <Item icon="assignment-return" label="Devoluciones" hint="M6" disabled />
+        <Item
+          icon="warning"
+          label="Alertas de stock"
+          href="/(tabs)/mas/alertas"
+        />
+        <Item
+          icon="local-offer"
+          label="Descuentos"
+          href="/(tabs)/mas/descuentos"
+          hint="Solo lectura"
+        />
+        <Item
+          icon="assignment-return"
+          label="Devoluciones"
+          href="/(tabs)/mas/devoluciones"
+        />
 
         <Text className="text-muted-foreground px-4 pb-2 pt-6 text-xs font-semibold uppercase tracking-wider">
           Cuenta
         </Text>
-        <Item icon="person" label="Mi perfil" hint="M6" disabled />
+        <Item icon="person" label="Mi perfil" href="/(tabs)/mas/perfil" />
+        {isAdmin ? (
+          <Item
+            icon="admin-panel-settings"
+            label="Usuarios"
+            hint="Solo ADMIN"
+            href="/(tabs)/mas/usuarios"
+          />
+        ) : null}
         <Item
           icon="logout"
           label="Cerrar sesión"
