@@ -140,8 +140,8 @@ packages:
 | Fase | Contenido | Agente | Duración est. | Estado |
 |------|-----------|--------|---------------|--------|
 | M1 | Foundation: scaffold apps/mobile/, packages/api-client, packages/domain, NativeWind + theme tokens | CLI | 2-3 días | ✅ f4310a2 + 3321414 |
-| M2 | Auth: endpoint /api/v1/auth/login stateless, JWT en expo-secure-store, refresh, route guards | CLI | 1-2 días | 🔄 en progreso |
-| M3 | Navegación + Dashboard: bottom tabs (Caja/Ventas/Dashboard/Más), KPIs Victory Native | Worktree | 2 días | ⏳ pendiente |
+| M2 | Auth: endpoint /api/v1/auth/login stateless, JWT en expo-secure-store, refresh, route guards | CLI | 1-2 días | ✅ d7d034b — verificado CLI + Worktree + Cowork |
+| M3 | Navegación + Dashboard: bottom tabs (Caja/Ventas/Dashboard/Más), KPIs Victory Native | Worktree | 2 días | 🔄 en progreso |
 | M4 | POS Caja nativo: scanner expo-camera, carrito, IVA, métodos pago, impresión ESC/POS BT, cash drawer | Worktree | 3-4 días | ⏳ pendiente |
 | M5 | Offline-first: expo-sqlite + Drizzle, sync queue, conflict resolution (server-wins stock) | Worktree | 3 días | ⏳ pendiente |
 | M6 | Listados paridad: Ventas, Clientes, Productos, Categorías, Usuarios, Alertas, Devoluciones, Descuentos, Reportes, Perfil | Worktree | 4-5 días | ⏳ pendiente |
