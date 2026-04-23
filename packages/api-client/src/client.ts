@@ -51,7 +51,7 @@ export function createApiClient(config: ApiClientConfig) {
   }
 
   async function request<T>(
-    method: "GET" | "POST" | "PATCH" | "DELETE",
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     path: string,
     options: {
       body?: unknown;
@@ -141,6 +141,10 @@ export function createApiClient(config: ApiClientConfig) {
 
     post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
       return request("POST", path, { body, schema });
+    },
+
+    put<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+      return request("PUT", path, { body, schema });
     },
 
     patch<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
