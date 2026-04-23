@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4: plugins se cargan via @plugin. Sin esta línea las clases
+   `prose` son silenciosamente no-op (página /privacidad renderiza sin
+   espaciado/tipografía). Detectado por Cowork en review Fase A. */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 /* ════════════════════════════════════════════════════════════════════

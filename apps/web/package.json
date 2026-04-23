@@ -53,6 +53,7 @@
     "@eslint/eslintrc": "^3.3.5",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.2.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
