@@ -6,7 +6,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: Params) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { error } = await requireAuth();
+  const { error } = await requireAuth(request);
   if (error) return error;
 
   const { id } = await params;

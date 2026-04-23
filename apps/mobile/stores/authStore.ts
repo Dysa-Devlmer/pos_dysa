@@ -22,7 +22,10 @@ import {
  * - logout() → limpia SecureStore + resetea state
  */
 
-const TOKEN_KEY = "pos_jwt";
+// Namespaced para evitar collision con otras apps del device que pudieran
+// usar la misma key genérica. SecureStore es per-app en iOS/Android así
+// que el riesgo real es bajo, pero la convención ayuda a debug y migración.
+const TOKEN_KEY = "pos_chile_jwt";
 
 // Base URL configurable via env. En prod queda apuntando al VPS.
 const API_BASE_URL =

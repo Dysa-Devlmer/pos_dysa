@@ -5,7 +5,7 @@ import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } fro
 export async function GET(request: Request) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { error } = await requireAuth();
+  const { error } = await requireAuth(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
@@ -62,7 +62,7 @@ const CreateVentaSchema = z.object({
 export async function POST(request: Request) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { session, error } = await requireAuth();
+  const { session, error } = await requireAuth(request);
   if (error) return error;
 
   let body: unknown;

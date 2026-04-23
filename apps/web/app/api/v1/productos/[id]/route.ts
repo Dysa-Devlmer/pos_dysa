@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: Params) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { error } = await requireAuth();
+  const { error } = await requireAuth(request);
   if (error) return error;
 
   const { id } = await params;
@@ -33,7 +33,7 @@ const UpdateSchema = z.object({
 export async function PUT(request: Request, { params }: Params) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { session, error } = await requireAuth();
+  const { session, error } = await requireAuth(request);
   if (error) return error;
   const denied = requireAdmin(session);
   if (denied) return denied;
@@ -67,7 +67,7 @@ export async function PUT(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { session, error } = await requireAuth();
+  const { session, error } = await requireAuth(request);
   if (error) return error;
   const denied = requireAdmin(session);
   if (denied) return denied;

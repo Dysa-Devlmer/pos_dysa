@@ -36,7 +36,10 @@ const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL ?? "").startsWith(
 const SESSION_COOKIE = USE_SECURE_COOKIES
   ? "__Secure-authjs.session-token"
   : "authjs.session-token";
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 días en segundos
+// Mobile: 7 días (más corto que web 30d — dispositivos son más fáciles de
+// perder/robar que un laptop, y mobile puede re-loguear más fácil con
+// Face ID / Touch ID en futuro). Cowork review M2 pidió este ajuste.
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 días en segundos
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

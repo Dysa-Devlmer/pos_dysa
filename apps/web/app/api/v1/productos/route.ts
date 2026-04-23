@@ -5,7 +5,7 @@ import { requireAuth, requireAdmin, requireRateLimit, jsonOk, jsonError, parsePa
 export async function GET(request: Request) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { error } = await requireAuth();
+  const { error } = await requireAuth(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
@@ -47,7 +47,7 @@ const CreateSchema = z.object({
 export async function POST(request: Request) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { session, error } = await requireAuth();
+  const { session, error } = await requireAuth(request);
   if (error) return error;
   const denied = requireAdmin(session);
   if (denied) return denied;
