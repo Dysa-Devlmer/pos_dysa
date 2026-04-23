@@ -42,17 +42,20 @@ export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export const ProductoSchema = z.object({
   id: z.number().int(),
-  codigo: z.string().nullable(),
+  codigoBarras: z.string(),
   nombre: z.string(),
-  descripcion: z.string().nullable(),
+  descripcion: z.string().nullable().optional(),
   precio: z.number().int(), // CLP sin decimales
   stock: z.number().int(),
-  stockMinimo: z.number().int(),
+  alertaStock: z.number().int(),
   activo: z.boolean(),
   categoriaId: z.number().int(),
   ventas: z.number().int(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  categoria: z
+    .object({ id: z.number().int(), nombre: z.string() })
+    .optional(),
 });
 export type Producto = z.infer<typeof ProductoSchema>;
 
@@ -63,6 +66,7 @@ export const ProductosListSchema = z.object({
       page: z.number().int(),
       limit: z.number().int(),
       total: z.number().int().optional(),
+      totalPages: z.number().int().optional(),
     })
     .optional(),
 });
@@ -117,8 +121,17 @@ export const VentaSchema = z.object({
 });
 export type Venta = z.infer<typeof VentaSchema>;
 
+/**
+ * Body para POST /api/v1/ventas.
+ *
+ * OJO — el server espera `items` (no `detalles`). El field `detalles` solo
+ * existe en el response (VentaSchema). Este schema está alineado con el
+ * handler real en apps/web/app/api/v1/ventas/route.ts.
+ *
+ * Descuentos: M6+ (todavía no soportado por el server).
+ */
 export const CrearVentaRequestSchema = z.object({
-  detalles: z
+  items: z
     .array(
       z.object({
         productoId: z.number().int(),
@@ -128,10 +141,28 @@ export const CrearVentaRequestSchema = z.object({
     .min(1),
   metodoPago: MetodoPagoSchema,
   clienteId: z.number().int().nullable().optional(),
-  descuentoPct: z.number().min(0).max(100).optional(),
-  descuentoMonto: z.number().int().min(0).optional(),
 });
 export type CrearVentaRequest = z.infer<typeof CrearVentaRequestSchema>;
+
+/**
+ * Response minimal del POST /api/v1/ventas — wrappeado en { data }.
+ * El handler incluye todos los campos de Prisma (detalles, numeroBoleta,
+ * total, etc.); acá validamos solo lo que el mobile necesita mostrar.
+ */
+export const VentaCreadaSchema = z.object({
+  id: z.number().int(),
+  numeroBoleta: z.string(),
+  subtotal: z.number().int(),
+  impuesto: z.number().int(),
+  total: z.number().int(),
+  metodoPago: MetodoPagoSchema,
+});
+export type VentaCreada = z.infer<typeof VentaCreadaSchema>;
+
+export const VentaCreadaResponseSchema = z.object({
+  data: VentaCreadaSchema,
+});
+export type VentaCreadaResponse = z.infer<typeof VentaCreadaResponseSchema>;
 
 // ─── Health ─────────────────────────────────────────────────────────────────
 

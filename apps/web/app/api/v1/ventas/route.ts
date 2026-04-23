@@ -154,6 +154,12 @@ export async function POST(request: Request) {
     return jsonOk(result);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error al crear venta";
+    // 409 Conflict para stock insuficiente y producto inactivo/missing —
+    // cliente mobile (M4) lo distingue de 422 validación para mostrar UI
+    // específica ("Stock insuficiente en X") vs mensaje genérico.
+    if (/Stock insuficiente|no encontrado|inactivo/i.test(msg)) {
+      return jsonError(msg, 409);
+    }
     return jsonError(msg, 422);
   }
 }

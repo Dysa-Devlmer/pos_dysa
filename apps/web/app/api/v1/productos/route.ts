@@ -12,10 +12,15 @@ export async function GET(request: Request) {
   const { page, limit, skip } = parsePagination(searchParams);
   const categoriaId = searchParams.get("categoriaId");
   const search = searchParams.get("search");
+  // codigoBarras — lookup exacto para scanner mobile (M4). Match por
+  // equality contra el @unique del schema; si no existe devuelve data:[]
+  // y el cliente decide cómo mostrar "no encontrado".
+  const codigoBarras = searchParams.get("codigoBarras");
 
   const where = {
     activo: true,
     ...(categoriaId ? { categoriaId: Number(categoriaId) } : {}),
+    ...(codigoBarras ? { codigoBarras } : {}),
     ...(search
       ? { nombre: { contains: search, mode: "insensitive" as const } }
       : {}),
