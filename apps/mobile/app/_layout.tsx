@@ -10,9 +10,41 @@ import {
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
+import {
+  QueryClient,
+  QueryClientProvider,
+  focusManager,
+} from "@tanstack/react-query";
+import { AppState, type AppStateStatus } from "react-native";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/useAuth";
+
+/**
+ * React Query client — singleton para toda la app mobile.
+ *
+ * Defaults pensados para POS mobile:
+ * - staleTime 30s → KPIs del dashboard no mutan tan rápido; evita refetch
+ *   agresivo al cambiar de tab.
+ * - retry 1 → fail-fast en red mala (usuario prefiere error claro que
+ *   app colgada 3×10s).
+ * - refetchOnWindowFocus → true vía focusManager wiring abajo.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+// React Query no sabe de AppState en RN → hook manual para que los queries
+// se refresquen al volver a foreground (equivalente a window focus en web).
+AppState.addEventListener("change", (status: AppStateStatus) => {
+  focusManager.setFocused(status === "active");
+});
 
 /**
  * Route guard global — M2 Auth.
@@ -76,5 +108,9 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  return <RootLayoutNav />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootLayoutNav />
+    </QueryClientProvider>
+  );
 }
