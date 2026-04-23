@@ -4,6 +4,8 @@
 .claude/memory/
 .claude/settings.json
 .claude/settings.local.json
+.claude/rescan.log
+.claude/.rescan.lock/
 
 # ZIPs del curso (no subir al repo)
 *.zip
