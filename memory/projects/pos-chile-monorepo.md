@@ -344,7 +344,7 @@ $transaction:
 27. **formatCLP normalize** — `.replace(/[\u202f\u00a0]/g, " ")` obligatorio para evitar hydration mismatch Node 20+ vs browser
 28. **SELECT ... FOR UPDATE NOWAIT** en $transaction devoluciones — primera operación, bloqueo pesimista para concurrencia
 29. **Content-Length check** en rutas de upload (avatar) — pre-filtro ANTES de await request.formData(); el check real es `file.size` después
-30. **`/api/v1` excluido del middleware NextAuth** — usa API Key propia (`requireAuth` en `app/api/v1/_helpers.ts`) + rate-limit Upstash (para acceso B2B sin sesión JWT)
+30. **`/api/v1` excluido del middleware NextAuth** — usa helper propio (`requireAuth` en `app/api/v1/_helpers.ts`) + rate-limit Upstash. Desde commit `2edf51a` el helper acepta **Bearer token** (mobile M2) como primera opción, con fallback a cookie session (web SSR). Backwards compatible: callers viejos sin `request` param siguen funcionando. El tipo del parámetro es `Request` (Web API base), no `NextRequest` — ver Pattern 9 en [[auth-patterns]]
 31. **`Permissions-Policy: usb=()`** deshabilita WebUSB intencionalmente — si se agregan lectores de barras/impresoras fiscales, cambiar a `usb=(self)` y revisar CSP
 32. **`.claude/commands/` ignorado pero `session-end.md` se commitea con `git add -f`** — es un comando del proyecto aunque el dir esté gitignored
 33. **Worktrees stale no se auto-limpian al mergear branch** — requiere `git worktree remove` explícito. Nunca `rm -rf` sobre `.worktrees/` porque deja refs zombie en `.git/worktrees/`

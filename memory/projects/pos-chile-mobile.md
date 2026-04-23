@@ -16,7 +16,7 @@ aliases:
 **Repo:** `apps/mobile/` dentro del monorepo `system_pos`
 **Stack:** Expo SDK 52 + TypeScript strict + NativeWind + Drizzle + Zustand
 **Aprobado por CEO:** ✅ 2026-04-22
-**Estado:** 🔄 M2 completo local — M3 pendiente
+**Estado:** 🔄 M3 completo local — M4 en progreso
 
 ---
 
@@ -115,13 +115,24 @@ system_pos/
 │       └── src/calcularIVA.ts  ← extraído de web lib/utils.ts
 ```
 
-### Endpoint nuevo en web (requerido para M2)
+### Endpoints web nuevos (para mobile)
 
 ```typescript
-// apps/web/app/api/v1/auth/login/route.ts — NUEVO
-// POST { email, password } → { token: JWT, user: { id, email, rol } }
-// Stateless — no usa cookies, devuelve JWT en body para mobile
-// Mismo bcrypt.compare + encode() que loginAction server action
+// apps/web/app/api/v1/auth/login/route.ts — commit 1615b78 + 2edf51a
+// POST { email, password } → { token: JWT, user: { id, email, nombre, rol } }
+// Stateless, JWT 7d (mobile más corto que web 30d — dispositivos más fáciles de perder)
+// Salt = nombre del cookie de sesión v5 (scheme-dependent — ver G-M13)
+
+// apps/web/app/api/v1/_helpers.ts — commit 2edf51a
+// requireAuth(request?: Request) ahora prueba Bearer primero, fallback a cookie
+// Backwards compatible: web SSR sigue funcionando sin request param
+// Tipo Request (no NextRequest) — ver G-M12
+
+// apps/web/app/api/v1/dashboard/route.ts — commit 744521f
+// GET → { data: { ventasHoy, stockCritico, ventas7dias } }
+// Shape validado runtime con DashboardResponseSchema de @repo/api-client
+// Sin rol-gating (cajero/vendedor/admin todos consumen)
+// Zona horaria Chile para buckets de fecha — ver G-M15
 ```
 
 ### pnpm-workspace.yaml actualizado
@@ -141,8 +152,8 @@ packages:
 |------|-----------|--------|---------------|--------|
 | M1 | Foundation: scaffold apps/mobile/, packages/api-client, packages/domain, NativeWind + theme tokens | CLI | 2-3 días | ✅ f4310a2 + 3321414 |
 | M2 | Auth: endpoint /api/v1/auth/login stateless, JWT en expo-secure-store, refresh, route guards | CLI | 1-2 días | ✅ d7d034b — verificado CLI + Worktree + Cowork |
-| M3 | Navegación + Dashboard: bottom tabs (Caja/Ventas/Dashboard/Más), KPIs Victory Native | Worktree | 2 días | 🔄 en progreso |
-| M4 | POS Caja nativo: scanner expo-camera, carrito, IVA, métodos pago, impresión ESC/POS BT, cash drawer | Worktree | 3-4 días | ⏳ pendiente |
+| M3 | Navegación + Dashboard: bottom tabs (Caja/Ventas/Dashboard/Más), KPIs Victory Native | Worktree | 2 días | ✅ 3db64d9 (Worktree) + 744521f (CLI) — verificado Cowork 2026-04-22 |
+| M4 | POS Caja nativo: scanner expo-camera, carrito, IVA, métodos pago, impresión ESC/POS BT, cash drawer | Worktree | 3-4 días | 🔄 en progreso |
 | M5 | Offline-first: expo-sqlite + Drizzle, sync queue, conflict resolution (server-wins stock) | Worktree | 3 días | ⏳ pendiente |
 | M6 | Listados paridad: Ventas, Clientes, Productos, Categorías, Usuarios, Alertas, Devoluciones, Descuentos, Reportes, Perfil | Worktree | 4-5 días | ⏳ pendiente |
 | M7 | Build & Deploy: EAS Build, TestFlight + Play Internal, EAS Update OTA, iconos/splash, Sentry RN, PostHog | CLI | 2-3 días | ⏳ pendiente |
@@ -259,6 +270,17 @@ Pantallas con paridad funcional respecto al web:
 **G-M10** — EAS Build requiere `EXPO_TOKEN` en CI. No commitear el token — usar secrets de GitHub Actions o EAS secrets.
 
 **G-M11** — `packages/domain` extrae funciones de `apps/web/lib/utils.ts`. NO borrar las funciones originales del web — hacer re-export: `export { formatCLP } from '@repo/domain'` en utils.ts para mantener compatibilidad.
+
+**G-M12** — `requireAuth(request?)` en `apps/web/app/api/v1/_helpers.ts` acepta `Request` (Web API base), **no** `NextRequest`. Todos los handlers `/api/v1/*` reciben `Request` estándar en su signature (`export async function GET(request: Request)`). Usar `NextRequest` en el helper rompe 12 callsites con TS2345 (Request no es asignable a NextRequest). El helper solo necesita `request.headers.get("authorization")`, lo cual existe en `Request` — no hace falta subtipo. Commit `2edf51a`.
+
+**G-M13** — Salt del JWT **DEBE** matchear exactamente el nombre del cookie de sesión de NextAuth v5. En `/api/v1/auth/login` (encode) y en `sessionFromBearer` (decode), el salt es scheme-dependent:
+- `https://...` → `"__Secure-authjs.session-token"`
+- `http://...` → `"authjs.session-token"`
+Si el salt no coincide, `decode()` devuelve `null` **silenciosamente** (no throw, no log) → el Bearer no autentica y cae al fallback cookie → mobile siempre ve 401. La regla `USE_SECURE_COOKIES = (NEXTAUTH_URL ?? "").startsWith("https://")` debe estar en AMBOS lados. Commit `1615b78` (encode) + `2edf51a` (decode).
+
+**G-M14** — Rate limiter en memoria (`checkMemoryRateLimit` en `apps/web/lib/rate-limit.ts:77`) es **5 intentos / 15 min por IP**, SIN distinguir entre login success y login failure. Un smoke test que hace `login_success + login_wrong + loop 6 wrong` llega a 429 en el tercer attempt del loop — no en el sexto. Para tests limpios: restart `./scripts/dev.sh` entre corridas o esperar 15 min. El comportamiento es correcto, solo que el ratio 5:1 requiere contador limpio. Detectado al verificar M2.
+
+**G-M15** — Para series tipo `ventas7dias` en zona Chile, usar `Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" })` para producir claves `YYYY-MM-DD` consistentes. **NO** usar `venta.fecha.toISOString().slice(0, 10)` — eso da la fecha UTC, no Chile, y genera off-by-one cerca de medianoche (ej: una venta del 2026-04-22 23:30 CLT sale como `2026-04-23` en UTC). El `page.tsx` del dashboard web ya usaba este pattern; el endpoint `/api/v1/dashboard` lo replica para que mobile y web vean exactamente los mismos buckets. Commit `744521f`.
 
 ---
 

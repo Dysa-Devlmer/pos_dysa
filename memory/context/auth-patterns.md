@@ -351,6 +351,113 @@ if (process.env.UPSTASH_REDIS_REST_URL) {
 }
 ```
 
+## Pattern 9 — Stateless login + Bearer middleware (mobile M2)
+
+Contexto: [[pos-chile-mobile]] M2. El web usa cookies `__Secure-authjs.session-token`; mobile (React Native) no tiene cookie jar compatible → necesita JWT en body y header `Authorization: Bearer <jwt>`.
+
+### Endpoint stateless — `apps/web/app/api/v1/auth/login/route.ts`
+
+```ts
+// POST /api/v1/auth/login
+// Body: { email, password }
+// Respuesta: { token, user: { id, email, nombre, rol } }
+// JWT: 7 días (vs web 30d — dispositivos más fáciles de perder)
+
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+const SESSION_COOKIE = USE_SECURE_COOKIES
+  ? "__Secure-authjs.session-token"
+  : "authjs.session-token";
+
+const token = await encode({
+  token: { sub, id, email, name, rol, iat, exp, jti },
+  secret: process.env.NEXTAUTH_SECRET!,
+  salt: SESSION_COOKIE,            // ← salt === nombre de cookie v5
+});
+return NextResponse.json({ token, user });
+```
+
+Mismas reglas que Pattern 4bis:
+- `bcrypt.compare` contra `usuario.password`
+- Rate limit Upstash + fallback memoria (ver [[#Pattern 8]])
+- Sentry captureMessage para `login_failure` y `login_rate_limited`
+- Zod `LoginResponseSchema.parse()` defensivo antes de responder
+
+**Diferencia con web**: no escribe cookie. Devuelve el JWT crudo en body — mobile lo persiste en `expo-secure-store` y lo adjunta en cada request.
+
+### Middleware Bearer — `apps/web/app/api/v1/_helpers.ts`
+
+`requireAuth()` extendido para aceptar Bearer **O** cookie, mismo helper para todas las rutas `/api/v1/*`:
+
+```ts
+async function sessionFromBearer(request: Request): Promise<Session | null> {
+  const header = request.headers.get("authorization");
+  if (!header || !header.toLowerCase().startsWith("bearer ")) return null;
+
+  const token = header.slice(7).trim();
+  if (!token) return null;
+
+  const payload = await decode({
+    token,
+    secret: process.env.NEXTAUTH_SECRET!,
+    salt: SESSION_COOKIE_SALT,        // ← mismo salt que encode()
+  });
+  if (!payload) return null;
+
+  // Reconstruir Session desde claims del JWT
+  return {
+    user: { id: payload.sub!, email: payload.email, name: payload.name ?? null, rol: payload.rol },
+    expires: new Date((payload.exp ?? 0) * 1000).toISOString(),
+  } as Session;
+}
+
+export async function requireAuth(request?: Request) {
+  // 1. Bearer primero si hay request (mobile/external API)
+  if (request) {
+    const bearerSession = await sessionFromBearer(request);
+    if (bearerSession) return { session: bearerSession };
+  }
+  // 2. Fallback cookie session (web SSR)
+  const session = await auth();
+  if (!session?.user) return { error: unauthorized401 };
+  return { session };
+}
+```
+
+**Backwards compatible**: los callers viejos que no pasan `request` siguen usando el flow cookie — no hay migración destructiva.
+
+### Reglas críticas
+
+| # | Regla | Razón |
+|---|-------|-------|
+| 1 | Tipo del parámetro es `Request` (Web API), NO `NextRequest` | Los handlers `/api/v1/*` reciben `Request` estándar. `NextRequest` no es asignable desde `Request` → rompe 12 callsites. Solo se usa `request.headers.get()`, disponible en base. |
+| 2 | `salt === SESSION_COOKIE` en encode Y decode | En v5 beta.31 el salt se usa en la derivación criptográfica. Si no matchea → `decode()` devuelve `null` silenciosamente (sin throw, sin log). El Bearer falla y cae al cookie → mobile siempre 401. |
+| 3 | `USE_SECURE_COOKIES` scheme-dependent | `__Secure-` solo sobre HTTPS; en dev HTTP local usa sin prefix. Regla idéntica a Pattern 4bis del web. |
+| 4 | Mobile usa SecureStore namespaced | Key `"pos_chile_jwt"` (no `"pos_jwt"` genérico) para evitar colisión entre apps del dispositivo (gotcha G-M11) |
+| 5 | Tokens mobile = 7 días | vs web 30d — dispositivos más fáciles de perder/robar |
+
+### Flujo end-to-end (verificado local)
+
+```
+mobile RN  ──POST /api/v1/auth/login { email, password }──►  web
+                                                              │
+                                                    bcrypt.compare
+                                                    encode(salt=cookie)
+                                                              │
+mobile  ◄──── { token, user } 200 ──────────────────────────
+  │
+  expo-secure-store.set("pos_chile_jwt", token)
+  │
+mobile  ──GET /api/v1/productos  Authorization: Bearer ──►  web
+                                                              │
+                                                    requireAuth(request)
+                                                    sessionFromBearer(request)
+                                                    decode(salt=cookie)  ✓
+                                                              │
+mobile  ◄──── { data: [...] } 200 ──────────────────────────
+```
+
+Commits: `1615b78` (login endpoint) · `2edf51a` (Bearer helper + 7d + namespace) · `744521f` (primer consumer: `/api/v1/dashboard`)
+
 ## Gotchas resumidos
 
 | # | Gotcha | Por qué | Workaround |
