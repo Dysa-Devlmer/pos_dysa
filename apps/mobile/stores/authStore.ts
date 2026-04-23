@@ -11,7 +11,7 @@ import {
  * Auth store — Zustand slice para estado de sesión.
  *
  * Persistencia:
- * - Token JWT en `expo-secure-store` bajo key "pos_jwt" (Keychain iOS /
+ * - Token JWT en `expo-secure-store` bajo key "pos_chile_jwt" (Keychain iOS /
  *   EncryptedSharedPreferences Android)
  * - User object en memoria solamente — se re-fetchea o se restaura del JWT
  *   decodificado al bootstrap (M3 decidirá si necesita /api/v1/auth/me)
