@@ -24,6 +24,8 @@ aliases:
 - [[business-logic]] — IVA, RUT, CLP, ventas, descuentos, devoluciones
 - [[infra-docker]] — Compose, Dockerfile multi-stage, puertos, healthcheck
 - [[agents-workflow]] — roles Cowork/CLI/Worktree/Gemini + protocolo verificación
+- [[roadmap]] — gaps post-prod priorizados (GAP-01→GAP-11)
+- [[pos-chile-mobile]] — plan maestro app React Native (Expo SDK 52) aprobado 2026-04-22
 
 **Guía externa replicable**: [`OBSIDIAN-CLAUDE-SETUP.md`](../../OBSIDIAN-CLAUDE-SETUP.md) en la raíz del repo — documenta cómo replicar el segundo cerebro en proyectos nuevos (arquitectura + instalación paso a paso + checklist + gotchas + tiempo estimado).
 
