@@ -19,6 +19,9 @@ import { AppState, type AppStateStatus } from "react-native";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/useAuth";
+import { useSyncStore } from "@/stores/syncStore";
+import { initDb } from "@/db/client";
+import { SyncBanner } from "@/components/sync-banner";
 
 /**
  * React Query client — singleton para toda la app mobile.
@@ -44,6 +47,12 @@ const queryClient = new QueryClient({
 // se refresquen al volver a foreground (equivalente a window focus en web).
 AppState.addEventListener("change", (status: AppStateStatus) => {
   focusManager.setFocused(status === "active");
+  // Al volver a foreground, intentar drenar la queue offline (M5). El
+  // syncStore internamente chequea isOnline + isSyncing y retorna
+  // "offline"/"skipped" si no corresponde.
+  if (status === "active") {
+    void useSyncStore.getState().syncNow();
+  }
 });
 
 /**
@@ -76,11 +85,26 @@ function useProtectedRoute(token: string | null, isLoading: boolean) {
 
 function RootLayoutNav() {
   const { token, isLoading, bootstrap } = useAuth();
+  const syncBootstrap = useSyncStore((s) => s.bootstrap);
   const colorScheme = useColorScheme();
 
   useEffect(() => {
     bootstrap();
-  }, [bootstrap]);
+    // Offline stack bootstrap — M5. initDb() asegura que la tabla
+    // sync_queue existe antes de que caja.tsx intente encolar. El
+    // syncStore.bootstrap() cuenta pendientes + suscribe NetInfo.
+    // Ambos son fire-and-forget; errores se loggean internamente y no
+    // bloquean el arranque de la UI (modo degradado: app funciona
+    // pero sin offline si SQLite explota).
+    (async () => {
+      try {
+        await initDb();
+        await syncBootstrap();
+      } catch (e) {
+        console.warn("[root] offline bootstrap failed:", e);
+      }
+    })();
+  }, [bootstrap, syncBootstrap]);
 
   useProtectedRoute(token, isLoading);
 
@@ -94,6 +118,10 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      {/* SyncBanner va FUERA del Stack para persistir en todas las tabs
+          y la pantalla de login. Su visibilidad la decide el propio
+          componente según el estado del store. */}
+      <SyncBanner />
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -29,6 +29,8 @@ import { formatCLP } from "@repo/domain";
 
 import { apiClient } from "@/stores/authStore";
 import { useCartStore, type CartItem } from "@/stores/cartStore";
+import { useSyncStore } from "@/stores/syncStore";
+import { enqueueVenta } from "@/db/sync";
 
 /**
  * Caja POS mobile — M4.
@@ -125,6 +127,13 @@ export default function CajaScreen() {
   const [searchResults, setSearchResults] = useState<Producto[]>([]);
   const [cobrando, setCobrando] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<VentaCreada | null>(null);
+  const [ventaOffline, setVentaOffline] = useState<{
+    localId: string;
+    total: number;
+  } | null>(null);
+
+  const isOnline = useSyncStore((s) => s.isOnline);
+  const refreshSyncCounts = useSyncStore((s) => s.refreshCounts);
 
   const handleProductoEncontrado = useCallback(
     (producto: Producto) => {
@@ -167,6 +176,42 @@ export default function CajaScreen() {
   const handleCobrar = async () => {
     if (items.length === 0) return;
     setCobrando(true);
+    const totalCobro = totales.total;
+
+    // Rama offline (G-M04, M5): encolar local en SQLite. El sync worker
+    // la enviará al reconectar. NO validamos stock acá — lo hará el
+    // server cuando drene la queue (server-wins).
+    if (!isOnline) {
+      try {
+        const payload = {
+          items: items.map((i) => ({
+            productoId: i.producto.id,
+            cantidad: i.cantidad,
+          })),
+          metodoPago,
+        };
+        const localId = await enqueueVenta(payload);
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+        clearCart();
+        setVentaOffline({ localId, total: totalCobro });
+        await refreshSyncCounts();
+      } catch (e) {
+        Alert.alert(
+          "No se pudo guardar offline",
+          e instanceof Error ? e.message : "Error inesperado",
+        );
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error,
+        );
+      } finally {
+        setCobrando(false);
+      }
+      return;
+    }
+
+    // Rama online: POST directo.
     try {
       const venta = await crearVenta(items, metodoPago);
       void Haptics.notificationAsync(
@@ -182,6 +227,42 @@ export default function CajaScreen() {
           Alert.alert(
             "Sesión expirada",
             "Por favor vuelve a iniciar sesión.",
+          );
+        } else if (e.status === 0 || e.status >= 500) {
+          // Timeout / 5xx → ofrecer encolar offline. Patrón común cuando
+          // el cajero está con red inestable pero el dispositivo dice
+          // "online". Evita perder la venta.
+          Alert.alert(
+            "Error de red",
+            "No pudimos contactar el servidor. ¿Guardar la venta offline para sincronizarla después?",
+            [
+              { text: "Cancelar", style: "cancel" },
+              {
+                text: "Guardar offline",
+                onPress: async () => {
+                  try {
+                    const payload = {
+                      items: items.map((i) => ({
+                        productoId: i.producto.id,
+                        cantidad: i.cantidad,
+                      })),
+                      metodoPago,
+                    };
+                    const localId = await enqueueVenta(payload);
+                    clearCart();
+                    setVentaOffline({ localId, total: totalCobro });
+                    await refreshSyncCounts();
+                  } catch (enqueueErr) {
+                    Alert.alert(
+                      "Error al guardar",
+                      enqueueErr instanceof Error
+                        ? enqueueErr.message
+                        : "Error inesperado",
+                    );
+                  }
+                },
+              },
+            ],
           );
         } else {
           Alert.alert("No se pudo cobrar", e.message);
@@ -402,7 +483,11 @@ export default function CajaScreen() {
               <MaterialIcons name="check-circle" size={22} color="#fff" />
             )}
             <Text className="text-primary-foreground text-base font-bold">
-              {cobrando ? "Procesando…" : `Cobrar ${formatCLP(totales.total)}`}
+              {cobrando
+                ? "Procesando…"
+                : !isOnline
+                  ? `Guardar offline ${formatCLP(totales.total)}`
+                  : `Cobrar ${formatCLP(totales.total)}`}
             </Text>
           </TouchableOpacity>
 
@@ -441,10 +526,16 @@ export default function CajaScreen() {
         }}
       />
 
-      {/* Confirmación de venta */}
+      {/* Confirmación de venta online */}
       <VentaExitosaModal
         venta={ventaExitosa}
         onClose={() => setVentaExitosa(null)}
+      />
+
+      {/* Confirmación de venta offline — encolada, no enviada */}
+      <VentaOfflineModal
+        venta={ventaOffline}
+        onClose={() => setVentaOffline(null)}
       />
     </SafeAreaView>
   );
@@ -654,6 +745,58 @@ function ScannerModal({
 }
 
 // ─── Venta exitosa modal ────────────────────────────────────────────────
+
+function VentaOfflineModal({
+  venta,
+  onClose,
+}: {
+  venta: { localId: string; total: number } | null;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      visible={!!venta}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View className="flex-1 items-center justify-center bg-black/50 p-6">
+        <View className="bg-card w-full max-w-sm items-center rounded-2xl p-6">
+          <View className="bg-warning/20 mb-3 h-16 w-16 items-center justify-center rounded-full">
+            <MaterialIcons name="cloud-off" size={32} color="#f59e0b" />
+          </View>
+          <Text className="text-foreground text-lg font-bold">
+            Guardado offline
+          </Text>
+          <Text className="text-muted-foreground mt-1 text-center text-sm">
+            Se enviará al servidor automáticamente{"\n"}cuando recuperes conexión.
+          </Text>
+
+          <View className="bg-muted/50 mt-4 w-full rounded-lg p-3">
+            <View className="flex-row justify-between">
+              <Text className="text-muted-foreground text-sm">Total</Text>
+              <Text className="text-foreground text-base font-bold">
+                {formatCLP(venta?.total ?? 0)}
+              </Text>
+            </View>
+            <Text className="text-muted-foreground mt-2 text-[11px]">
+              ID local: {venta?.localId.slice(0, 8) ?? ""}…
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={onClose}
+            className="bg-primary mt-5 w-full items-center rounded-lg py-3"
+          >
+            <Text className="text-primary-foreground font-semibold">
+              Nueva venta
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 function VentaExitosaModal({
   venta,
