@@ -20,6 +20,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@react-pdf/renderer": "^4.5.1",
     "@repo/db": "workspace:*",
+    "@repo/domain": "workspace:*",
     "@repo/ui": "workspace:*",
     "@scalar/nextjs-api-reference": "^0.10.8",
     "@sentry/nextjs": "^10.49.0",
