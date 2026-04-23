@@ -3,6 +3,9 @@
     "name": "POS Chile",
     "slug": "pos-chile-mobile",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "poschile",
@@ -10,11 +13,16 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "cl.zgamersa.poschile",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "POS Chile usa la cámara para escanear códigos de barras de productos en la caja."
+        "NSCameraUsageDescription": "POS Chile usa la cámara para escanear códigos de barras de productos en la caja.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "cl.zgamersa.poschile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

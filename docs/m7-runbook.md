@@ -39,10 +39,39 @@ Los updates OTA (`eas update`) solo llegan a usuarios con la misma `version` dec
 - [ ] **Apple Developer Program activo** ($99/año) — necesario para cualquier build iOS device y submit TestFlight
 - [ ] **Google Play Developer activo** ($25 one-time) — necesario para submit Play Internal
 
-**Complementarios** (pueden resolverse durante M7 paso 5–6):
+**Bloquean submit a stores** (pasos 8–9; resolver antes de paso 7):
 
-- [ ] `appleId`, `ascAppId`, `appleTeamId` — Pierre los copia desde App Store Connect tras crear la App
-- [ ] `android-service-account.json` — JSON key desde Google Cloud Console (API "Google Play Android Developer") con permisos de release management, colocar en `apps/mobile/android-service-account.json` (se auto-ignora porque `*.json` no está en gitignore, **añadirlo explícitamente** en .gitignore antes de descargar)
+- [ ] **App record creado en App Store Connect** — Pierre registra manualmente la app en [appstoreconnect.apple.com](https://appstoreconnect.apple.com) (Apps → `+` → New App) con:
+  - **Platform**: iOS
+  - **Name**: `POS Chile`
+  - **Primary Language**: Spanish (Chile)
+  - **Bundle ID**: `cl.zgamersa.poschile` (debe matchear exacto al del `app.json`)
+  - **SKU**: `pos-chile-mobile` (o cualquier ID interno único)
+
+  **BLOQUEA `eas submit -p ios`** — EAS solo sube binarios a listings existentes, no crea el record. Error típico si falta: `App with bundle identifier ... was not found`.
+
+- [ ] **App record creado en Play Console** — Pierre registra en [play.google.com/console](https://play.google.com/console) (All apps → Create app) con:
+  - **App name**: `POS Chile`
+  - **Default language**: Spanish (Chile)
+  - **App or game**: App
+  - **Free or paid**: Free
+  - **Package name** (implícito, se valida al primer upload): `cl.zgamersa.poschile`
+
+  **BLOQUEA `eas submit -p android`** — mismo motivo que iOS.
+
+- [ ] **Privacy Policy URL pública y funcional** — obligatoria porque POS Chile procesa datos personales:
+  - **RUT** (cédula chilena) — identificador fiscal personal
+  - **email, nombre** de usuarios y clientes
+  - **historial de ventas** asociado a clientes identificados
+
+  Apple (App Privacy) y Google (Data Safety form) EXIGEN URL de política pública antes de publicar. Si falta o está caída al momento de review: rechazo inmediato.
+
+  **Sugerido**: hostear en `https://dy-pos.zgamersa.com/privacidad` o `/legal/privacidad` — usa la misma infra web que ya está en prod. La redacción legal debe hacerla el responsable legal de Dysa/Zgamersa (NO generar con template sin revisión jurídica — en Chile la Ley 19.628 + Ley 21.719 aplican).
+
+  **BLOQUEA aprobación en ambos stores**.
+
+- [ ] `appleId`, `ascAppId`, `appleTeamId` — Pierre los copia desde App Store Connect tras crear la App (App Information → General Information). Se pegan en `eas.json` > `submit.production.ios`.
+- [ ] `android-service-account.json` — JSON key desde Google Cloud Console (API "Google Play Android Developer") con permisos de release management, colocar en `apps/mobile/android-service-account.json`. **Añadir a `.gitignore` ANTES de descargar** (contiene private key de la cuenta de servicio).
 
 **Assets de diseño** (bloquean M7 paso 3):
 
@@ -261,6 +290,17 @@ Genera:
 - Android: AAB (bundle) para Play Store
 
 ### Paso 8 — Submit a stores
+
+> ⚠️ **Pre-requisito obligatorio** — confirmar ANTES de ejecutar los comandos:
+>
+> 1. **App record ya creado** en App Store Connect (bundle ID `cl.zgamersa.poschile`) y en Play Console (package `cl.zgamersa.poschile`). EAS Submit **no crea el listing**, solo sube el binario a una listing existente. Sin este paso → fallas con error críptico:
+>    - iOS: `App with bundle identifier 'cl.zgamersa.poschile' was not found in App Store Connect`
+>    - Android: `404 — The package name is not found in Google Play` (o errores de Play Developer API)
+> 2. **Privacy Policy URL funcionando** y linkeada en la ficha de cada store (App Store Connect → App Privacy; Play Console → Data Safety). Sin esto, el review rechaza el submit antes de llegar a testers.
+> 3. `eas.json > submit.production.ios` con `appleId` + `ascAppId` + `appleTeamId` llenados.
+> 4. `apps/mobile/android-service-account.json` en su lugar y en `.gitignore`.
+>
+> Los 4 items están en el pre-flight checklist arriba — revisar que estén `[x]` antes de continuar.
 
 **iOS (TestFlight)**:
 ```bash
