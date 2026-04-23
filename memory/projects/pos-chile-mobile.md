@@ -16,7 +16,34 @@ aliases:
 **Repo:** `apps/mobile/` dentro del monorepo `system_pos`
 **Stack:** Expo SDK 52 + TypeScript strict + NativeWind + Drizzle + Zustand
 **Aprobado por CEO:** ✅ 2026-04-22
-**Estado:** 📋 Plan aprobado — M1 pendiente arranque CLI
+**Estado:** 🔄 M2 completo local — M3 pendiente
+
+---
+
+## 🚨 REGLA ABSOLUTA — Producción intocable hasta M7
+
+> **TODO el desarrollo M1-M6 es LOCAL. Prod queda intocable hasta M7 paso 3.**
+
+### Por qué
+- `dy-pos.zgamersa.com` tiene usuarios reales. Un bug en endpoint nuevo puede afectarles.
+- Mismo Docker Compose + Postgres — un deploy roto puede tumbar el POS web.
+- Los tests en prod ensucian logs y métricas reales.
+
+### Regla operativa para CLI, Worktree y Gemini
+- ✅ Tests contra `http://localhost:3000` exclusivamente
+- ✅ `pnpm dev` / `./scripts/dev.sh start` para desarrollo local
+- ✅ Mobile físico: `EXPO_PUBLIC_API_URL=http://<IP-mac-wifi>:3000`
+- ❌ NUNCA `https://dy-pos.zgamersa.com` durante M1-M6
+
+### Flujo de deploy final (M7)
+1. M1-M6 merged y verificados **localmente**
+2. M7: scaffold EAS (solo config, sin builds a stores)
+3. Deploy web (`./scripts/deploy.sh`) — agrega endpoints `/api/v1/*` a prod
+4. EAS Build con `EXPO_PUBLIC_API_URL=https://dy-pos.zgamersa.com` → TestFlight + Play Internal
+5. Staff interno prueba contra prod real
+6. Si OK → submit a stores públicas
+
+---
 
 ## Mapa de contexto
 
