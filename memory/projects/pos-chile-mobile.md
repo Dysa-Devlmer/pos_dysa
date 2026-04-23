@@ -16,7 +16,7 @@ aliases:
 **Repo:** `apps/mobile/` dentro del monorepo `system_pos`
 **Stack:** Expo SDK 52 + TypeScript strict + NativeWind + Drizzle + Zustand
 **Aprobado por CEO:** ✅ 2026-04-22
-**Estado:** 🔄 M6 completo local — M7 pendiente (último paso)
+**Estado:** 🔄 M1-M6 completos — M7 prep listo (runbook + app.json + privacy rollout plan) — bloqueado esperando Pierre (cuentas Apple/Google, assets diseño, abogado Dysa, app records manuales en stores)
 
 ---
 
@@ -156,7 +156,7 @@ packages:
 | M4 | POS Caja nativo: scanner expo-camera, carrito, IVA, métodos pago, impresión ESC/POS BT, cash drawer | Worktree | 3-4 días | ✅ 0da7d57 — verificado Cowork 2026-04-22 |
 | M5 | Offline-first: expo-sqlite + Drizzle, sync queue, conflict resolution (server-wins stock) | Worktree | 3 días | ✅ 1b07d7b — verificado Cowork 2026-04-22 |
 | M6 | Listados paridad: Ventas, Clientes, Productos, Categorías, Usuarios, Alertas, Devoluciones, Descuentos, Reportes, Perfil | Worktree | 4-5 días | ✅ 9240672+b24191e — verificado Cowork 2026-04-22 |
-| M7 | Build & Deploy: EAS Build, TestFlight + Play Internal, EAS Update OTA, iconos/splash, Sentry RN, PostHog | CLI | 2-3 días | ⏳ pendiente |
+| M7 | Build & Deploy: EAS Build, TestFlight + Play Internal, EAS Update OTA, iconos/splash, Sentry RN, PostHog. **Runbook en `docs/m7-runbook.md` (cf0b9ba) + fix Cowork (ecce0c7)**. Privacy rollout en paralelo (`docs/privacy-rollout-plan.md`, 3b5f3c9). app.json patch Option C ya aplicado: bundleIdentifier `cl.zgamersa.poschile`, runtimeVersion policy `appVersion`, buildNumber 1, versionCode 1 | CLI | 2-3 días | 🔄 prep completo — esperando cuentas stores + diseño assets |
 
 **Total estimado:** 17-22 días ingeniería · ~4-5 semanas calendario con paralelismo de agentes
 
@@ -294,19 +294,33 @@ Si el salt no coincide, `decode()` devuelve `null` **silenciosamente** (no throw
 
 **G-M21** — **Gotcha #10 re-surge con `pnpm dev` sin env vars**: `packages/db/src/client.ts` lanza un `throw` a **nivel de módulo** si `POS_DATABASE_URL` no está definida. Esto corre cuando Next.js carga CUALQUIER ruta que importe `@repo/db` (login incluido) → "Internal Server Error" en `/login`. Detectado por Cowork al verificar M6: no es bug de M6 sino del arranque del dev server. Fix: `docker compose up -d` + verificar `apps/web/.env.local` tenga `POS_DATABASE_URL` + reiniciar `pnpm dev`. Considerar en el futuro convertir el throw en warning+lazy-init para evitar bloquear rutas que no usan DB.
 
+**G-M22** — **Bundle ID + package name son PERMANENTES tras publicar en stores**. Decisión bloqueada en M7 prep (2026-04-23): `cl.zgamersa.poschile` para iOS y Android (idéntico, Play Store acepta). Una vez que Apple acepta la primera build con este bundle ID, **no hay forma de cambiarlo sin crear una app nueva** (pierde reviews, instalaciones, etc.). Android es similar pero menos draconiano (permite migración formal con usuario notificado). Si hay que cambiar el bundle ID en el futuro, tratarlo como re-launch, no como update. Commit de la decisión: `ecce0c7`.
+
+**G-M23** — **EAS Submit NO crea el app record en App Store Connect ni en Play Console**; sube el binario a una listing existente. Si Pierre corre `eas submit -p ios` sin haber creado antes la app en ASC (Apps → `+` → New App con bundle ID `cl.zgamersa.poschile`), falla con error críptico: `App with bundle identifier ... was not found`. Idem para Play Console con `404 — The package name is not found`. **Orden obligatorio en M7**: (1) Pierre crea el app record manualmente en cada store con nombre "POS Chile", bundle/package `cl.zgamersa.poschile`, primary language Spanish (Chile), SKU interno. (2) Luego `eas submit`. Documentado en warning block del Paso 8 de `docs/m7-runbook.md`.
+
+**G-M24** — **Privacy Policy URL es blocker BIDIRECCIONAL (Apple + Google)** — ambos stores la requieren pública, HTTPS, sin login, HTML navegable (no PDF), idioma = primary language de la app (Spanish Chile). Si la URL devuelve 404 durante review → rechazo inmediato. Para POS Chile: ruta planificada `https://dy-pos.zgamersa.com/privacidad` implementada en Fase A.3 del `docs/privacy-rollout-plan.md`. El middleware NextAuth debe excluir la ruta (matcher `/((?!api|_next|privacidad|manifest).*)`). Verificación pre-submit: `curl -I` en browser incógnito debe devolver 200. Adicionalmente, **Apple exige page "App Privacy" completa y Google exige "Data Safety" completa**, ambas alineadas al contenido de la policy (mismatch = rechazo).
+
+**G-M25** — **Skill `privacy-compliance` creado y activo** en `.claude/skills/privacy-compliance/` (280 KB, 6240 líneas, 14 archivos). Cubre ciclo completo: Ley 19.628 + Ley 21.719, mapa PII del stack real, store policies campo-a-campo, ARCOP+ endpoints con Prisma, consent management, breach playbook, tabla subprocesadores. Incluye 3 scripts Python ejecutables (`pii_scanner.py` auditor, `privacy_policy_validator.py` score 0-100, `dsar_exporter.py` data export ARCOP+) y 3 templates production-ready (policy español-chileno con 15 secciones, consent banner React/Next, email respuestas DPO). **Local-only** (`.claude/skills/` gitignored como toda la infra DEE), disponible a cualquier agente Claude en esta máquina. Invocar con `/privacy-compliance` o mencionar "privacy"/"compliance" en conversación. Plan de rollout multi-agente en `docs/privacy-rollout-plan.md` (commit `3b5f3c9`) con 5 fases A-E distribuidas entre CLI/Worktree/Cowork/Gemini/Pierre.
+
 ---
 
 ## 📋 Pre-Requisitos (CEO / Pierre)
 
 | Item | Costo | Estado | Bloquea |
 |------|-------|--------|---------|
-| Apple Developer Program | $99/año | ⏳ pendiente | M7 iOS |
-| Google Play Developer | $25 one-time | ⏳ pendiente | M7 Android |
-| Modelo impresora térmica | variable | ⏳ pendiente | M4 print |
-| `EXPO_PUBLIC_API_URL` en .env | gratis | ⏳ pendiente | M2 |
-| EAS CLI login (`eas login`) | gratis | ⏳ pendiente | M7 |
+| Apple Developer Program | $99/año | ⏳ pendiente | M7 iOS submit |
+| Google Play Developer | $25 one-time | ⏳ pendiente | M7 Android submit |
+| Modelo impresora térmica | variable | ❌ descopado a v1.1 | — (M4 sin BT en v1) |
+| `EXPO_PUBLIC_API_URL` en .env | gratis | ✅ M2 resuelto | — |
+| EAS CLI login (`eas login`) | gratis | ⏳ pendiente | M7 build |
+| **App record creado en ASC** (manual) | gratis | ⏳ pendiente | M7 iOS submit (ver G-M23) |
+| **App record creado en Play Console** (manual) | gratis | ⏳ pendiente | M7 Android submit (ver G-M23) |
+| **Privacy Policy URL hosteada** (`/privacidad`) | gratis | ⏳ pendiente | M7 submit BIDIRECCIONAL (ver G-M24) |
+| **Abogado Dysa disponible** para revisar policy | variable | ⏳ pendiente | M7 (revisión final de policy) |
+| **Assets reales de diseño** (6 PNGs icon/splash) | variable | ⏳ pendiente | M7 paso 3 |
+| **DPAs firmados** (Sentry, PostHog, Vultr, Upstash) | gratis | ⏳ pendiente | M7 compliance |
 
-> ⚠️ Apple Developer y Google Play NO bloquean M1-M6. Se puede desarrollar y testear en simulador/emulador sin cuenta de stores. Solo bloquean el submit final en M7.
+> ⚠️ Apple Developer + Google Play + app records + Privacy Policy URL NO bloquean M1-M6. Solo bloquean el submit final en M7. El rollout de privacy compliance está planificado en `docs/privacy-rollout-plan.md` con fases paralelizables.
 
 ---
 
