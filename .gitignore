@@ -114,6 +114,7 @@ pos*.png
 credentials.json
 keystore.properties
 .env.mobile.local
+.env.mobile.publish
 android.env
 
 # APK artifacts — los subimos a Cloudflare R2, no al repo (40-80 MB cada uno)
