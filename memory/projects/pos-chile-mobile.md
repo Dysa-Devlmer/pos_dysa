@@ -233,6 +233,30 @@ Pantallas con paridad funcional respecto al web:
 - PostHog: eventos `screen_view`, `caja_venta_completada`, `login_success/failure`
 - EAS Update: `eas update --branch production` para OTA hotfixes
 
+### M7-ALT — Distribución APK directa (Fase 2+ pivoteada, 2026-04-24)
+
+**Pivote estratégico**: por presupuesto ($99/año Apple + $25 Google = $124+ anuales)
+decidimos no publicar en Play/App Store en v1. En su lugar: distribuir APK auto-hosteado
+con update-checker in-app. Ventajas: costo $0, velocidad de release (sin review 1-7 días),
+control total. Desventajas: sin auto-install silencioso (Android requiere tap manual
+en cada update), solo Android, requiere "allow unknown sources". Asumibles para B2B/interno.
+
+**Fases implementadas:**
+
+| Fase | Contenido | Commit | Estado |
+|------|-----------|--------|--------|
+| 1 | Keystore infra: script generador (`mobile-generate-keystore.sh`), runbook completo, gitignore defense-in-depth | `904c645` | ✅ |
+| 2 | Update checker in-app: `MobileRelease` schema + `/api/mobile/manifest` endpoint (GET público + POST admin con anti-rollback) + `useUpdateCheck` hook + `UpdateBanner` component (banner inline + modal detalle + modal bloqueante forceUpdate) | `436691b` | ✅ |
+| 3 | Publish script `scripts/mobile-publish-release.sh`: valida → lee version de app.json → upload R2 vía aws CLI → POST manifest → verifica GET | `d53d60e` | ✅ |
+| 4 | (Opcional) EAS Update para OTA JS — deferred hasta tener usuarios reales | - | ⏳ |
+| 5 | Primer build v1.0.0 + publish | - | ⏳ |
+
+**Infra creada:**
+- Keystore: `~/.android-keystores/pos-chile-release.keystore` (password en Bitwarden, backup iCloud)
+- R2 bucket: `pos-chile-mobile-releases` (región ENAM, público vía `https://pub-f8234d800bb54f6b9f6d4152b7adca6d.r2.dev`)
+- Cloudflare account: `fa2fd1592fea9c324d39fe5d765d9cd5` (zgamersa)
+- R2 API Token S3-compatible generado con scope solo al bucket (credenciales en Bitwarden)
+
 ---
 
 ## 👥 Reparto de Agentes
@@ -299,6 +323,12 @@ Si el salt no coincide, `decode()` devuelve `null` **silenciosamente** (no throw
 **G-M23** — **EAS Submit NO crea el app record en App Store Connect ni en Play Console**; sube el binario a una listing existente. Si Pierre corre `eas submit -p ios` sin haber creado antes la app en ASC (Apps → `+` → New App con bundle ID `cl.zgamersa.poschile`), falla con error críptico: `App with bundle identifier ... was not found`. Idem para Play Console con `404 — The package name is not found`. **Orden obligatorio en M7**: (1) Pierre crea el app record manualmente en cada store con nombre "POS Chile", bundle/package `cl.zgamersa.poschile`, primary language Spanish (Chile), SKU interno. (2) Luego `eas submit`. Documentado en warning block del Paso 8 de `docs/m7-runbook.md`.
 
 **G-M24** — **Privacy Policy URL es blocker BIDIRECCIONAL (Apple + Google)** — ambos stores la requieren pública, HTTPS, sin login, HTML navegable (no PDF), idioma = primary language de la app (Spanish Chile). Si la URL devuelve 404 durante review → rechazo inmediato. Para POS Chile: ruta planificada `https://dy-pos.zgamersa.com/privacidad` implementada en Fase A.3 del `docs/privacy-rollout-plan.md`. El middleware NextAuth debe excluir la ruta (matcher `/((?!api|_next|privacidad|manifest).*)`). Verificación pre-submit: `curl -I` en browser incógnito debe devolver 200. Adicionalmente, **Apple exige page "App Privacy" completa y Google exige "Data Safety" completa**, ambas alineadas al contenido de la policy (mismatch = rechazo).
+
+**G-M26** — **Cloudflare R2 tiene DOS tipos de token incompatibles entre sí**. El **User API Token** (formato `cfut_...`, 53 chars) sirve para Workers, DNS, etc. pero **NO funciona como credencial S3** — falla con `InvalidArgument: Credential access key has length 53, should be 32`. Para `aws s3 cp` hay que generar un **R2 API Token** desde R2 → Manage R2 API tokens → Create API token → Object Read & Write, que devuelve un par `Access Key ID` (32 hex) + `Secret Access Key` (64 hex), formato S3 clásico. El endpoint es `https://{ACCOUNT_ID}.r2.cloudflarestorage.com` + `AWS_DEFAULT_REGION=auto`. El script `scripts/mobile-publish-release.sh` valida el formato antes de intentar upload y falla temprano si le pasan un `cfut_*`. Commit `d53d60e` (con ajuste post-test en sesión del 2026-04-24).
+
+**G-M27** — **MobileRelease `isLatest` flip debe ser atómico vía `$transaction`**. Publicar una release nueva = desmarcar el `isLatest = true` anterior + crear el nuevo con `isLatest = true`. Si se hace en 2 queries sueltas, hay ventana de ~100ms donde NO hay latest publicado (o peor: DOS latest simultáneos). El endpoint `POST /api/mobile/manifest` usa `prisma.$transaction(async (tx) => { updateMany + create })` para garantizar invariante "exactamente 1 latest por plataforma". Además valida anti-rollback: `versionCode` nuevo > `versionCode` actual latest, porque Android rechaza APKs con versionCode menor al instalado (el banner diría "hay update" pero Android rechazaría la instalación). Commit `436691b`.
+
+**G-M28** — **Middleware matcher debe excluir rutas públicas mobile-facing**. La app mobile consulta `/api/mobile/manifest` **antes del login** (para detectar updates críticos desde v1.0.0 antes de que el user se autentique). El endpoint tiene que ser público. El matcher de `apps/web/middleware.ts` se actualizó a `((?!api|_next|...|api/mobile|...).*)` — agregar `api/mobile` al negative lookahead. Rate limiting aplica vía `requireRateLimit(request)` dentro del handler, no desde middleware. Commit `436691b`.
 
 **G-M25** — **Skill `privacy-compliance` creado y activo** en `.claude/skills/privacy-compliance/` (280 KB, 6240 líneas, 14 archivos). Cubre ciclo completo: Ley 19.628 + Ley 21.719, mapa PII del stack real, store policies campo-a-campo, ARCOP+ endpoints con Prisma, consent management, breach playbook, tabla subprocesadores. Incluye 3 scripts Python ejecutables (`pii_scanner.py` auditor, `privacy_policy_validator.py` score 0-100, `dsar_exporter.py` data export ARCOP+) y 3 templates production-ready (policy español-chileno con 15 secciones, consent banner React/Next, email respuestas DPO). **Local-only** (`.claude/skills/` gitignored como toda la infra DEE), disponible a cualquier agente Claude en esta máquina. Invocar con `/privacy-compliance` o mencionar "privacy"/"compliance" en conversación. Plan de rollout multi-agente en `docs/privacy-rollout-plan.md` (commit `3b5f3c9`) con 5 fases A-E distribuidas entre CLI/Worktree/Cowork/Gemini/Pierre.
 

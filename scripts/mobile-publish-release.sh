@@ -56,9 +56,13 @@ ENV_FILE="$ROOT/.env.mobile.publish"
 # shellcheck source=/dev/null
 set -a; . "$ENV_FILE"; set +a
 
-for v in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN R2_BUCKET_NAME R2_PUBLIC_URL API_BASE_URL; do
+for v in CLOUDFLARE_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET_NAME R2_PUBLIC_URL API_BASE_URL; do
   [[ -z "${!v:-}" ]] && err "Variable $v vacía en $ENV_FILE"
 done
+
+# El User API Token (cfut_...) no sirve para S3 — avisar si alguien lo pegó aquí.
+[[ "$R2_ACCESS_KEY_ID" == cfut_* ]] && err "R2_ACCESS_KEY_ID parece ser un User API Token (cfut_...). Para S3 necesitás un R2 API Token → genera uno en R2 → Manage R2 API tokens."
+[[ ${#R2_ACCESS_KEY_ID} -ne 32 ]] && warn "R2_ACCESS_KEY_ID tiene ${#R2_ACCESS_KEY_ID} chars (se esperan 32). Puede fallar el upload."
 
 # ─── Dependencias ───────────────────────────────────────────────────────
 command -v aws  >/dev/null || err "falta aws CLI — instalá con: brew install awscli"
@@ -104,14 +108,11 @@ fi
 say "Subiendo APK a R2…"
 R2_ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
-# Cloudflare API Tokens se usan como access_key_id=TOKEN, secret_access_key= sha256 del token
-# Ver https://developers.cloudflare.com/r2/api/tokens/#generate-an-s3-auth-token
-# Pero hay un atajo más limpio: usar el token como ambas credenciales funciona si fue
-# creado como "R2 Token" (no "User API Token"). El tuyo es cfut_... → R2 Token.
-TOKEN_SHA=$(printf '%s' "$CLOUDFLARE_API_TOKEN" | sha256sum | awk '{print $1}')
-
-AWS_ACCESS_KEY_ID="$CLOUDFLARE_API_TOKEN" \
-AWS_SECRET_ACCESS_KEY="$TOKEN_SHA" \
+# Credenciales S3-compatibles del R2 API Token (Access Key ID + Secret Access Key).
+# Son 32-hex y 64-hex respectivamente — NO confundir con el User API Token cfut_...
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+AWS_DEFAULT_REGION="auto" \
 aws s3 cp "$APK_PATH" "s3://${R2_BUCKET_NAME}/${OBJECT_KEY}" \
   --endpoint-url "$R2_ENDPOINT" \
   --content-type "application/vnd.android.package-archive" \
