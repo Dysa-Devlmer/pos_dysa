@@ -120,3 +120,9 @@ android.env
 # APK artifacts — los subimos a Cloudflare R2, no al repo (40-80 MB cada uno)
 releases/*.apk
 apps/mobile/releases/
+
+# Android build artifacts — generados por gradle, no trackear
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/local.properties

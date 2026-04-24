@@ -47,5 +47,8 @@ yarn-error.*
 app-example
 
 # generated native folders
+# NOTA: `/android` solía estar gitignorado (Expo default para managed workflow).
+# Decidimos commitearlo para reproducibilidad, CI futuro y evitar dependencia
+# de re-prebuild cada vez que alguien clona. Los build artifacts se ignoran en
+# el .gitignore raíz (android/build/, android/.gradle/, android/local.properties).
 /ios
-/android
