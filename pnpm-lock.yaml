@@ -42,9 +42,6 @@ importers:
       '@repo/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@shopify/react-native-skia':
-        specifier: ^2.6.2
-        version: 2.6.2(react-native-reanimated@4.1.7(react-native-worklets@0.5.1(@babel/core@7.29.0)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.99.2(react@19.1.0)
@@ -154,6 +151,9 @@ importers:
       '@types/react':
         specifier: ~19.1.0
         version: 19.1.17
+      babel-preset-expo:
+        specifier: ~54.0.10
+        version: 54.0.10(@babel/core@7.29.0)(@babel/runtime@7.29.2)(expo@54.0.33)(react-refresh@0.14.2)
       eslint:
         specifier: ^9.25.0
         version: 9.39.4(jiti@1.21.7)
