@@ -217,3 +217,42 @@ model DevolucionItem {
   @@index([productoId])
   @@map("devolucion_items")
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Mobile release management (M7)
+//
+// Cada publicación de APK crea un MobileRelease. El endpoint público
+// `GET /api/mobile/manifest` devuelve el que tiene `isLatest = true` para
+// la plataforma solicitada. La app mobile hace polling al abrir y muestra
+// banner "Actualizar" si la versión instalada es menor que la remota.
+//
+// Campo `minVersion` → si la versión instalada es MENOR a este valor, el
+// banner es `forceUpdate: true` (no se puede dismissar). Útil para
+// bugfixes de seguridad que no pueden esperar opt-in del usuario.
+//
+// Convención: SOLO UNO debe tener `isLatest = true` por plataforma a la
+// vez. El POST del endpoint hace el toggle atómico vía $transaction.
+// ─────────────────────────────────────────────────────────────────────
+
+enum MobilePlatform {
+  ANDROID
+  IOS
+}
+
+model MobileRelease {
+  id          String          @id @default(cuid())
+  platform    MobilePlatform  @default(ANDROID)
+  version     String          // semver: "1.0.0"
+  versionCode Int             // android versionCode: 1, 2, 3... (ios: buildNumber)
+  apkUrl      String          @map("apk_url")     // Cloudflare R2 URL pública
+  notes       String?         @db.Text            // changelog visible al usuario
+  minVersion  String?         @map("min_version") // forceUpdate si installed < minVersion
+  isLatest    Boolean         @default(false) @map("is_latest")
+  publishedAt DateTime        @default(now()) @map("published_at")
+  publishedBy Int?            @map("published_by") // usuario.id del admin que publicó
+
+  @@unique([platform, version])
+  @@unique([platform, versionCode])
+  @@index([platform, isLatest])
+  @@map("mobile_releases")
+}

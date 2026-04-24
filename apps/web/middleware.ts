@@ -12,9 +12,13 @@ export const { auth: middleware } = NextAuth(authConfig);
 // /privacidad excluido: página pública de la Política de Privacidad.
 // DEBE ser accesible sin login para cumplir requisitos de Apple App Store
 // y Google Play Store (URL pública sin auth). No remover.
+//
+// /api/mobile/manifest excluido: endpoint que la app mobile consulta
+// al arrancar (ANTES del login) para detectar updates disponibles.
+// GET es público, POST valida admin internamente. No remover.
 export const config = {
   matcher: [
-    "/((?!api/auth|api/health|api/docs|api/v1|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|icon-192.png|icon-512.png|privacidad).*)",
+    "/((?!api/auth|api/health|api/docs|api/v1|api/mobile|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|icon-192.png|icon-512.png|privacidad).*)",
   ],
 };
 

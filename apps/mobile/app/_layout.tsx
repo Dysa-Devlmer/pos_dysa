@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSyncStore } from "@/stores/syncStore";
 import { initDb } from "@/db/client";
 import { SyncBanner } from "@/components/sync-banner";
+import { UpdateBanner } from "@/components/update-banner";
 
 /**
  * React Query client — singleton para toda la app mobile.
@@ -122,6 +123,10 @@ function RootLayoutNav() {
           y la pantalla de login. Su visibilidad la decide el propio
           componente según el estado del store. */}
       <SyncBanner />
+      {/* UpdateBanner — Fase 2 M7. Consulta /api/mobile/manifest al abrir la
+          app y muestra banner/modal si hay update. Se auto-oculta si no hay
+          update o si el usuario dismisseó. ForceUpdate bloquea el acceso. */}
+      <UpdateBanner />
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
