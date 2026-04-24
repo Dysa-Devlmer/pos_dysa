@@ -103,3 +103,19 @@ pos*.png
 # macOS spotlight / Obsidian
 .metadata_never_index
 .obsidian/
+
+# ─────────────────────────────────────────────────────────────────────
+# Android / mobile signing — defense-in-depth
+# Keystore release vive en ~/.android-keystores/, FUERA del repo.
+# Estos globs son paranoia contra un mv/cp accidental al repo.
+# ─────────────────────────────────────────────────────────────────────
+*.keystore
+*.jks
+credentials.json
+keystore.properties
+.env.mobile.local
+android.env
+
+# APK artifacts — los subimos a Cloudflare R2, no al repo (40-80 MB cada uno)
+releases/*.apk
+apps/mobile/releases/

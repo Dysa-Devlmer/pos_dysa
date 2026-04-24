@@ -9,14 +9,22 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native — firma Android / iOS. NUNCA commitear keystores o credenciales.
+# Si se filtra el keystore release, un atacante puede firmar malware con tu
+# identidad. Ver docs/mobile-release-runbook.md.
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
+credentials.json
+keystore.properties
+# Env local con passwords del keystore (usado por scripts/mobile-release.sh)
+.env.mobile.local
+android.env
 
 # Metro
 .metro-health-check*
