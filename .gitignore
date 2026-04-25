@@ -126,3 +126,9 @@ apps/mobile/android/.gradle/
 apps/mobile/android/build/
 apps/mobile/android/app/build/
 apps/mobile/android/local.properties
+
+# Mobile web export (expo export -p web) — canvaskit.wasm + bundle, no commitear
+apps/mobile/web/
+
+# Imagenes generadas Gemini sin uso en codigo (audit R-refactor #3)
+img-nano/
