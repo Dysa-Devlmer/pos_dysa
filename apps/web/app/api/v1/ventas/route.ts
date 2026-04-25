@@ -5,7 +5,7 @@ import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } fro
 export async function GET(request: Request) {
   const limited = await requireRateLimit(request);
   if (limited) return limited;
-  const { error } = await requireAuth(request);
+  const { session, error } = await requireAuth(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
@@ -15,7 +15,17 @@ export async function GET(request: Request) {
   const clienteId = searchParams.get("clienteId");
   const metodoPago = searchParams.get("metodoPago");
 
+  // R5 (audit 2026-04-25) — IDOR fix. CAJERO solo ve sus propias ventas;
+  // ADMIN ve todo. Antes, cualquier cajero autenticado podia listar el
+  // historial completo de la tienda (datos sensibles: clientes, montos,
+  // metodos de pago de otros turnos). Filtro server-side, no negociable.
+  const usuarioFilter =
+    session.user.rol === "CAJERO"
+      ? { usuarioId: Number(session.user.id) }
+      : {};
+
   const where = {
+    ...usuarioFilter,
     ...(desde || hasta
       ? {
           fecha: {

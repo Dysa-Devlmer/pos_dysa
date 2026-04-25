@@ -60,7 +60,7 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="es"
+      lang="es-CL"
       suppressHydrationWarning
       className={`${geist.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
     >
