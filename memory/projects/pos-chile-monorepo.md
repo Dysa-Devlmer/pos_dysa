@@ -232,6 +232,14 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| a6feb73 | chore(mobile): R2 custom domain `apk-dy-pos.zgamersa.com` reemplaza `pub-*.r2.dev` (rate-limited) |
+| b01fe99 | fix(auth): redirect a `/login` sin `callbackUrl` — URL limpia + cierra vector open-redirect |
+| 4dbdd63 | fix(mobile): `apps/mobile/.npmrc` con hoisted linker + remueve `@shopify/react-native-skia` directo (transitivo de victory-native) |
+| 7652fc6 | feat(mobile): Fase 5 build infra — `expo prebuild --platform android` committeado + gradle signing + `mobile-build-apk.sh` |
+| d53d60e | feat(mobile): Fase 3 publish script — R2 upload (aws CLI S3) + manifest POST + verify GET |
+| 436691b | feat(mobile): Fase 2 update checker — `MobileRelease` schema + `/api/mobile/manifest` + `useUpdateCheck` + `UpdateBanner` |
+| 904c645 | chore(mobile): Fase 1 release infra — keystore generator + runbook + gitignore defense-in-depth |
+| 003c8de | feat(privacy): MLV A.2 + A.3 — pseudonymize helper + página `/privacidad` pública |
 | 7d118be | fix(qa): 6 hallazgos adversariales — **C5** bloqueo edición venta con devoluciones (UI + guard server + action) · **C4** precio mínimo $1 (era nonnegative) · **C7** helper text motivo devolución < 5 chars · **A3** `/devoluciones/[id]` 404 limpio |
 | 85ebcf2 | chore(repo): reorganize root — `scripts/`, `docs/`, elimina `zip/` (1.7GB) + `screenshots/` (gitignored, ahora fuera de disco) |
 | c06f9f9 | chore(design): mockup HTML `design-preview.html` (1668 líneas) — movido luego a `docs/design/preview.html` |
