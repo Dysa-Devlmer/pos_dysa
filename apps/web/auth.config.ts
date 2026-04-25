@@ -31,7 +31,14 @@ export default {
         return true;
       }
 
-      if (!isLoggedIn) return false;
+      // Redirect explícito a /login SIN ?callbackUrl=... — preferencia
+      // del proyecto: URL limpia, menos ruido visual, y evita que el
+      // param callbackUrl pueda usarse como vector de open-redirect si
+      // algún día lo leyéramos sin validar. Trade-off: tras login el
+      // usuario siempre cae en "/" en vez de la ruta que intentaba.
+      if (!isLoggedIn) {
+        return Response.redirect(new URL("/login", nextUrl));
+      }
 
       if (adminRoutes.some((r) => nextUrl.pathname.startsWith(r))) {
         if (auth?.user?.rol !== "ADMIN") {
