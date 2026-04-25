@@ -8,8 +8,17 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
+
+// Mantener el splash hasta que el bootstrap termine — sin esto, en release
+// el splash con dark backgroundColor #000000 queda visible para siempre
+// (sin llamada a hideAsync en algun lado). En dev no se nota porque Metro
+// ya lo desmonta solo al cargar el bundle.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Si ya se dismisseó (race con auto-hide en algunos devices), no es error.
+});
 import {
   QueryClient,
   QueryClientProvider,
@@ -87,7 +96,16 @@ function useProtectedRoute(token: string | null, isLoading: boolean) {
 function RootLayoutNav() {
   const { token, isLoading, bootstrap } = useAuth();
   const syncBootstrap = useSyncStore((s) => s.bootstrap);
-  const colorScheme = useColorScheme();
+  // Forzamos light mode — gotcha G-M38. La paleta SystemQR (#f5f1ea ivory +
+  // #171717 near-black) esta diseñada solo para light. Si dejamos que
+  // useColorScheme() lea prefers-color-scheme y entre en DarkTheme, React
+  // Navigation pinta fondo #010101 mientras `text-foreground` queda en
+  // #171717 → texto invisible. Para soportar dark hay que portar tokens
+  // dark-mode del web primero.
+  const colorScheme = "light" as const;
+  // Mantener referencia al hook para no romper imports si se reactiva
+  // dark mode en el futuro.
+  void useColorScheme;
 
   useEffect(() => {
     bootstrap();
@@ -108,6 +126,15 @@ function RootLayoutNav() {
   }, [bootstrap, syncBootstrap]);
 
   useProtectedRoute(token, isLoading);
+
+  // Ocultar splash una vez que el auth bootstrap terminó. Si esto no se
+  // llama, el splash nativo queda permanente → pantalla negra (en dark)
+  // o blanca (en light) sin forma de recuperarse.
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return (

@@ -28,7 +28,11 @@
       "esbuild",
       "prisma",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    }
   },
   "dependencies": {
     "@tailwindcss/oxide-darwin-x64": "4.2.2"

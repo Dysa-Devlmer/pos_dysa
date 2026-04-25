@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Reset web — Gotcha G-M36
+ *
+ * NativeWind v4 + react-native-web no inyecta CSS variables base por defecto
+ * en SSR de Expo Router. Esto causa que `bg-background` y `text-foreground`
+ * resuelvan a undefined → texto/bg en colores default del browser (negro
+ * sobre negro, ilegible).
+ *
+ * Las reglas siguientes solo aplican en target web (selectores con `:` /
+ * elementos HTML). En native el preset `nativewind/preset` las descarta —
+ * cero impacto en APK.
+ */
+@layer base {
+  /*
+   * Light mode forzado en mobile — la paleta SystemQR esta tuneada para
+   * fondo ivory (#f5f1ea) y texto near-black (#171717). El media query
+   * `prefers-color-scheme: dark` sin overrides en tailwind.config dejaba
+   * texto #171717 sobre fondo #0a0a0a → invisible (gotcha G-M38).
+   * Para dark mode real habria que portar los tokens dark del web.
+   */
+  :root, html, body, #root {
+    background-color: #f5f1ea;
+    color: #171717;
+  }
+  .dark, .dark html, .dark body, .dark #root {
+    background-color: #0a0a0a;
+    color: #fafafa;
+  }
+}

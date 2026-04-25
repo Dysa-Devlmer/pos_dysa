@@ -18,7 +18,12 @@ module.exports = {
     "./hooks/**/*.{ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
-  darkMode: "class",
+  // Gotcha G-M36 — `important: "html"` solo afecta web (CSS specificity).
+  // En native, nativewind/preset lo descarta (no hay cascade). Garantiza que
+  // las utilities de Tailwind ganen sobre los átomos `r-*` que inyecta
+  // react-native-web después del bundle CSS.
+  important: "html",
+  darkMode: ["class", "[data-theme='dark']"],
   theme: {
     extend: {
       colors: {
