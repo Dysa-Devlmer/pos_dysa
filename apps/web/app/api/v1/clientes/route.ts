@@ -1,4 +1,5 @@
 import { prisma } from "@repo/db";
+import { validarRUT } from "@repo/domain";
 import { z } from "zod";
 import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
 
@@ -34,9 +35,18 @@ export async function GET(request: Request) {
   return jsonOk(data, { page, limit, total, totalPages: Math.ceil(total / limit) });
 }
 
+// DV1 (audit 2026-04-25) — `.refine(validarRUT)` cierra el gap de la API
+// mobile que aceptaba RUTs con DV invalido. validarRUT() ya esta en
+// @repo/domain (single source of truth web/mobile). `.trim()` en strings
+// evita "   " como nombre/RUT.
 const CreateSchema = z.object({
-  rut: z.string().min(3).max(12),
-  nombre: z.string().min(1).max(200),
+  rut: z
+    .string()
+    .min(3)
+    .max(12)
+    .trim()
+    .refine(validarRUT, { message: "RUT invalido (digito verificador)" }),
+  nombre: z.string().min(1).max(200).trim(),
   email: z.string().email().optional().or(z.literal("")),
   telefono: z.string().optional(),
   direccion: z.string().optional(),

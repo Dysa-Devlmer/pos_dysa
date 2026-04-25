@@ -40,12 +40,16 @@ export async function GET(request: Request) {
   return jsonOk(data, { page, limit, total, totalPages: Math.ceil(total / limit) });
 }
 
+// DV2 (audit 2026-04-25) — caps explicitos para evitar overflow INT4 en
+// Postgres (max 2_147_483_647). precio CLP: 99.999.999 cubre cualquier SKU
+// real de POS chico (lavadora premium ~$1.5M). stock: 1_000_000 unidades
+// supera por mucho el inventario fisico de un abarrotero.
 const CreateSchema = z.object({
-  nombre: z.string().min(1).max(200),
+  nombre: z.string().min(1).max(200).trim(),
   descripcion: z.string().optional(),
-  codigoBarras: z.string().min(1),
-  precio: z.number().int().positive(),
-  stock: z.number().int().min(0).default(0),
+  codigoBarras: z.string().min(1).trim(),
+  precio: z.number().int().positive().max(99_999_999),
+  stock: z.number().int().min(0).max(1_000_000).default(0),
   categoriaId: z.number().int().positive(),
 });
 

@@ -48,9 +48,13 @@ export async function GET(request: Request) {
   return jsonOk(data, { page, limit, total, totalPages: Math.ceil(total / limit) });
 }
 
+// DV3 (audit 2026-04-25) — `.max(10000)` evita overflow en `precio * cantidad`.
+// Sin esto, cantidad: 999_999_999 con precio 100k revienta INT4 Postgres (NaN/
+// Infinity en DB) y el `$transaction` aborta. 10k unidades por linea es un cap
+// razonable: el POS chico real no factura 10k unidades por SKU en una boleta.
 const ItemSchema = z.object({
   productoId: z.number().int().positive(),
-  cantidad: z.number().int().positive(),
+  cantidad: z.number().int().positive().max(10_000),
 });
 
 const CreateVentaSchema = z.object({
