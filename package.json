@@ -37,6 +37,6 @@
     }
   },
   "dependencies": {
-    "@tailwindcss/oxide-darwin-x64": "4.2.2"
+    "@tailwindcss/oxide-darwin-x64": "4.2.4"
   }
 }
