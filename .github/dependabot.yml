@@ -1,32 +1,20 @@
-# Dependabot — solo security PRs.
+# Dependabot — solo updates de GitHub Actions.
 #
-# Renovate (renovate.json) maneja updates regulares.
-# Dependabot solo abre PRs cuando hay un advisory de seguridad publicado
-# (GHSA, CVE) — los marca con label "security" para triage prioritario.
+# NO incluimos `package-ecosystem: npm` aquí. La config previa con
+# `allow: direct + indirect` abrió 12+ PRs/semana incluyendo majors
+# riesgosos (Next 15→16, TypeScript 5→6, Expo SDK bumps). Para version
+# updates regulares de npm, Renovate (renovate.json) hace el trabajo
+# con grouping y scheduling adecuados.
 #
-# Schedule weekly para no saturar PRs si Renovate ya actualizó la dep.
+# Para advisories de seguridad, GitHub auto-crea PRs vía Dependabot
+# Security Updates (Settings → Code security & analysis), sin yaml.
+# Eso es lo que queremos: solo CVEs, NO version bumps regulares.
 
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: "/"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
-    labels:
-      - "security"
-      - "type: dependencies"
-    # Solo PRs de security (Dependabot ignora updates regulares).
-    # Esto se controla en Settings → Code security → Dependabot alerts.
-    allow:
-      - dependency-type: direct
-      - dependency-type: indirect
-    commit-message:
-      prefix: "fix(deps)"
-      include: scope
-
   # SHAs de Actions — pinned por SHA (audit ronda 4 §26).
+  # Sí queremos esto: bumps chicos, generalmente safe, y Renovate
+  # por default no maneja github-actions.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
