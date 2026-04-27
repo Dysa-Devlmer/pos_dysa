@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":dependencyDashboard"
+  ],
+  "schedule": ["before 7am on monday"],
+  "timezone": "America/Santiago",
+  "labels": ["type: dependencies"],
+  "rangeStrategy": "bump",
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 8,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "Group por workspace para que un update toque un solo paquete",
+      "matchPackageNames": ["*"],
+      "matchFileNames": ["apps/web/**"],
+      "groupName": "web deps"
+    },
+    {
+      "matchFileNames": ["apps/mobile/**"],
+      "groupName": "mobile deps"
+    },
+    {
+      "matchFileNames": ["packages/**"],
+      "groupName": "packages deps"
+    },
+    {
+      "description": "next-auth en beta — no auto-merge ni bump major hasta GA",
+      "matchPackageNames": ["next-auth"],
+      "enabled": true,
+      "automerge": false,
+      "allowedVersions": "<6.0.0"
+    },
+    {
+      "description": "Respetar pnpm.overrides del root — Renovate los toma como pin estricto",
+      "matchPackageNames": ["react", "react-dom", "postcss", "uuid"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Patches y minor → auto-merge si CI verde, dev deps",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Production deps requieren review humano para minor/major",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": false,
+    "schedule": "at any time"
+  },
+  "regexManagers": [
+    {
+      "description": "Track next-auth beta versions con regex",
+      "fileMatch": ["^apps/web/package.json$"],
+      "matchStrings": ["\"next-auth\":\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "next-auth",
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "ignorePresets": [":prHourlyLimit2"]
+}

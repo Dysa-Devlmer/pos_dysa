@@ -1,0 +1,124 @@
+# Deploy a producción — OPCIONAL.
+#
+# CLAUDE.md raíz indica que el deploy canónico es `scripts/deploy.sh` manual.
+# Este workflow es para automatizar PR previews y deploys triggered desde
+# GitHub UI; NO reemplaza al script.
+#
+# Manual dispatch:
+#   gh workflow run deploy-prod.yml -f confirm=deploy
+#
+# Auto dispatch (push a main):
+#   solo corre si el commit toca apps/web/, packages/, scripts/deploy.sh, o
+#   este mismo workflow. Cambios solo a docs/, memory/, .claude/, README →
+#   NO deploya (ahorra minutos).
+#
+# Secrets requeridos en GitHub Settings → Secrets and variables → Actions:
+#   - DEPLOY_SSH_KEY    — contenido del archivo ~/.ssh/pos_deploy_ed25519
+#   - DEPLOY_HOST       — 64.176.21.229 (o cambiar VPS)
+#   - DEPLOY_USER       — root (o pierre post-hardening)
+#   - DEPLOY_PATH       — /opt/pos-chile
+#   - HEALTH_URL        — https://dy-pos.zgamersa.com/api/health
+#
+# Si los secrets no están seteados, el workflow falla en pre-flight y NO
+# rompe nada en prod.
+
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm production deploy'
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "scripts/deploy.sh"
+      - ".github/workflows/deploy-prod.yml"
+
+concurrency:
+  # Un solo deploy a la vez para no pisar el rsync intermedio.
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    # Reutiliza el mismo gate que pre-merge — si CI falla, no hay deploy.
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'deploy')
+    environment:
+      name: production
+      url: ${{ secrets.HEALTH_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Pre-flight — verify required secrets
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+        run: |
+          set -e
+          missing=()
+          [[ -z "$DEPLOY_SSH_KEY" ]] && missing+=("DEPLOY_SSH_KEY")
+          [[ -z "$DEPLOY_HOST"    ]] && missing+=("DEPLOY_HOST")
+          [[ -z "$DEPLOY_USER"    ]] && missing+=("DEPLOY_USER")
+          [[ -z "$DEPLOY_PATH"    ]] && missing+=("DEPLOY_PATH")
+          [[ -z "$HEALTH_URL"     ]] && missing+=("HEALTH_URL")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Faltan secrets: ${missing[*]}"
+            echo "Configurar en GitHub Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          echo "✅ All required secrets present"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH (replica scripts/deploy.sh)
+        run: |
+          set -e
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=10 \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+              "cd ${{ secrets.DEPLOY_PATH }} && \
+               git pull --ff-only && \
+               docker compose up -d --build --force-recreate --remove-orphans"
+
+      - name: Health check (12×10s)
+        env:
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+        run: |
+          set +e
+          for i in $(seq 1 12); do
+            sleep 10
+            status=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 8 "$HEALTH_URL")
+            echo "[$i/12] $HEALTH_URL → HTTP $status"
+            if [[ "$status" == "200" ]]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+          done
+          echo "::error::Health check failed after 2min"
+          exit 1
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

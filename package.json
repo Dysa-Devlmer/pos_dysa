@@ -31,7 +31,9 @@
     ],
     "overrides": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "postcss": ">=8.5.10",
+      "uuid": ">=14.0.0"
     }
   },
   "dependencies": {

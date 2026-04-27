@@ -1,0 +1,37 @@
+# Dependabot — solo security PRs.
+#
+# Renovate (renovate.json) maneja updates regulares.
+# Dependabot solo abre PRs cuando hay un advisory de seguridad publicado
+# (GHSA, CVE) — los marca con label "security" para triage prioritario.
+#
+# Schedule weekly para no saturar PRs si Renovate ya actualizó la dep.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - "security"
+      - "type: dependencies"
+    # Solo PRs de security (Dependabot ignora updates regulares).
+    # Esto se controla en Settings → Code security → Dependabot alerts.
+    allow:
+      - dependency-type: direct
+      - dependency-type: indirect
+    commit-message:
+      prefix: "fix(deps)"
+      include: scope
+
+  # SHAs de Actions — pinned por SHA (audit ronda 4 §26).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - "type: deps-action"
+    commit-message:
+      prefix: "chore(actions)"
