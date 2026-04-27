@@ -163,10 +163,13 @@ export async function POST(request: NextRequest) {
     const validated = LoginResponseSchema.parse(responseBody);
     return NextResponse.json(validated);
   } catch (error) {
+    // No loguear `error` raw — ver lib/privacy.ts y comentario en login/actions.ts.
+    // Prisma errors pueden incluir parámetros con PII. Sentry lo recibe filtrado
+    // por `beforeSend` (pseudonymize email + truncar IP).
     console.error(
       "[api/v1/auth/login] unexpected:",
-      (error as Error)?.message,
-      error,
+      (error as Error)?.name ?? "Unknown",
+      (error as Error)?.message ?? "(no message)",
     );
     captureExceptionSafe(error, {
       extra: { email, ip, endpoint: "api/v1/auth/login" },

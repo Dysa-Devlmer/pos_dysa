@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -61,8 +63,14 @@ export async function limitWithTimeout(
       err instanceof Error && err.message === "rate-limit timeout";
     const reason: "timeout" | "error" = isTimeout ? "timeout" : "error";
     if (failClosed) {
+      // No loguear `identifier` crudo: puede ser email o IP (PII Ley 21.719).
+      // Hash truncado a 8 chars permite correlar logs sin exponer la fuente.
+      const idHash = createHash("sha256")
+        .update(identifier)
+        .digest("hex")
+        .slice(0, 8);
       console.warn(
-        `[rate-limit] ${reason} for ${context} (id=${identifier.slice(0, 12)}…) — failing CLOSED`,
+        `[rate-limit] ${reason} for ${context} (id_hash=${idHash}) — failing CLOSED`,
       );
     }
     return {

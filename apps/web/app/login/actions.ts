@@ -123,11 +123,15 @@ export async function loginAction(
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
       throw error;
     }
-    // Error inesperado — loguear sin crashear el cliente
+    // Error inesperado — loguear sin crashear el cliente.
+    // No loguear el objeto `error` raw: Prisma errors incluyen `meta.target`
+    // y a veces parámetros de query → puede leakear email/RUT (Ley 21.719).
+    // Solo el mensaje + nombre del error. El stacktrace completo va a Sentry
+    // donde `beforeSend` aplica `pseudonymize()`.
     console.error(
       "[loginAction] unexpected error:",
-      (error as Error)?.message,
-      error
+      (error as Error)?.name ?? "Unknown",
+      (error as Error)?.message ?? "(no message)"
     );
     captureExceptionSafe(error, {
       extra: { email, ip, context: "login_unexpected" },

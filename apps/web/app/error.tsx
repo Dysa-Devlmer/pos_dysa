@@ -16,6 +16,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // No usamos captureExceptionSafe aquí porque sentry-helpers importa
+    // lib/privacy.ts con node:crypto → rompe el client bundle (ver gotcha 90).
+    // El scrubbing PII sucede en sentry.client.config.ts::beforeSend
+    // (user.email/ip + headers cookie/authorization). Para errores del client
+    // boundary, error.message rara vez tiene PII (Next framework errors).
     Sentry.captureException(error);
   }, [error]);
 
