@@ -43,8 +43,8 @@ export default async function VentaDetallePage({
   const id = Number(idParam);
   if (!Number.isFinite(id) || id <= 0) notFound();
 
-  const venta = await prisma.venta.findUnique({
-    where: { id },
+  const venta = await prisma.venta.findFirst({
+    where: { id, deletedAt: null },
     include: {
       cliente: true,
       usuario: { select: { id: true, nombre: true, email: true, rol: true } },

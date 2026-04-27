@@ -5,6 +5,7 @@ import { prisma, type Prisma } from "@repo/db";
 
 import { Button } from "@/components/ui/button";
 import { calcularDesglose, formatCLP } from "@/lib/utils";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 import { RangoFechasFiltro } from "./rango-fechas";
 import { VentasTable, type VentaRow } from "./ventas-table";
 
@@ -27,7 +28,7 @@ export default async function VentasPage({
   const desde = parseFecha(sp.desde);
   const hasta = parseFecha(sp.hasta);
 
-  const where: Prisma.VentaWhereInput = {};
+  const where: Prisma.VentaWhereInput = { ...VENTAS_VISIBLES };
   if (desde || hasta) {
     where.fecha = {};
     if (desde) (where.fecha as { gte?: Date }).gte = desde;

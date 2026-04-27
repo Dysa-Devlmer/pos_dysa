@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 import { AlertasBanner } from "./alertas-banner";
 import { contarAlertasStock } from "./alertas/actions";
@@ -100,22 +101,25 @@ export default async function DashboardPage() {
     ultimasVentas,
   ] = await Promise.all([
     prisma.venta.aggregate({
-      where: { fecha: { gte: hoy } },
+      where: { fecha: { gte: hoy }, ...VENTAS_VISIBLES },
       _count: { _all: true },
       _sum: { total: true },
     }),
     prisma.venta.aggregate({
-      where: { fecha: { gte: ayer, lt: hoy } },
+      where: { fecha: { gte: ayer, lt: hoy }, ...VENTAS_VISIBLES },
       _count: { _all: true },
       _sum: { total: true },
     }),
     prisma.venta.aggregate({
-      where: { fecha: { gte: inicioMes } },
+      where: { fecha: { gte: inicioMes }, ...VENTAS_VISIBLES },
       _count: { _all: true },
       _sum: { total: true },
     }),
     prisma.venta.aggregate({
-      where: { fecha: { gte: inicioMesAnterior, lt: finMesAnteriorParcial } },
+      where: {
+        fecha: { gte: inicioMesAnterior, lt: finMesAnteriorParcial },
+        ...VENTAS_VISIBLES,
+      },
       _count: { _all: true },
       _sum: { total: true },
     }),
@@ -123,7 +127,7 @@ export default async function DashboardPage() {
     prisma.cliente.count(),
     prisma.cliente.count({ where: { createdAt: { gte: hace30 } } }).catch(() => 0),
     prisma.venta.findMany({
-      where: { fecha: { gte: hace7 } },
+      where: { fecha: { gte: hace7 }, ...VENTAS_VISIBLES },
       select: { fecha: true, total: true },
       orderBy: { fecha: "asc" },
     }),
@@ -134,6 +138,7 @@ export default async function DashboardPage() {
       include: { categoria: { select: { nombre: true } } },
     }),
     prisma.venta.findMany({
+      where: { ...VENTAS_VISIBLES },
       orderBy: { fecha: "desc" },
       take: 5,
       include: { cliente: { select: { nombre: true } } },

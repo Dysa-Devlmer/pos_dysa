@@ -7,6 +7,7 @@ import {
   CHILE_TZ,
   parseRangoDesdeURL,
 } from "@/lib/reportes-fecha";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 import {
   ReporteDocument,
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   const { desdeYMD, hastaYMD, desde, hasta } = rango;
 
   const ventas = await prisma.venta.findMany({
-    where: { fecha: { gte: desde, lte: hasta } },
+    where: { fecha: { gte: desde, lte: hasta }, ...VENTAS_VISIBLES },
     orderBy: { fecha: "desc" },
     include: {
       cliente: { select: { nombre: true, rut: true } },

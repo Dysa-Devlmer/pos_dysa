@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { customAlphabet } from "nanoid";
-import { prisma, MetodoPago, Prisma } from "@repo/db";
+import { prisma, MetodoPago, Prisma, AuditAccion } from "@repo/db";
 import { auth } from "@/auth";
 import { calcularDesglose } from "@/lib/utils";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -226,12 +227,22 @@ export async function crearVenta(
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// ELIMINAR VENTA — revierte stock, ventas, compras, recalcula ultimaCompra
+// ELIMINAR VENTA — soft-delete (F-3 audit P1)
+//   → revierte stock + ventas + compras + ultimaCompra (idéntico al hard
+//     delete previo) PERO no elimina la fila: setea deletedAt/deletedBy y
+//     escribe AuditLog(accion=DELETE).
+//   → razón opcional para trazabilidad.
+//   → la fila queda fuera de listings (filtro `VENTAS_VISIBLES`) y se
+//     puede restaurar desde /ventas/eliminadas (ADMIN-only).
 // ──────────────────────────────────────────────────────────────────────────
 
-export async function eliminarVenta(id: number): Promise<ActionResult> {
+export async function eliminarVenta(
+  id: number,
+  razon?: string,
+): Promise<ActionResult> {
   try {
-    await requireSession();
+    const session = await requireSession();
+    const usuarioId = Number(session.user.id);
 
     // Pre-check: si la venta tiene devoluciones asociadas, no se puede eliminar
     // (FK constraint `devoluciones_venta_id_fkey`). Mostramos un mensaje claro
@@ -247,8 +258,8 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
     }
 
     await prisma.$transaction(async (tx) => {
-      const venta = await tx.venta.findUnique({
-        where: { id },
+      const venta = await tx.venta.findFirst({
+        where: { id, ...VENTAS_VISIBLES },
         include: { detalles: true },
       });
       if (!venta) throw new Error("Venta no encontrada");
@@ -265,10 +276,15 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
       }
 
       // 2. Si había cliente, revertir contador y recalcular ultimaCompra
+      //    (NO contamos otras ventas eliminadas en el MAX — usamos VENTAS_VISIBLES).
       if (venta.clienteId !== null) {
         const clienteId = venta.clienteId;
         const otraUltima = await tx.venta.findFirst({
-          where: { clienteId, NOT: { id: venta.id } },
+          where: {
+            clienteId,
+            NOT: { id: venta.id },
+            ...VENTAS_VISIBLES,
+          },
           orderBy: { fecha: "desc" },
           select: { fecha: true },
         });
@@ -281,18 +297,49 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
         });
       }
 
-      // 3. Eliminar la venta (detalles caen por cascade)
-      await tx.venta.delete({ where: { id } });
+      // 3. Soft-delete: marcar deletedAt + razón. Detalles permanecen para
+      //    poder restaurar (re-aplicar stock decrement) sin perder la
+      //    composición original.
+      await tx.venta.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: usuarioId,
+          deletionReason: razon?.trim() ? razon.trim().slice(0, 500) : null,
+        },
+      });
+
+      // 4. AuditLog. Snapshot mínimo: detalles + total + cliente para
+      //    poder reconstruir contexto incluso si se hard-deletea más tarde.
+      await tx.auditLog.create({
+        data: {
+          tabla: "ventas",
+          registroId: id,
+          accion: AuditAccion.DELETE,
+          usuarioId,
+          diff: {
+            numeroBoleta: venta.numeroBoleta,
+            total: venta.total,
+            clienteId: venta.clienteId,
+            metodoPago: venta.metodoPago,
+            razon: razon ?? null,
+            detalles: venta.detalles.map((d) => ({
+              productoId: d.productoId,
+              cantidad: d.cantidad,
+              precioUnitario: d.precioUnitario,
+            })),
+          },
+        },
+      });
     });
 
     revalidatePath("/ventas");
+    revalidatePath("/ventas/eliminadas");
     revalidatePath("/productos");
     revalidatePath("/clientes");
 
     return { ok: true };
   } catch (err) {
-    // Fallback: capturar FK violations de Prisma con mensaje amigable
-    // (por si se agregaran nuevas relaciones con ON DELETE RESTRICT).
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2003"
@@ -307,6 +354,130 @@ export async function eliminarVenta(id: number): Promise<ActionResult> {
       ok: false,
       error: err instanceof Error ? err.message : "Error al eliminar venta",
     };
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// RESTAURAR VENTA — ADMIN-only (F-3)
+//   → re-aplica stock decrement + ventas/compras/ultimaCompra
+//   → si stock actual no permite re-aplicar (alguien vendió mientras estaba
+//     borrada) → error 409 con mensaje claro
+//   → audit log con accion=RESTORE
+// ──────────────────────────────────────────────────────────────────────────
+
+export async function restaurarVenta(
+  id: number,
+  razon?: string,
+): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    if (session.user.rol !== "ADMIN") {
+      return { ok: false, error: "Solo un administrador puede restaurar ventas" };
+    }
+    const usuarioId = Number(session.user.id);
+
+    await prisma.$transaction(async (tx) => {
+      const venta = await tx.venta.findUnique({
+        where: { id },
+        include: { detalles: true },
+      });
+      if (!venta) throw new Error("Venta no encontrada");
+      if (venta.deletedAt === null) {
+        throw new Error("La venta no está eliminada");
+      }
+
+      // Validar stock disponible para cada producto del detalle.
+      const productos = await tx.producto.findMany({
+        where: { id: { in: venta.detalles.map((d) => d.productoId) } },
+        select: { id: true, nombre: true, stock: true, activo: true },
+      });
+      const prodMap = new Map(productos.map((p) => [p.id, p]));
+
+      for (const d of venta.detalles) {
+        const p = prodMap.get(d.productoId);
+        if (!p) {
+          throw new Error(
+            `No se puede restaurar: el producto del detalle ya no existe.`,
+          );
+        }
+        if (p.stock < d.cantidad) {
+          // 409 Conflict semántico — el caller mapea por mensaje
+          throw new Error(
+            `STOCK_INSUFICIENTE: No hay stock suficiente para restaurar "${p.nombre}" (disponible: ${p.stock}, requerido: ${d.cantidad}).`,
+          );
+        }
+      }
+
+      // Re-aplicar stock + contadores
+      for (const d of venta.detalles) {
+        await tx.producto.update({
+          where: { id: d.productoId },
+          data: {
+            stock: { decrement: d.cantidad },
+            ventas: { increment: d.cantidad },
+          },
+        });
+      }
+
+      if (venta.clienteId !== null) {
+        const cid = venta.clienteId;
+        // ultimaCompra debe quedar = MAX(fecha) considerando esta venta
+        // ahora viva. Recalculamos desde 0 sobre VENTAS_VISIBLES + esta.
+        const ultimaActual = await tx.venta.findFirst({
+          where: { clienteId: cid, ...VENTAS_VISIBLES },
+          orderBy: { fecha: "desc" },
+          select: { fecha: true },
+        });
+        const nuevaUltima =
+          !ultimaActual || venta.fecha > ultimaActual.fecha
+            ? venta.fecha
+            : ultimaActual.fecha;
+        await tx.cliente.update({
+          where: { id: cid },
+          data: {
+            compras: { increment: 1 },
+            ultimaCompra: nuevaUltima,
+          },
+        });
+      }
+
+      await tx.venta.update({
+        where: { id },
+        data: {
+          deletedAt: null,
+          deletedBy: null,
+          deletionReason: null,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tabla: "ventas",
+          registroId: id,
+          accion: AuditAccion.RESTORE,
+          usuarioId,
+          diff: {
+            numeroBoleta: venta.numeroBoleta,
+            total: venta.total,
+            razon: razon ?? null,
+          },
+        },
+      });
+    });
+
+    revalidatePath("/ventas");
+    revalidatePath("/ventas/eliminadas");
+    revalidatePath("/productos");
+    revalidatePath("/clientes");
+
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error al restaurar venta";
+    if (msg.startsWith("STOCK_INSUFICIENTE:")) {
+      // Devolvemos sin el prefix para UI
+      return { ok: false, error: msg.replace("STOCK_INSUFICIENTE: ", "") };
+    }
+    return { ok: false, error: msg };
   }
 }
 
@@ -326,8 +497,8 @@ export async function editarVenta(
 
     // Calcular stock efectivo (stock actual + lo que devuelve la venta vieja)
     // permite que, si un producto figura en la vieja y en la nueva, no falle por stock ficticio.
-    const ventaVieja = await prisma.venta.findUnique({
-      where: { id },
+    const ventaVieja = await prisma.venta.findFirst({
+      where: { id, ...VENTAS_VISIBLES },
       include: { detalles: true },
     });
     if (!ventaVieja) return { ok: false, error: "Venta no encontrada" };
@@ -431,7 +602,7 @@ export async function editarVenta(
       if (ventaVieja.clienteId !== null) {
         const cid = ventaVieja.clienteId;
         const otraUltima = await tx.venta.findFirst({
-          where: { clienteId: cid, NOT: { id } },
+          where: { clienteId: cid, NOT: { id }, ...VENTAS_VISIBLES },
           orderBy: { fecha: "desc" },
           select: { fecha: true },
         });

@@ -1,6 +1,7 @@
 import { prisma, MetodoPago } from "@repo/db";
 import { z } from "zod";
 import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 export async function GET(request: Request) {
   const limited = await requireRateLimit(request);
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
       : {};
 
   const where = {
+    ...VENTAS_VISIBLES,
     ...usuarioFilter,
     ...(desde || hasta
       ? {

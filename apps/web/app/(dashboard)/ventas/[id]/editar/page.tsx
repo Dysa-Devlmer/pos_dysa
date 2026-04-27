@@ -21,8 +21,8 @@ export default async function EditarVentaPage({
   const id = Number(idParam);
   if (!Number.isFinite(id) || id <= 0) notFound();
 
-  const venta = await prisma.venta.findUnique({
-    where: { id },
+  const venta = await prisma.venta.findFirst({
+    where: { id, deletedAt: null },
     include: {
       cliente: true,
       detalles: {

@@ -20,6 +20,13 @@ enum MetodoPago {
   TRANSFERENCIA
 }
 
+enum AuditAccion {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+}
+
 model Usuario {
   id        Int      @id @default(autoincrement())
   email     String   @unique
@@ -31,10 +38,12 @@ model Usuario {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  ventas       Venta[]
-  accounts     Account[]
-  sessions     Session[]
-  devoluciones Devolucion[]
+  ventas         Venta[]
+  ventasBorradas Venta[]      @relation("VentaDeletedBy")
+  accounts       Account[]
+  sessions       Session[]
+  devoluciones   Devolucion[]
+  auditLogs      AuditLog[]
 
   @@map("usuarios")
 }
@@ -156,6 +165,12 @@ model Venta {
   usuarioId Int     @map("usuario_id")
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
+  // Soft-delete (F-3 audit) — los listados activos filtran por deletedAt = null
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       Int?      @map("deleted_by")
+  deletionReason  String?   @map("deletion_reason")
+  deletedByUsuario Usuario? @relation("VentaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
   detalles     DetalleVenta[]
   devoluciones Devolucion[]
 
@@ -163,7 +178,34 @@ model Venta {
   @@index([numeroBoleta])
   @@index([clienteId])
   @@index([usuarioId])
+  @@index([deletedAt])
   @@map("ventas")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// AuditLog (F-3) — bitácora de operaciones sensibles sobre ventas y otros
+// recursos. Todo soft-delete y restore inserta una fila aquí.
+// `diff` opcional almacena snapshot del registro o subset relevante (ej.
+// detalles de la venta al borrar) en JSON para poder reconstruir la
+// situación previa si la auditoría lo requiere.
+// ─────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         Int          @id @default(autoincrement())
+  tabla      String
+  registroId Int          @map("registro_id")
+  accion     AuditAccion
+  usuarioId  Int          @map("usuario_id")
+  diff       Json?
+  fecha      DateTime     @default(now())
+  ip         String?
+  userAgent  String?      @map("user_agent")
+
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([tabla, registroId])
+  @@index([fecha])
+  @@map("audit_logs")
 }
 
 model DetalleVenta {

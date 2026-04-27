@@ -1,6 +1,7 @@
 import { prisma } from "@repo/db";
 import { DashboardResponseSchema } from "@repo/api-client/types";
 import { requireAuth, requireRateLimit, jsonOk } from "../_helpers";
+import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 /**
  * GET /api/v1/dashboard — datos del dashboard para el mobile (M3).
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
   const [ventasHoyAgg, stockCriticoCount, stockCriticoTop, ventas7diasRows] =
     await Promise.all([
       prisma.venta.aggregate({
-        where: { fecha: { gte: hoy } },
+        where: { fecha: { gte: hoy }, ...VENTAS_VISIBLES },
         _count: { _all: true },
         _sum: { total: true },
       }),
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
         select: { id: true, nombre: true, stock: true, alertaStock: true },
       }),
       prisma.venta.findMany({
-        where: { fecha: { gte: hace7 } },
+        where: { fecha: { gte: hace7 }, ...VENTAS_VISIBLES },
         select: { fecha: true, total: true },
         orderBy: { fecha: "asc" },
       }),

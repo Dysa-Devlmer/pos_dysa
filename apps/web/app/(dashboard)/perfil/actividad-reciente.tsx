@@ -26,7 +26,7 @@ function formatFechaHora(d: Date): string {
 
 export async function ActividadReciente({ usuarioId }: { usuarioId: number }) {
   const ventas = await prisma.venta.findMany({
-    where: { usuarioId },
+    where: { usuarioId, deletedAt: null },
     orderBy: { fecha: "desc" },
     take: 10,
     include: {
