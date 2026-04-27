@@ -12,6 +12,19 @@ Sentry.init({
   // Performance: 10% de transacciones en prod, 100% en dev.
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
 
+  /**
+   * Ruido conocido del runtime de Node — no son bugs nuestros:
+   *  - `Error: aborted` en `abortIncoming(node:_http_server)` ocurre cuando
+   *    el cliente cierra la conexión antes de que el server termine de
+   *    responder (refresh de página, health-checks de Cloudflare, browser
+   *    cancela un fetch). Sentry lo marca super_low actionability.
+   *    Filtrarlo evita ruido en el dashboard sin perder señal real.
+   */
+  ignoreErrors: [
+    "Error: aborted",
+    /^aborted$/, // mensaje crudo sin prefijo
+  ],
+
   // PII: no enviar IP ni user-agent automáticamente.
   // Los datos sensibles se añaden manualmente vía Sentry.captureMessage({ extra }).
   sendDefaultPii: false,
