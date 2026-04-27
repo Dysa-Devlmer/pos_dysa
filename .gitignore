@@ -1,5 +1,7 @@
 # DEE / Claude
 .claude/mcp-env-setup.sh
+.claude/launch.json
+.claude/scheduled_tasks.lock
 .claude/logs/
 .claude/memory/
 .claude/settings.json
