@@ -23,6 +23,57 @@ export const apiRatelimit = new Ratelimit({
 });
 
 /**
+ * Wrapper sobre `ratelimit.limit()` con timeout 500ms y política
+ * **fail-closed en producción** / fail-open en development.
+ *
+ * Por qué: si Upstash está down/lento, el limiter cuelga el request hasta
+ * timeout HTTP del runtime (típico 30s). Sin esto, un Upstash 503 se vuelve
+ * un DoS interno — la API entera se ralentiza.
+ *
+ * Política:
+ *  - timeout 500ms (Upstash p99 normal es <50ms; 500ms es 10× margen)
+ *  - timeout o error → fail-closed en prod (deny: success=false)
+ *    porque lo seguro asume "limite excedido" cuando no podemos validar
+ *  - en dev → fail-open (permitir) para no bloquear desarrollo offline
+ *  - log via console.warn (Sentry capturará el warn si está en breadcrumbs)
+ *
+ * Mantiene compat con la firma original `{ success, reset }` que esperan
+ * los callsites — `reason` es opcional para telemetría.
+ */
+export async function limitWithTimeout(
+  ratelimit: Ratelimit,
+  identifier: string,
+  context: string,
+): Promise<{ success: boolean; reset: number; reason?: "timeout" | "error" }> {
+  const TIMEOUT_MS = 500;
+  const failClosed = process.env.NODE_ENV === "production";
+
+  try {
+    const result = await Promise.race([
+      ratelimit.limit(identifier),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("rate-limit timeout")), TIMEOUT_MS),
+      ),
+    ]);
+    return { success: result.success, reset: result.reset };
+  } catch (err) {
+    const isTimeout =
+      err instanceof Error && err.message === "rate-limit timeout";
+    const reason: "timeout" | "error" = isTimeout ? "timeout" : "error";
+    if (failClosed) {
+      console.warn(
+        `[rate-limit] ${reason} for ${context} (id=${identifier.slice(0, 12)}…) — failing CLOSED`,
+      );
+    }
+    return {
+      success: !failClosed,
+      reset: Date.now() + 60_000,
+      reason,
+    };
+  }
+}
+
+/**
  * Obtiene la IP del cliente considerando proxies (x-forwarded-for, x-real-ip).
  * Acepta tanto Request (API routes) como Headers (Server Actions).
  */

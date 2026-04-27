@@ -5,7 +5,7 @@ import { headers, cookies } from "next/headers";
 import { encode } from "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { prisma } from "@repo/db";
-import * as Sentry from "@sentry/nextjs";
+import { captureMessageSafe, captureExceptionSafe } from "@/lib/sentry-helpers";
 import { getClientIP, warnIfDisabledInProd } from "@/lib/rate-limit";
 
 // NextAuth v5 cookie names: __Secure- prefix requiere HTTPS.
@@ -31,12 +31,19 @@ export async function loginAction(
 
   // Rate limiting (si Upstash está configurado)
   if (process.env.UPSTASH_REDIS_REST_URL) {
-    // Rate limiting distribuido con Upstash (producción ideal)
-    const { loginRatelimit } = await import("@/lib/rate-limit");
-    const { success, reset } = await loginRatelimit.limit(ip);
+    // Rate limiting distribuido con Upstash (producción ideal).
+    // Usa wrapper con timeout 500ms + fail-closed en prod.
+    const { loginRatelimit, limitWithTimeout } = await import(
+      "@/lib/rate-limit"
+    );
+    const { success, reset } = await limitWithTimeout(
+      loginRatelimit,
+      ip,
+      "login_action",
+    );
     if (!success) {
       const minutos = Math.ceil((reset - Date.now()) / 60000);
-      Sentry.captureMessage("login_rate_limited", {
+      captureMessageSafe("login_rate_limited", {
         level: "warning",
         extra: { email, ip, minutos },
       });
@@ -70,7 +77,7 @@ export async function loginAction(
 
     const ok = await bcrypt.compare(password, usuario.password);
     if (!ok) {
-      Sentry.captureMessage("login_failure", {
+      captureMessageSafe("login_failure", {
         level: "warning",
         extra: { email, ip, reason: "CredentialsSignin" },
       });
@@ -122,7 +129,7 @@ export async function loginAction(
       (error as Error)?.message,
       error
     );
-    Sentry.captureException(error, {
+    captureExceptionSafe(error, {
       extra: { email, ip, context: "login_unexpected" },
     });
     return {

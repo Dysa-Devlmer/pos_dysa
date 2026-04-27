@@ -144,10 +144,25 @@ export async function requireRateLimit(
     warnIfDisabledInProd("api/v1 request");
     return null; // skip en dev; en prod ya emitió warning visible
   }
-  const { apiRatelimit, getClientIP } = await import("@/lib/rate-limit");
+  const { apiRatelimit, getClientIP, limitWithTimeout } = await import(
+    "@/lib/rate-limit"
+  );
   const ip = getClientIP(request);
-  const { success } = await apiRatelimit.limit(ip);
+  const { success, reason } = await limitWithTimeout(
+    apiRatelimit,
+    ip,
+    "api/v1",
+  );
   if (!success) {
+    // Si fallamos closed por timeout/error de Upstash, devolvemos 503
+    // (Service Unavailable) en lugar de 429 — la causa NO es el cliente.
+    // Retry-After 5s para no agravar la presión sobre Redis.
+    if (reason === "timeout" || reason === "error") {
+      return NextResponse.json(
+        { error: "Servicio de control de tráfico no disponible. Reintentar." },
+        { status: 503, headers: { "Retry-After": "5" } },
+      );
+    }
     return NextResponse.json(
       { error: "Rate limit excedido. Máximo 100 requests/minuto." },
       { status: 429, headers: { "Retry-After": "60" } },

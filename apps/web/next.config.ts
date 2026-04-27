@@ -1,5 +1,27 @@
 import type { NextConfig } from "next";
 
+// CSP — política base. Allowlists actuales:
+//   - Sentry ingest: *.ingest.sentry.io / *.sentry.io / browser.sentry-cdn.com
+//   - Tailwind v4 + Next 15 hidratación → 'unsafe-inline' style + script
+//   - 'unsafe-eval' SOLO en development (Turbopack HMR)
+//
+// Extender cuando llegue:
+//   - Webpay/Transbank → connect-src https://webpay3g.transbank.cl
+//   - Imágenes R2 público → img-src https://apk-dy-pos.zgamersa.com
+const isDev = process.env.NODE_ENV !== "production";
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://browser.sentry-cdn.com https://js.sentry-cdn.com`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.ingest.sentry.io https://*.sentry.io",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -12,6 +34,7 @@ const securityHeaders = [
     // agregar: usb=(self) y revisar CSP.
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
+  { key: "Content-Security-Policy", value: csp },
 ];
 
 const nextConfig: NextConfig = {

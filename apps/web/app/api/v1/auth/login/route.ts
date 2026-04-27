@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { encode } from "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { prisma } from "@repo/db";
-import * as Sentry from "@sentry/nextjs";
+import { captureMessageSafe, captureExceptionSafe } from "@/lib/sentry-helpers";
 import {
   LoginRequestSchema,
   LoginResponseSchema,
@@ -69,11 +69,17 @@ export async function POST(request: NextRequest) {
 
   // ── 2. Rate limiting ────────────────────────────────────────────────────
   if (process.env.UPSTASH_REDIS_REST_URL) {
-    const { loginRatelimit } = await import("@/lib/rate-limit");
-    const { success, reset } = await loginRatelimit.limit(ip);
+    const { loginRatelimit, limitWithTimeout } = await import(
+      "@/lib/rate-limit"
+    );
+    const { success, reset } = await limitWithTimeout(
+      loginRatelimit,
+      ip,
+      "api/v1/auth/login",
+    );
     if (!success) {
       const minutos = Math.ceil((reset - Date.now()) / 60000);
-      Sentry.captureMessage("login_rate_limited", {
+      captureMessageSafe("login_rate_limited", {
         level: "warning",
         extra: { email, ip, minutos, endpoint: "api/v1/auth/login" },
       });
@@ -112,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     const ok = await bcrypt.compare(password, usuario.password);
     if (!ok) {
-      Sentry.captureMessage("login_failure", {
+      captureMessageSafe("login_failure", {
         level: "warning",
         extra: {
           email,
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
       (error as Error)?.message,
       error,
     );
-    Sentry.captureException(error, {
+    captureExceptionSafe(error, {
       extra: { email, ip, endpoint: "api/v1/auth/login" },
     });
     return NextResponse.json(
