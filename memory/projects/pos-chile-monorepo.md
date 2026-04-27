@@ -427,6 +427,18 @@ $transaction:
     - **Verificación rápida**: `tail -5 .claude/rescan.log` muestra los últimos triggers; `python3 -c "import json; print(json.load(open('.claude/PROJECT_PROFILE.json'))['last_scan'])"` confirma frescura.
     - **Gotcha de orchestrate.py**: busca `blueprints/ecosystems.json` UN nivel arriba del esperado (`$REPO/blueprints/` en vez de `$REPO/.claude/blueprints/`). El rescan script compensa inyectando el path correcto via Python wrapper inline — NO modificar `orchestrate.py` directamente (es infra compartida del engine).
 
+90. **Sentry edge/client runtime no tiene `node:crypto` — split `lib/privacy.ts` ↔ `lib/privacy-edge.ts`** — `apps/web/lib/privacy.ts` usa `createHash("sha256")` para `pseudonymize()`; importarlo desde `sentry.edge.config.ts` o `sentry.client.config.ts` rompe el build edge bundle (`Module not found: 'crypto'`). Fix canónico (sesión 2026-04-26): crear `lib/privacy-edge.ts` con SOLO `truncateIP()` (regex puro, sin crypto) + en edge/client configs **redactar emails con string literal** (`"(redacted-edge)"` / `"(redacted-client)"`) en lugar de pseudonimizar. Server runtime (`sentry.server.config.ts`) sí puede importar `lib/privacy.ts` completo. Regla: cualquier helper que toque `node:crypto`, `fs`, `path` debe vivir en módulo separado del edge surface.
+
+91. **Migraciones Prisma idempotentes obligatorias cuando dev DB tiene drift** — `packages/db/prisma/migrations/20260426*_*/migration.sql` (F-3 + F-9) usan: `CREATE TABLE IF NOT EXISTS`, `ALTER TYPE ... ADD VALUE IF NOT EXISTS`, `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` para FKs, `CREATE INDEX IF NOT EXISTS`. Razón: la dev DB ya tenía F-3/F-9 schema aplicado vía `db:push` durante experimentación, pero prod arranca clean. Sin idempotencia, `prisma migrate deploy` falla en dev (objeto ya existe) o en prod si re-corre. Pattern: **toda migración manual escrita-a-mano debe ser idempotente** (las generadas por `prisma migrate dev` no necesitan, pero las nuestras no se generan así porque el schema ya está aplicado). `migration_lock.toml` con `provider = "postgresql"` también es obligatorio para baseline.
+
+92. **GitHub `gh` CLI con scope `workflow` requerido para tocar `.github/workflows/*.yml`** — sesión 2026-04-26 quedó bloqueada en PR #3 porque el token tenía `gist, read:org, repo` pero faltaba `workflow`. Síntoma: `gh pr merge` retorna error sobre permisos. Fix: `gh auth refresh -s workflow,repo,admin:repo_hook`. **Regla operativa**: si Cowork/CLI va a tocar workflows o secrets en CI, validar primero `gh auth status` muestra `workflow` en scopes. Setear secrets via `gh secret set NAME` requiere admin del repo (verificar con `gh api repos/OWNER/REPO --jq .permissions.admin`).
+
+93. **`deploy-prod.yml` `push: branches: [main]` trigger falla 0s con Dependabot** — bot pushes corren con `GITHUB_TOKEN` restringido (sin secrets de production) → workflow falla en pre-flight con "workflow file issue" en cada PR auto-merged. Fix (commit `08e4d33`): remover el push trigger entirely, dejar solo `workflow_dispatch` con input `confirm == 'deploy'`. CLAUDE.md raíz ya marca `scripts/deploy.sh` como canonical — el workflow es OPCIONAL. Si en el futuro se quiere push trigger, agregar `if: github.actor != 'dependabot[bot]'` al job.
+
+94. **Dependabot `npm` con `allow: direct + indirect` abre 12+ PRs/semana incluyendo majors riesgosos** — descubierto en sesión 2026-04-26 (Next 15→16, TypeScript 5→6, Expo SDK bumps llegaron en una sola noche). Decisión arquitectural: **Renovate para version updates** (grouping + scheduling adecuado vía `renovate.json`) + **Dependabot solo `github-actions`** (Renovate por default no maneja Actions). Para CVEs: GitHub Dependabot **Security Updates** (toggle en Settings → Code security & analysis) crea PRs solo para advisories, NO version bumps regulares. Config final en `.github/dependabot.yml` solo tiene `package-ecosystem: github-actions`.
+
+95. **Worktrees branched de main viejo deben rebasearse antes de squash-merge** — F-9 worktree (`worktree-agent-a848a7aa`) fue creado desde commit `5b67622` (pre-F-5). Al volver al main para integrar, main había avanzado (08e4d33, 8863f82, 1f89fda). Sin rebase, `git merge --squash` introduciría conflictos en `dependabot.yml`/`ci.yml`. Pattern canónico: **DENTRO del worktree** correr `git fetch origin && git rebase origin/main` antes de hacer el commit final. Luego desde main: `git merge --squash <branch>`. Después: `git worktree remove <path> -f -f` (doble `-f` necesario si el agente sigue lockeando vía pid file en `.git/worktrees/<name>/locked`).
+
 89. **Skill custom `privacy-compliance` existe en `.claude/skills/` — activado y listo** — creado 2026-04-23 para resolver el gap del CEO ("Privacy Policy URL pública — borrador legal + página /privacidad"). Cubre Ley 19.628 + Ley 21.719 + Apple App Privacy + Google Data Safety con foco exclusivo en el stack POS Chile. **280 KB · 6240 líneas · 14 archivos** (1 SKILL.md + 8 references + 3 scripts Python funcionales + 3 templates production-ready). Invocable con `/privacy-compliance`. Incluye `pii_scanner.py` que detectó 15 campos PII del schema actual + 2 findings high genuinos (usos de console.log con PII sin `pseudonymize()` — pendiente de arreglar antes de activar Sentry en prod). **Local-only** (`.claude/skills/` gitignored). Plan de rollout multi-agente en `docs/privacy-rollout-plan.md` con 5 fases A-E distribuidas entre CLI/Worktree/Cowork/Gemini/Pierre; cubre endpoints ARCOP+, consent banner, RAT, DPAs, app privacy + data safety forms. **Comparación con bar existente**: senior-security = 44 KB, senior-architect = 72 KB, mobile-design = 268 KB, privacy-compliance = 280 KB (tier más alto del ecosistema). No duplicar contenido legal en `memory/context/` — el skill es la fuente de verdad; memory/ solo apunta al skill.
 
 ---
@@ -458,6 +470,11 @@ $transaction:
 | 18 | Production hardening: PWA manifest + metadata + health + README + gitignore | CLI | 5234212 | ✅ |
 | 19a | Docs arquitecturales + tests edge (hydration, RUT, boundary) + cleanup | CLI | 7e7444c | ✅ |
 | 19b | Polish final: badge consistency + animations + dark mode + loading states | Worktree | 02cb8a6+0f96905 | ✅ |
+| F-2 | Hardening: CSP + rate-limit fail-closed (500ms) + Sentry PII scrub | CLI | 590049c | ✅ |
+| F-3 | Soft-delete ventas + AuditLog (Ley 21.210, retención 6 años) | Worktree | 5b67622 | ✅ |
+| F-5 | CI/CD pro: workflows reusables + branch protection + Dependabot/Renovate | CLI | 01e3528+8863f82+1f89fda | ✅ |
+| F-9 | Caja: split tender + apertura/cierre + movimientos + Z-tape | Worktree | 4ab6e31 | ✅ |
+| F-10 | Mobile a11y + ios.privacyManifests + Maestro E2E | CLI | 614ed07 | ✅ |
 
 ---
 
@@ -551,3 +568,27 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 > - **B3** — "sin índice en `fecha`": el índice `@@index([fecha])` existía desde Fase 1 en `schema.prisma`.
 
 > **Regla crítica:** No confiar ciegamente en reportes — siempre verificar leyendo archivos reales. Ver [[agents-workflow#3. Cowork verifica independientemente]].
+
+## Sesión 2026-04-26 — Sprint hardening F-2/F-3/F-5/F-9/F-10
+
+**Contexto**: post-recovery de main con orphans + integración de paquete F-2/F-5 entregado por CLI paralelo + delegación explícita CEO ("hazlo tu, tienes acceso").
+
+### Decisiones técnicas
+
+- **Sentry edge/client privacy split**: `lib/privacy-edge.ts` (sin crypto, solo `truncateIP`) + redacción literal de emails en edge/client configs. Server config mantiene `pseudonymize()` con sha256 → ver gotcha 90.
+- **F-3 soft-delete + AuditLog**: `Venta.deletedAt/deletedBy/deletionReason` + `AuditLog` model + `AuditAccion {CREATE,UPDATE,DELETE,RESTORE}`. Ley 21.210 SII obliga retención 6 años — soft-delete preserva trazabilidad. `restaurarVenta` ADMIN-only con validación de stock. `VENTAS_VISIBLES = { deletedAt: null }` en `lib/db-helpers.ts` para queries default.
+- **F-9 split tender + caja**: `MetodoPago.MIXTO` (cache cuando `pagos.length > 1`) + `PagoVenta[]` + apertura/cierre con `Caja`/`AperturaCaja`/`MovimientoCaja` + Z-tape print-friendly. UI en `caja/{abrir,cerrar,movimientos/nuevo,[aperturaId]/cierre}`. `crearVenta` ahora resuelve apertura activa automáticamente.
+- **Migraciones idempotentes**: `IF NOT EXISTS`, `ADD VALUE IF NOT EXISTS`, `DO $$ EXCEPTION WHEN duplicate_object` — gotcha 91.
+- **F-2 hardening**: CSP completo en `next.config.ts` headers + rate-limit con `Promise.race(500ms)` fail-closed (antes era silently-pass) + `captureMessageSafe` wrappers que respetan `beforeSend` PII scrub.
+- **F-5 CI/CD**: `ci.yml` reusable via `workflow_call` + branch protection vía `gh api PUT /repos/.../branches/main/protection` (5 secrets seteados desde Cowork con admin scope) + Dependabot tightening (gotcha 94).
+- **F-10 mobile**: `app.json::ios.privacyManifests` (NSPrivacyTracking false + 2 RequiredReason APIs + 3 DataTypes para Apple) + Maestro YAML E2E + a11y labels.
+- **Deploy-prod workflow fix**: removido push trigger, solo workflow_dispatch (gotcha 93).
+- **Dependabot avalanche cierre**: 10 PRs cerradas + 2 SHA bumps mergeadas + config restringida solo a github-actions (gotcha 94).
+- **Worktree rebase pattern**: F-9 worktree rebase a origin/main antes de squash-merge (gotcha 95).
+
+### Pendientes user-only
+
+- PR #3 merge: requiere `gh auth refresh -s workflow,repo,admin:repo_hook` (gotcha 92)
+- Sentry DSN: pegar en GH secrets como `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN`
+- Renovate App: install desde GitHub Marketplace
+- EAS submit iOS: requiere Apple Developer account interactivo
