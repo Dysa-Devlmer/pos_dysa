@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ROL_BADGE } from "@/lib/badge-styles";
 import { gradientePorNombre, inicialesDe } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
+import { getActiveHref } from "@/lib/nav-active";
 import { navGroups } from "@/components/nav-config";
 
 export interface SidebarProps {
@@ -59,6 +60,11 @@ export function Sidebar({
       items: g.items.filter((i) => !i.adminOnly || rol === "ADMIN"),
     }))
     .filter((g) => g.items.length > 0);
+
+  // Detección de ruta activa con longest-prefix-match para evitar que
+  // `/caja` y `/caja/movimientos` se prendan a la vez.
+  const allHrefs = gruposVisibles.flatMap((g) => g.items.map((i) => i.href));
+  const activeHref = getActiveHref(pathname, allHrefs);
 
   return (
     <aside
@@ -138,8 +144,11 @@ export function Sidebar({
             ) : null}
             <ul className="flex flex-col gap-0.5">
               {grupo.items.map(({ href, label, icon: Icon, badgeCountKey }) => {
-                const isActive =
-                  href === "/" ? pathname === "/" : pathname.startsWith(href);
+                // Active match: longest-prefix winner (calculado arriba).
+                // Evita: 1) colisión `/caja` vs `/cajas` (boundary `/` en helper);
+                //        2) colisión padre/hijo cuando ambos están en el nav
+                //           (p. ej. `/caja` vs `/caja/movimientos`).
+                const isActive = href === activeHref;
                 const count =
                   badgeCountKey === "alertasStock" ? alertasStockCount : 0;
 

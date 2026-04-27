@@ -11,6 +11,8 @@ import {
   Code2,
   AlertTriangle,
   RotateCcw,
+  Wallet,
+  ArrowLeftRight,
 } from "lucide-react";
 
 export type NavItem = {
@@ -33,6 +35,11 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/caja", label: "Caja", icon: CreditCard },
+      {
+        href: "/caja/movimientos",
+        label: "Movimientos",
+        icon: ArrowLeftRight,
+      },
       { href: "/ventas", label: "Ventas", icon: ShoppingCart },
       { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw },
     ],
@@ -62,6 +69,7 @@ export const navGroups: NavGroup[] = [
     label: "Administración",
     items: [
       { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
+      { href: "/cajas", label: "Cajas", icon: Wallet, adminOnly: true },
       { href: "/docs", label: "API Docs", icon: Code2, adminOnly: true },
     ],
   },

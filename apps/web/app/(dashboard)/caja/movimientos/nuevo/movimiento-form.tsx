@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { TipoMovimientoCaja } from "@repo/db";
 import { Button } from "@/components/ui/button";
 import { MoneyInput } from "@/components/ui/money-input";
 import { registrarMovimientoCaja } from "../../actions";
@@ -12,6 +11,18 @@ interface Props {
   aperturaId: number;
   cajaNombre: string;
 }
+
+// NOTA: NO importar `TipoMovimientoCaja` desde `@repo/db` en este client component.
+// Eso evalúa `packages/db/src/client.ts` en el bundle cliente y rompe con
+// "POS_DATABASE_URL no definida" en el browser (gotcha 90 — client/server boundary).
+// Replicamos el enum como string literal local; el server action lo valida con Zod.
+type TipoMovimientoCaja = "INGRESO" | "EGRESO" | "RETIRO" | "AJUSTE";
+const TipoMovimientoCaja = {
+  INGRESO: "INGRESO",
+  EGRESO: "EGRESO",
+  RETIRO: "RETIRO",
+  AJUSTE: "AJUSTE",
+} as const satisfies Record<string, TipoMovimientoCaja>;
 
 const TIPOS: { value: TipoMovimientoCaja; label: string; hint: string }[] = [
   {

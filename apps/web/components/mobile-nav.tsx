@@ -10,6 +10,7 @@ import { Menu, X, Sparkles } from "lucide-react";
 import type { Rol } from "@repo/db";
 import { navGroups } from "@/components/nav-config";
 import { cn } from "@/lib/utils";
+import { getActiveHref } from "@/lib/nav-active";
 
 export interface MobileNavProps {
   rol?: Rol;
@@ -56,6 +57,9 @@ export function MobileNav({ rol, alertasStockCount = 0 }: MobileNavProps) {
       items: g.items.filter((i) => !i.adminOnly || rol === "ADMIN"),
     }))
     .filter((g) => g.items.length > 0);
+
+  const allHrefs = gruposVisibles.flatMap((g) => g.items.map((i) => i.href));
+  const activeHref = getActiveHref(pathname, allHrefs);
 
   return (
     <>
@@ -149,10 +153,10 @@ export function MobileNav({ rol, alertasStockCount = 0 }: MobileNavProps) {
                     <ul className="flex flex-col gap-0.5">
                       {grupo.items.map(
                         ({ href, label, icon: Icon, badgeCountKey }) => {
-                          const isActive =
-                            href === "/"
-                              ? pathname === "/"
-                              : pathname.startsWith(href);
+                          // Longest-prefix-match (lib/nav-active.ts) — evita
+                          // tanto la colisión `/caja` vs `/cajas` como la
+                          // colisión padre/hijo `/caja` vs `/caja/movimientos`.
+                          const isActive = href === activeHref;
                           const count =
                             badgeCountKey === "alertasStock"
                               ? alertasStockCount
