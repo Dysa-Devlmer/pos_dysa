@@ -25,6 +25,8 @@ export const METODO_PAGO_BADGE: Record<MetodoPago, string> = {
   DEBITO: SOFT_BADGE.info,
   CREDITO: SOFT_BADGE.violet,
   TRANSFERENCIA: SOFT_BADGE.warning,
+  // F-9 — split tender: cuando una venta tiene >1 método se persiste como MIXTO.
+  MIXTO: SOFT_BADGE.muted,
 };
 
 // ─── Rol de usuario ───────────────────────────────────────────────────────

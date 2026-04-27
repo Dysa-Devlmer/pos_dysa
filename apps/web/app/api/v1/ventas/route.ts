@@ -1,4 +1,4 @@
-import { prisma, MetodoPago } from "@repo/db";
+import { prisma, MetodoPago, EstadoApertura } from "@repo/db";
 import { z } from "zod";
 import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
@@ -69,10 +69,24 @@ const ItemSchema = z.object({
   cantidad: z.number().int().positive().max(10_000),
 });
 
+// F-9: split tender. MIXTO no es válido en un PagoSchema individual.
+const PagoSchema = z.object({
+  metodo: z
+    .nativeEnum(MetodoPago)
+    .refine((v) => v !== MetodoPago.MIXTO, {
+      message: "MIXTO no es válido como método de un pago individual",
+    }),
+  monto: z.number().int().positive(),
+  referencia: z.string().max(100).optional(),
+});
+
 const CreateVentaSchema = z.object({
   items: z.array(ItemSchema).min(1),
   clienteId: z.number().int().positive().optional(),
-  metodoPago: z.nativeEnum(MetodoPago).default(MetodoPago.EFECTIVO),
+  // metodoPago legacy: si NO viene `pagos`, se usa para compatibilidad mobile/CLI.
+  metodoPago: z.nativeEnum(MetodoPago).optional(),
+  pagos: z.array(PagoSchema).min(1).optional(),
+  montoRecibido: z.number().int().min(0).optional(),
 });
 
 export async function POST(request: Request) {
@@ -93,8 +107,17 @@ export async function POST(request: Request) {
     return jsonError(parsed.error.issues.map((e: { message: string }) => e.message).join(", "));
   }
 
-  const { items, clienteId, metodoPago } = parsed.data;
+  const { items, clienteId, metodoPago, pagos, montoRecibido } = parsed.data;
   const usuarioId = Number(session.user.id);
+
+  // F-9: resolver apertura activa del cajero (requerida)
+  const apertura = await prisma.aperturaCaja.findFirst({
+    where: { usuarioId, estado: EstadoApertura.ABIERTA },
+    select: { id: true },
+  });
+  if (!apertura) {
+    return jsonError("Debe abrir caja primero", 422);
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -130,18 +153,66 @@ export async function POST(request: Request) {
       const total = subtotal + impuesto;
       const numeroBoleta = `BOL-${Date.now()}`;
 
+      // Resolver pagos. Normalizamos al mismo shape: { metodo, monto, referencia? }.
+      // metodoPago a nivel root sigue siendo back-compat: si NO viene `pagos`
+      // lo tratamos como pago único con monto = total.
+      const pagosInput: { metodo: MetodoPago; monto: number; referencia?: string }[] =
+        pagos && pagos.length > 0
+          ? pagos.map((p) => ({
+              metodo: p.metodo,
+              monto: p.monto,
+              referencia: p.referencia,
+            }))
+          : [{ metodo: metodoPago ?? MetodoPago.EFECTIVO, monto: total }];
+
+      const sumaPagos = pagosInput.reduce((a, p) => a + p.monto, 0);
+      if (sumaPagos !== total) {
+        throw new Error(
+          `La suma de pagos (${sumaPagos}) no coincide con el total (${total})`,
+        );
+      }
+      const sumaEfectivo = pagosInput
+        .filter((p) => p.metodo === MetodoPago.EFECTIVO)
+        .reduce((a, p) => a + p.monto, 0);
+
+      let vuelto: number | null = null;
+      let recibido: number | null = null;
+      if (sumaEfectivo > 0) {
+        const r = montoRecibido ?? sumaEfectivo;
+        if (r < sumaEfectivo) {
+          throw new Error(
+            `Monto recibido (${r}) menor al efectivo declarado (${sumaEfectivo})`,
+          );
+        }
+        recibido = r;
+        vuelto = r - sumaEfectivo;
+      }
+
+      const metodoFlat: MetodoPago =
+        pagosInput.length === 1 ? pagosInput[0]!.metodo : MetodoPago.MIXTO;
+
       const venta = await tx.venta.create({
         data: {
           numeroBoleta,
           subtotal,
           impuesto,
           total,
-          metodoPago,
+          metodoPago: metodoFlat,
           usuarioId,
           clienteId: clienteId ?? null,
+          aperturaId: apertura.id,
+          montoRecibido: recibido,
+          vuelto,
           detalles: { create: detalles },
+          pagos: {
+            create: pagosInput.map((p) => ({
+              metodo: p.metodo,
+              monto: p.monto,
+              referencia: p.referencia ?? null,
+            })),
+          },
         },
-        include: { detalles: true },
+        include: { detalles: true, pagos: true },
       });
 
       for (const item of items) {

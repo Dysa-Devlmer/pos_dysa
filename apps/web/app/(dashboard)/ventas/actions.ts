@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { customAlphabet } from "nanoid";
-import { prisma, MetodoPago, Prisma, AuditAccion } from "@repo/db";
+import { prisma, MetodoPago, Prisma, AuditAccion, EstadoApertura } from "@repo/db";
 import { auth } from "@/auth";
 import { calcularDesglose } from "@/lib/utils";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
@@ -17,9 +17,23 @@ const itemSchema = z.object({
   cantidad: z.number().int().positive("Cantidad debe ser mayor a 0"),
 });
 
+// F-9: Split tender — pagoSchema vive en ./schemas.ts (no puede vivir aquí
+// porque "use server" solo permite exportar funciones async).
+import { pagoSchema } from "./schemas";
+
 const ventaInputSchema = z.object({
   clienteId: z.number().int().positive().nullable().optional(),
-  metodoPago: z.nativeEnum(MetodoPago),
+  // metodoPago legacy queda opcional: si viene `pagos` se ignora y se calcula.
+  // Si NO viene `pagos` (callers viejos antes de F-9), se trata como pago único.
+  metodoPago: z.nativeEnum(MetodoPago).optional(),
+  pagos: z.array(pagoSchema).min(1).optional(),
+  // Solo relevante si hay pago en EFECTIVO. El vuelto se calcula:
+  //   vuelto = montoRecibido - sum(efectivo)
+  montoRecibido: z
+    .number()
+    .int("Debe ser entero (CLP)")
+    .min(0, "No puede ser negativo")
+    .optional(),
   items: z
     .array(itemSchema)
     .min(1, "La venta debe tener al menos un producto"),
@@ -162,10 +176,75 @@ export async function crearVenta(
     }
 
     const usuarioId = Number(session.user.id);
+
+    // ─── F-9: Resolver pagos + apertura activa ──────────────────────────
+    // Si el caller envía `pagos` se usa split tender. Si no, se compatibiliza
+    // con callers viejos (un solo metodoPago, monto = total).
+    const pagosInput: Array<{
+      metodo: MetodoPago;
+      monto: number;
+      referencia?: string;
+    }> =
+      data.pagos && data.pagos.length > 0
+        ? data.pagos
+        : [{ metodo: data.metodoPago ?? MetodoPago.EFECTIVO, monto: desglose.total }];
+
+    // Validar suma de pagos == total
+    const sumaPagos = pagosInput.reduce((a, p) => a + p.monto, 0);
+    const sumaEfectivo = pagosInput
+      .filter((p) => p.metodo === MetodoPago.EFECTIVO)
+      .reduce((a, p) => a + p.monto, 0);
+    const hayEfectivo = sumaEfectivo > 0;
+
+    // Para tenders no-efectivo, suma debe ser exactamente el total (no se
+    // permite "vuelto" en débito/crédito). Para efectivo se permite sumaPagos
+    // >= total (vuelto = montoRecibido - sumaEfectivo) PERO los `pagos` deben
+    // representar exactamente cuánto se cobró por método: en efectivo el monto
+    // del PagoVenta es el aplicado a la venta (no incluye vuelto).
+    if (sumaPagos !== desglose.total) {
+      return {
+        ok: false,
+        error: `La suma de pagos (${sumaPagos}) no coincide con el total (${desglose.total})`,
+      };
+    }
+
+    // Validar montoRecibido si hay efectivo
+    let vuelto: number | null = null;
+    let montoRecibido: number | null = null;
+    if (hayEfectivo) {
+      const recibido = data.montoRecibido ?? sumaEfectivo;
+      if (recibido < sumaEfectivo) {
+        return {
+          ok: false,
+          error: `Monto recibido (${recibido}) menor al efectivo declarado (${sumaEfectivo})`,
+        };
+      }
+      montoRecibido = recibido;
+      vuelto = recibido - sumaEfectivo;
+    }
+
+    // metodoPago para back-compat: único método si pagos.length==1, sino MIXTO
+    const metodoPagoFlat: MetodoPago =
+      pagosInput.length === 1
+        ? pagosInput[0]!.metodo
+        : MetodoPago.MIXTO;
+
+    // Resolver apertura activa del cajero
+    const apertura = await prisma.aperturaCaja.findFirst({
+      where: { usuarioId, estado: EstadoApertura.ABIERTA },
+      select: { id: true },
+    });
+    if (!apertura) {
+      return {
+        ok: false,
+        error: "Debe abrir caja primero",
+      };
+    }
+
     const numeroBoleta = generarNumeroBoleta();
 
     const venta = await prisma.$transaction(async (tx) => {
-      // 1. Crear la venta + detalles
+      // 1. Crear la venta + detalles + pagos
       const v = await tx.venta.create({
         data: {
           numeroBoleta,
@@ -174,10 +253,20 @@ export async function crearVenta(
           descuentoMonto: descuentoMontoEfectivo,
           impuesto: desglose.iva,
           total: desglose.total,
-          metodoPago: data.metodoPago,
+          metodoPago: metodoPagoFlat,
           usuarioId,
           clienteId: data.clienteId ?? null,
+          aperturaId: apertura.id,
+          montoRecibido,
+          vuelto,
           detalles: { create: detalles },
+          pagos: {
+            create: pagosInput.map((p) => ({
+              metodo: p.metodo,
+              monto: p.monto,
+              referencia: p.referencia ?? null,
+            })),
+          },
         },
         select: { id: true, numeroBoleta: true, fecha: true },
       });
@@ -625,7 +714,7 @@ export async function editarVenta(
           descuentoMonto: descuentoMontoEfectivo,
           impuesto: desglose.iva,
           total: desglose.total,
-          metodoPago: data.metodoPago,
+          metodoPago: data.metodoPago ?? ventaVieja.metodoPago,
           clienteId: data.clienteId ?? null,
           usuarioId,
           detalles: { create: detallesNuevos },

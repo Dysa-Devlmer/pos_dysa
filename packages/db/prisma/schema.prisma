@@ -18,6 +18,7 @@ enum MetodoPago {
   DEBITO
   CREDITO
   TRANSFERENCIA
+  MIXTO
 }
 
 enum AuditAccion {
@@ -25,6 +26,18 @@ enum AuditAccion {
   UPDATE
   DELETE
   RESTORE
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+  RETIRO
+  AJUSTE
+}
+
+enum EstadoApertura {
+  ABIERTA
+  CERRADA
 }
 
 model Usuario {
@@ -44,6 +57,8 @@ model Usuario {
   sessions       Session[]
   devoluciones   Devolucion[]
   auditLogs      AuditLog[]
+  aperturasCaja  AperturaCaja[]
+  movimientosCaja MovimientoCaja[]
 
   @@map("usuarios")
 }
@@ -171,15 +186,97 @@ model Venta {
   deletionReason  String?   @map("deletion_reason")
   deletedByUsuario Usuario? @relation("VentaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
 
+  // F-9: Caja con split tender
+  // - aperturaId: FK a la AperturaCaja activa al momento de la venta (audit + cierre Z).
+  // - montoRecibido / vuelto: solo para componente EFECTIVO del split (suma de pagos
+  //   con metodo=EFECTIVO). Null si la venta no incluyó efectivo.
+  // - metodoPago se mantiene en la tabla raíz por back-compat con queries existentes
+  //   (filtros, reportes, dashboard). Se popula con el método único si pagos.length==1
+  //   o con MIXTO si hay >1 método.
+  aperturaId     Int?         @map("apertura_id")
+  apertura       AperturaCaja? @relation(fields: [aperturaId], references: [id], onDelete: SetNull)
+  montoRecibido  Int?         @map("monto_recibido")
+  vuelto         Int?
+
   detalles     DetalleVenta[]
   devoluciones Devolucion[]
+  pagos        PagoVenta[]
 
   @@index([fecha])
   @@index([numeroBoleta])
   @@index([clienteId])
   @@index([usuarioId])
   @@index([deletedAt])
+  @@index([aperturaId])
   @@map("ventas")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// F-9 — Caja (turnos), movimientos, pagos split-tender
+// ─────────────────────────────────────────────────────────────────────
+
+model Caja {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  ubicacion String?
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  aperturas AperturaCaja[]
+
+  @@map("cajas")
+}
+
+model AperturaCaja {
+  id                   Int            @id @default(autoincrement())
+  cajaId               Int            @map("caja_id")
+  caja                 Caja           @relation(fields: [cajaId], references: [id])
+  usuarioId            Int            @map("usuario_id")
+  usuario              Usuario        @relation(fields: [usuarioId], references: [id])
+  montoInicial         Int            @map("monto_inicial")
+  fechaApertura        DateTime       @default(now()) @map("fecha_apertura")
+  fechaCierre          DateTime?      @map("fecha_cierre")
+  montoFinalDeclarado  Int?           @map("monto_final_declarado")
+  montoFinalSistema    Int?           @map("monto_final_sistema")
+  diferencia           Int?
+  observaciones        String?
+  estado               EstadoApertura @default(ABIERTA)
+
+  ventas       Venta[]
+  movimientos  MovimientoCaja[]
+
+  @@index([cajaId])
+  @@index([usuarioId])
+  @@index([estado])
+  @@map("aperturas_caja")
+}
+
+model MovimientoCaja {
+  id          Int                 @id @default(autoincrement())
+  aperturaId  Int                 @map("apertura_id")
+  apertura    AperturaCaja        @relation(fields: [aperturaId], references: [id], onDelete: Cascade)
+  tipo        TipoMovimientoCaja
+  monto       Int
+  motivo      String
+  usuarioId   Int                 @map("usuario_id")
+  usuario     Usuario             @relation(fields: [usuarioId], references: [id])
+  fecha       DateTime            @default(now())
+
+  @@index([aperturaId])
+  @@index([fecha])
+  @@map("movimientos_caja")
+}
+
+model PagoVenta {
+  id         Int        @id @default(autoincrement())
+  ventaId    Int        @map("venta_id")
+  venta      Venta      @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  metodo     MetodoPago
+  monto      Int
+  referencia String?
+
+  @@index([ventaId])
+  @@map("pagos_venta")
 }
 
 // ─────────────────────────────────────────────────────────────────────

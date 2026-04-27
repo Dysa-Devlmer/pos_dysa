@@ -254,7 +254,11 @@ function ProductCard({
 // Método de pago pills
 // ──────────────────────────────────────────────────────────────────────────
 
-const METODOS: { value: MetodoPago; label: string; icon: React.ReactNode }[] = [
+const METODOS: {
+  value: Exclude<MetodoPago, "MIXTO">;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
   { value: "EFECTIVO", label: "Efectivo", icon: <Banknote className="size-4" /> },
   { value: "DEBITO", label: "Débito", icon: <CreditCard className="size-4" /> },
   { value: "CREDITO", label: "Crédito", icon: <CreditCard className="size-4" /> },
@@ -265,8 +269,8 @@ function MetodoPagoPills({
   onChange,
   disabled,
 }: {
-  value: MetodoPago;
-  onChange: (v: MetodoPago) => void;
+  value: Exclude<MetodoPago, "MIXTO">;
+  onChange: (v: Exclude<MetodoPago, "MIXTO">) => void;
   disabled?: boolean;
 }) {
   return (
@@ -332,9 +336,26 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
   const [descuentoPct, setDescuentoPct] = React.useState<number>(0);
   const [descuentoMonto, setDescuentoMonto] = React.useState<number>(0);
 
-  // ─── Pago ───
-  const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
+  // ─── Pago (F-9 split tender) ───
+  // Lista de pagos: usuario puede agregar varios métodos. Si solo hay uno, la
+  // venta queda como ese método; si hay >1, queda como MIXTO en metodoPago
+  // (back-compat) pero las filas reales viven en PagoVenta.
+  // MIXTO no es válido como método de un pago individual — solo es el cache
+  // a nivel Venta. Por eso el tipo restringe a los 4 métodos reales.
+  type MetodoTender = Exclude<MetodoPago, "MIXTO">;
+  const [pagos, setPagos] = React.useState<
+    { metodo: MetodoTender; monto: number; referencia?: string }[]
+  >([{ metodo: "EFECTIVO", monto: 0 }]);
   const [montoRecibido, setMontoRecibido] = React.useState<number>(0);
+
+  // Mantenemos un "método principal" derivado para UI legacy y short-circuits
+  // del hook efectivo. Solo se usa cuando hay un único pago.
+  const metodoPago: MetodoPago =
+    pagos.length === 1 ? pagos[0]!.metodo : "MIXTO";
+  const setMetodoPago = (v: MetodoTender) => {
+    // helper para el pill en modo single-tender
+    setPagos([{ metodo: v, monto: pagos[0]?.monto ?? 0 }]);
+  };
 
   // ─── Cliente (opcional, collapsible) ───
   const [clienteOpen, setClienteOpen] = React.useState(false);
@@ -445,6 +466,7 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
     setDescuentoPct(0);
     setDescuentoMonto(0);
     setMontoRecibido(0);
+    setPagos([{ metodo: "EFECTIVO", monto: 0 }]);
     setCliente(null);
     setClienteOpen(false);
     setRutInput("");
@@ -459,13 +481,21 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
     setDescuentoPct(0);
     setDescuentoMonto(0);
     setMontoRecibido(0);
-    setMetodoPago("EFECTIVO");
+    setPagos([{ metodo: "EFECTIVO", monto: 0 }]);
     setCliente(null);
     setClienteOpen(false);
     setRutInput("");
     setRutError(null);
     inputRef.current?.focus();
   };
+
+  // ─── Auto-ajustar monto del único pago al total (single-tender UX) ───
+  React.useEffect(() => {
+    if (pagos.length !== 1) return;
+    if (pagos[0]!.monto === total) return;
+    setPagos([{ ...pagos[0]!, monto: total }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total, pagos.length]);
 
   // ─── Auto-agregar al buscar código exacto ───
   React.useEffect(() => {
@@ -505,11 +535,23 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
     }
   };
 
+  // ─── Totales de pagos (F-9 split tender) ───
+  const sumaPagos = pagos.reduce((a, p) => a + (p.monto || 0), 0);
+  const sumaEfectivo = pagos
+    .filter((p) => p.metodo === "EFECTIVO")
+    .reduce((a, p) => a + (p.monto || 0), 0);
+  const hayEfectivo = sumaEfectivo > 0;
+
   // ─── Cobrar ───
+  // Reglas:
+  // - suma de pagos debe coincidir con total
+  // - si hay efectivo: montoRecibido >= sumaEfectivo (resto = vuelto)
+  // - tender no-efectivo solo: la suma debe ser exactamente el total
   const puedeCobrar =
     hayItems &&
     !procesando &&
-    (metodoPago !== "EFECTIVO" || montoRecibido >= total);
+    sumaPagos === total &&
+    (!hayEfectivo || montoRecibido >= sumaEfectivo);
 
   const cobrar = async () => {
     if (!puedeCobrar) return;
@@ -517,7 +559,8 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
     setMensaje(null);
     try {
       const res = await crearVenta({
-        metodoPago,
+        pagos,
+        montoRecibido: hayEfectivo ? montoRecibido : undefined,
         clienteId: cliente?.id ?? null,
         items: items.map((it) => ({
           productoId: it.productoId,
@@ -549,11 +592,10 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
         impuesto: desglose.iva,
         total: desglose.total,
         metodoPago,
-        montoRecibido: metodoPago === "EFECTIVO" ? montoRecibido : null,
-        vuelto:
-          metodoPago === "EFECTIVO"
-            ? Math.max(0, montoRecibido - total)
-            : null,
+        montoRecibido: hayEfectivo ? montoRecibido : null,
+        vuelto: hayEfectivo
+          ? Math.max(0, montoRecibido - sumaEfectivo)
+          : null,
         cliente: cliente
           ? { nombre: cliente.nombre, rut: cliente.rut }
           : null,
@@ -596,12 +638,12 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
   }, [puedeCobrar]);
 
   const vuelto =
-    metodoPago === "EFECTIVO" && montoRecibido >= total && hayItems
-      ? montoRecibido - total
+    hayEfectivo && montoRecibido >= sumaEfectivo && hayItems
+      ? montoRecibido - sumaEfectivo
       : null;
   const faltante =
-    metodoPago === "EFECTIVO" && montoRecibido < total && hayItems
-      ? total - montoRecibido
+    hayEfectivo && montoRecibido < sumaEfectivo && hayItems
+      ? sumaEfectivo - montoRecibido
       : null;
 
   // ─── Render ───
@@ -885,15 +927,100 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
                 <label className="text-xs font-medium text-muted-foreground">
                   Método de pago
                 </label>
-                <MetodoPagoPills
-                  value={metodoPago}
-                  onChange={setMetodoPago}
-                  disabled={procesando}
-                />
+                {/* Single-tender pills (UI rápida cuando hay un solo pago) */}
+                {pagos.length <= 1 ? (
+                  <MetodoPagoPills
+                    value={pagos[0]?.metodo ?? "EFECTIVO"}
+                    onChange={setMetodoPago}
+                    disabled={procesando}
+                  />
+                ) : null}
+
+                {/* Lista de pagos (split tender) */}
+                {pagos.length > 1 || pagos.some((p) => (p.monto ?? 0) > 0) ? (
+                  <div className="space-y-1.5 rounded-md border bg-muted/20 p-2">
+                    {pagos.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <select
+                          value={p.metodo}
+                          onChange={(e) => {
+                            const nuevo = [...pagos];
+                            nuevo[idx] = {
+                              ...p,
+                              metodo: e.target.value as MetodoTender,
+                            };
+                            setPagos(nuevo);
+                          }}
+                          disabled={procesando}
+                          className="h-9 rounded-md border bg-background px-2 text-xs"
+                        >
+                          <option value="EFECTIVO">Efectivo</option>
+                          <option value="DEBITO">Débito</option>
+                          <option value="CREDITO">Crédito</option>
+                          <option value="TRANSFERENCIA">Transferencia</option>
+                        </select>
+                        <MoneyInput
+                          value={p.monto}
+                          onValueChange={(v) => {
+                            const nuevo = [...pagos];
+                            nuevo[idx] = { ...p, monto: v };
+                            setPagos(nuevo);
+                          }}
+                          placeholder="0"
+                          className="h-9 flex-1"
+                        />
+                        {pagos.length > 1 ? (
+                          <button
+                            type="button"
+                            aria-label="Quitar pago"
+                            onClick={() => {
+                              setPagos(pagos.filter((_, i) => i !== idx));
+                            }}
+                            className="rounded-md border p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-1 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPagos([
+                            ...pagos,
+                            { metodo: "EFECTIVO", monto: Math.max(0, total - sumaPagos) },
+                          ])
+                        }
+                        className="rounded border px-2 py-0.5 text-xs hover:bg-muted"
+                      >
+                        + Agregar pago
+                      </button>
+                      <span
+                        className={cn(
+                          "tabular-nums",
+                          sumaPagos === total
+                            ? "text-emerald-700 dark:text-emerald-400"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {formatCLP(sumaPagos)} / {formatCLP(total)}
+                      </span>
+                    </div>
+                    {sumaPagos !== total && hayItems ? (
+                      <div className="rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+                        {sumaPagos < total
+                          ? `Faltan ${formatCLP(total - sumaPagos)}`
+                          : `Excede ${formatCLP(sumaPagos - total)} (no permitido en débito/crédito)`}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
               </div>
 
               {/* Monto recibido (solo efectivo) */}
-              {metodoPago === "EFECTIVO" && hayItems ? (
+              {hayEfectivo && hayItems ? (
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     Monto recibido
