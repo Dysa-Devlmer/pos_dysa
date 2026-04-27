@@ -24,6 +24,12 @@
 
 name: Deploy to Production
 
+# CLAUDE.md indica que el deploy canónico es `scripts/deploy.sh` manual.
+# Este workflow es OPCIONAL y solo via UI. NO push trigger — Dependabot
+# bot pushes hacían correr el workflow con token restringido → fallaba en
+# 0s con "workflow file issue" en cada PR de deps. Si querés deploy
+# automático en push a main, primero seteá los secrets y agregá un
+# `if: github.actor != 'dependabot[bot]'` al job ci.
 on:
   workflow_dispatch:
     inputs:
@@ -31,13 +37,6 @@ on:
         description: 'Type "deploy" to confirm production deploy'
         required: true
         type: string
-  push:
-    branches: [main]
-    paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "scripts/deploy.sh"
-      - ".github/workflows/deploy-prod.yml"
 
 concurrency:
   # Un solo deploy a la vez para no pisar el rsync intermedio.
@@ -54,9 +53,7 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'deploy')
+    if: github.event.inputs.confirm == 'deploy'
     environment:
       name: production
       url: ${{ secrets.HEALTH_URL }}
