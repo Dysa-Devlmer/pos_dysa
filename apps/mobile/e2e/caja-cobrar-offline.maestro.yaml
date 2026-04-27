@@ -1,0 +1,34 @@
+# Maestro flow — cobrar venta en modo offline
+#
+# Pre: app instalada y logueado como admin (correr login.maestro.yaml antes
+# o con --include-tags). Requiere que el dispositivo este en airplane mode
+# para forzar la rama offline (enqueue → sync_queue).
+#
+# Run: maestro test apps/mobile/e2e/caja-cobrar-offline.maestro.yaml
+
+appId: cl.zgamersa.poschile
+---
+- launchApp
+- assertVisible: "Caja"
+- tapOn: "Caja"
+- assertVisible: "Punto de venta"
+# Buscar producto por código (el seed tiene "ALM-001" como ejemplo)
+- tapOn:
+    id: "search"
+    optional: true
+- inputText: "ALM-001"
+- pressKey: Enter
+# Ajustar cantidad con el botón "Aumentar cantidad"
+- tapOn:
+    text: "Aumentar cantidad.*"
+    optional: true
+# Verificar que el botón de cobrar muestra el modo offline
+- assertVisible:
+    text: "Guardar offline.*"
+    timeout: 5000
+- tapOn:
+    text: "Guardar offline.*"
+- assertVisible:
+    text: "Guardado offline"
+    timeout: 5000
+- tapOn: "Nueva venta"

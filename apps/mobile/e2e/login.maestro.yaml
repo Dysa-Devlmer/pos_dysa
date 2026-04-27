@@ -1,0 +1,24 @@
+# Maestro flow — login happy path
+#
+# Run: maestro test apps/mobile/e2e/login.maestro.yaml
+#
+# Asume que la app esta instalada con el bundleId configurado en app.json.
+# Las credenciales son las del seed de POS Chile (admin@pos-chile.cl).
+
+appId: cl.zgamersa.poschile
+---
+- launchApp:
+    clearState: true
+- assertVisible: "POS Chile"
+- assertVisible: "Ingresar"
+- tapOn:
+    id: "Correo electrónico"
+- inputText: "admin@pos-chile.cl"
+- tapOn:
+    id: "Contraseña"
+- inputText: "admin123"
+- tapOn: "Ingresar"
+- assertVisible:
+    text: "Caja"
+    timeout: 10000
+- assertVisible: "Punto de venta"
