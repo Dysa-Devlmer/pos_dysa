@@ -635,7 +635,7 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 - **Dependabot PR #3 mergeada**: actions/checkout 4.2.2 → 6.0.2. Confirma que el flujo Dependabot post-tightening (gotcha 94) funciona — solo bumps de github-actions, sin avalanche npm.
 - **`.gitignore` artifacts Claude Code**: `.claude/launch.json` + `.claude/scheduled_tasks.lock` runtime-only.
 - **Tab refocus jank UX (commit `24167c9`)**: bug reportado por usuario "al volver a la pestaña, la web tarda y se ve borrosa". Doble fix: (a) `backdrop-filter: blur` removido de surfaces always-on (header, sticky table headers, Recharts tooltips) — gotcha 103; (b) `unstable_cache` 5min sobre el `findUnique` del perfil en `(dashboard)/layout.tsx` con `revalidateTag(\`usuario:{id}\`)` agregado en 4 callsites de mutación — gotcha 104.
-- **Reporte ejecutivo `reporte.md`** generado en raíz para entregar al CEO + Worktree (470 líneas, 11 secciones). Consolida estado del audit, epics cerrados (F-1/F-2/F-3/F-5/F-7/F-9/F-10), pendientes (F-6/F-8/F-11/F-12/F-13/F-14/F-15), incidentes 2026-04-26→27, faltantes user-only, score 78-82/100. Documento vivo — appendear ahí en lugar de crear paralelos.
+- **Reporte ejecutivo `reporte.md`** generado en raíz para entregar al CEO + Worktree. Documento vivo — appendear ahí en lugar de crear paralelos. (Tamaño actualizado en sesión 2026-04-28: 2.752 líneas, 11 secciones + 6 adendas — ver sesión siguiente).
 
 ### Pendientes user-only
 
@@ -644,3 +644,32 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 - Si llegan más migraciones manuales: usar IDEMPOTENT defensive pattern (gotcha 91) — generar baseline solo desde `prisma migrate dev` cuando posible.
 - 2 errores TS bloqueantes CI antes del primer push: `restaurar-boton.tsx` import `restaurarVenta` + `badge-styles.ts` falta `MIXTO`.
 - Decidir si `reporte.md` se commitea como `docs(reporte): ...` separado o se mueve a `docs/reporte.md` permanente.
+
+## Sesión 2026-04-28 — Cierre M0 mobile + audit consolidado pre-Fase 4
+
+**Contexto**: bundle Metro mobile bloqueado durante 2 sesiones (NativeWind 4.2.x + SDK 54) finalmente diagnosticado y cerrado. CEO + Worktree pidieron audit profesional exhaustivo del estado completo (web + mobile + infra + brand + risk) antes de arrancar Fase 4. Sesión opera en modo **read-only/diagnóstico** por instrucción explícita del usuario ("solo encontrar, no actuar — el reporte es el contrato").
+
+### Decisiones técnicas
+
+- **Cierre M0 mobile (G-M43)**: stack válido SDK 54 + NativeWind = `nativewind@4.2.3` exact + `react-native-css-interop@0.2.3` como dep DIRECTA (pnpm symlinks no exponen transitivas a Metro) + `darkMode: "class"` simple + `important` removido. El downgrade previo a 4.1.23 era contraproducente porque rompía el `import "react-native-css-interop/jsx-runtime"` que hace `expo-router@6`. Bundle confirmado en Xiaomi Redmi Note 14 (24932ms / 1877 modules). Commits `225c7b5` + `82d7cc1` + `b4aa32a`.
+- **`MetodoPago.MIXTO` drift packages/api-client (commit `82d7cc1`)**: el enum vivía en `packages/db` pero `packages/api-client` no había sido regenerado tras F-9 → mobile crashearía guaranteed la primera vez que recibiera una venta MIXTO desde la API. Fix puntual; queda gotcha sistémico pendiente sobre cómo sincronizar enums entre paquetes (candidato a script `pnpm gen:enums` o a generar el cliente desde OpenAPI/Prisma directamente).
+- **Audit consolidado en `reporte.md` (untracked, 2.752 líneas, 6 adendas)**: 62 hallazgos críticos cubriendo 14 dimensiones técnicas (auth, security, db, perf, a11y, i18n, observability, deploy, testing, mobile, brand, legal, ops, risk). Estructura final:
+  - Adenda I-IV: web + infra + cumplimiento legal Ley 19.628/21.719/21.210
+  - **Adenda V (SS1-SS8)**: root cause APK mobile roto = 6-8 bugs simultáneos no un solo culpable (expo-font no cargado / `SafeAreaView` deprecated de `react-native` rompe login / AppState listener race con `initDb` / `SecureStore` puede colgar primera vez en APK / `DefaultTheme` React Navigation pinta blanco / tab bar `useColorScheme` contradice G-M38 / Network Security Config falta para HTTP / NativeWind+Hermes+new-arch edge case)
+  - **Adenda VI**: gotchas operativos consolidados (sync enums packages, brand chaos 5 nombres, Int4 CLP overflow >$2.147B, 0 CHECK constraints en DB)
+- **Plan F-1..F-15 distribuido**: tareas asignadas por owner (CEO=decisiones estratégicas D1-D5, Worktree=features grandes, Cowork=coordinación+verificación, CLI=quick wins infra/scripts, Pierre=copies+legal+placeholders DYSA). Día 1 = 15 quick wins (~6h, baja backlog 62→47).
+- **Brand identity chaos detectado**: 5 nombres distintos en uso simultáneo (POS Chile / Dyon / Dy / SystemQR / zgamersa) entre web + mobile + dominios + Sentry org + Cloudflare R2. Bloquea submit Apple/Google porque el nombre del store debe coincidir con copy/legal. CEO debe decidir nombre canónico (D1).
+- **Modo standby explícito**: tras entregar mensajes a CEO + Worktree, NO ejecutar más cambios hasta recibir instrucción (D1-D5 confirmadas / Worktree asigna primer item / Pierre entrega 5 placeholders DYSA para `/privacidad`). El reporte es el contrato — modificaciones futuras van como Adenda VII.
+
+### Gotchas reforzados (no nuevos, pero validados en sesión)
+
+- **G-M43 reemplaza G-M40** (que era falsa): el bundle no se rompía por NativeWind 4.2.x sino por la combinación de 3 problemas encadenados.
+- **G-M40 marcada como OBSOLETA** en `pos-chile-mobile.md` línea 356.
+
+### Pendientes user-only / próximos owners
+
+- **CEO**: confirmar D1 (nombre canónico de marca) + D2 (proveedor SII e-boleta DTE) + D3 (Apple Developer + Google Play accounts) + D4 (presupuesto Pierre Legal Dysa para revisar policy) + D5 (timing F-8 SII vs F-11 mobile submit).
+- **Worktree**: leer `reporte.md` completo (2.752 líneas) y asignar primer item de F-1..F-15 al CLI.
+- **Pierre**: entregar 5 placeholders DYSA (razón social, RUT, dirección, email DPO, teléfono) para reemplazar en `apps/web/app/privacidad/page.tsx`.
+- **CLI (cuando autorizado)**: ejecutar día 1 = 15 quick wins (M9n hooksPath relativo, sync MetodoPago entre paquetes, isDark=false default mobile, etc.).
+- `reporte.md` sigue UNTRACKED — decidir si commitear como `docs/reporte-2026-04-28.md` o mantener volátil hasta que el plan F-1..F-15 esté en ejecución.
