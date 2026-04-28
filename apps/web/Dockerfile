@@ -47,4 +47,14 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# M9m 2026-04-28 — HEALTHCHECK directive a nivel imagen, complemento al
+# healthcheck de docker-compose.yml. Sirve cuando alguien corre la imagen
+# directo con `docker run` (sin compose) — en ese contexto compose no
+# inyecta su healthcheck y queda sin probe. Usa wget porque alpine no
+# trae curl (gotcha repetido en compose). 127.0.0.1 explícito porque
+# alpine resuelve "localhost" como ::1 IPv6 y Next.js escucha solo
+# IPv4 0.0.0.0 → "Connection refused" silencioso.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1
+
 CMD ["node", "apps/web/server.js"]
