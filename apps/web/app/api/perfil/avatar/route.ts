@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import sharp from "sharp";
 
 import { prisma } from "@repo/db";
@@ -95,6 +95,7 @@ export async function POST(request: Request) {
 
   revalidatePath("/perfil");
   revalidatePath("/", "layout");
+  revalidateTag(`usuario:${userId}`); // invalida unstable_cache del layout
 
   return NextResponse.json({
     ok: true,

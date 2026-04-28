@@ -14,8 +14,12 @@ export function Header({
   avatar: string | null;
   alertasStockCount?: number;
 }) {
+  // Header con fondo sólido (sin backdrop-filter): el `backdrop-blur` GPU-pesado
+  // causaba 1-2 frames de "borroso" cuando el compositor del browser recomponía
+  // la capa al volver a la pestaña (Chromium Memory Saver, Safari tab freeze).
+  // Con bg sólido la capa se compone instantáneo en cualquier browser.
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 sm:px-6">
       {/* Mobile: hamburger + brand */}
       <div className="flex items-center gap-3 md:hidden">
         <MobileNav rol={user.rol} alertasStockCount={alertasStockCount} />

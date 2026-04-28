@@ -1,10 +1,29 @@
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { contarAlertasStock } from "./alertas/actions";
+
+/**
+ * Cache del perfil del usuario por 5 min, taggeado por `usuario:{id}`.
+ * El layout corre en CADA navegación del dashboard; sin cache, eran ~30-80ms
+ * de Postgres extra por cada click. Las acciones de /perfil ya invalidan el
+ * tag (ver `app/(dashboard)/perfil/actions.ts:revalidateTag(...)`), así que
+ * los cambios de avatar/nombre se reflejan al instante.
+ */
+const getPerfilCacheado = (userId: number) =>
+  unstable_cache(
+    () =>
+      prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { avatar: true, nombre: true, email: true },
+      }),
+    ["dashboard-perfil", String(userId)],
+    { revalidate: 300, tags: [`usuario:${userId}`] },
+  )();
 
 export default async function DashboardLayout({
   children,
@@ -18,10 +37,7 @@ export default async function DashboardLayout({
   }
 
   const [perfil, alertasCount] = await Promise.all([
-    prisma.usuario.findUnique({
-      where: { id: Number(session.user.id) },
-      select: { avatar: true, nombre: true, email: true },
-    }),
+    getPerfilCacheado(Number(session.user.id)),
     contarAlertasStock().catch(() => 0),
   ]);
 

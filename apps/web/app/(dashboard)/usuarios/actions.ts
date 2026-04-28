@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma, Rol } from "@repo/db";
@@ -128,6 +128,7 @@ export async function actualizarUsuario(
     await prisma.usuario.update({ where: { id }, data: updateData });
 
     revalidatePath("/usuarios");
+    revalidateTag(`usuario:${id}`); // invalida cache del layout (avatar/nombre/email)
     return { ok: true };
   } catch (err) {
     if (err instanceof z.ZodError) {

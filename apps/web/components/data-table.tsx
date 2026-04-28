@@ -114,7 +114,7 @@ export function DataTable<TData, TValue>({
           <TableHeader
             className={
               stickyHeader
-                ? "sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40"
+                ? "sticky top-0 z-10 bg-muted"
                 : undefined
             }
           >

@@ -51,7 +51,7 @@ function TooltipContent({
       initial={{ opacity: 0, y: 4, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur-sm ring-1 ring-black/5 dark:ring-white/10"
+      className="rounded-lg border bg-background px-3 py-2 text-xs shadow-lg ring-1 ring-black/5 dark:ring-white/10"
     >
       <p className="font-medium">{d.etiqueta}</p>
       <p className="text-muted-foreground">

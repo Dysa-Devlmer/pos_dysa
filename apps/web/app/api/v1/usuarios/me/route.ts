@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { prisma } from "@repo/db";
 import { z } from "zod";
 import {
@@ -89,6 +90,10 @@ export async function PUT(request: Request) {
       createdAt: true,
     },
   });
+
+  // Invalida unstable_cache del layout (header avatar/nombre/email).
+  // Sin esto, el SPA web tarda hasta 5 min en reflejar cambios desde mobile.
+  revalidateTag(`usuario:${id}`);
 
   return jsonOk(updated);
 }

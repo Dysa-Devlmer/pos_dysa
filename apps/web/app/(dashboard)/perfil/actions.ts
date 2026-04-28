@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@repo/db";
@@ -97,6 +97,7 @@ export async function actualizarPerfil(
 
     revalidatePath("/perfil");
     revalidatePath("/", "layout"); // refresca Header (avatar/nombre)
+    revalidateTag(`usuario:${id}`); // invalida unstable_cache del layout
     return { ok: true };
   } catch (err) {
     if (err instanceof z.ZodError) {
