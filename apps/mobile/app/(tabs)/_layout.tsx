@@ -15,14 +15,23 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
  * - MaterialIcons directo (mejor cobertura cross-platform que SF Symbols
  *   fallback del template; IconSymbol solo mapeaba 4 nombres).
  * - Colores tomados de la paleta SystemQR (tailwind.config.js): primary
- *   naranja #f97316 activo, neutro #737373 inactivo. En dark mode
- *   invertimos el inactivo a #a3a3a3 para contraste.
+ *   naranja #f97316 activo, neutro #737373 inactivo.
+ * - Light forzado por G-M38 (la paleta SystemQR está tuneada solo para
+ *   light; en dark el texto #171717 queda invisible sobre #0a0a0a). El
+ *   fix SS6 (audit Claude Code CLI 2026-04-28) hardcodea `isDark=false`
+ *   para evitar el split visual jarring que ocurría cuando el OS tenía
+ *   dark mode activado: tab bar pintaba #0a0a0a y el resto del app
+ *   #f5f1ea (forced light) → desalineación cohesiva. Para soportar
+ *   dark real hay que portar primero los tokens dark del web.
  * - headerShown:false — cada pantalla renderiza su propio header con
  *   SafeArea y acciones contextuales.
  */
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  // SS6 — forzamos light. Mantenemos referencia al hook por si se
+  // reactiva dark mode tras portar tokens del web (consistente con
+  // app/_layout.tsx que aplica el mismo patrón).
+  void useColorScheme;
+  const isDark = false;
 
   return (
     <Tabs
