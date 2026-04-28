@@ -5,6 +5,7 @@ import { View, ActivityIndicator } from "react-native";
 import {
   DarkTheme,
   DefaultTheme,
+  type Theme,
   ThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -52,6 +53,43 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * SystemQRTheme — theme React Navigation alineado con la paleta SystemQR.
+ *
+ * SS5 (audit Claude Code CLI 2026-04-28): el `DefaultTheme` de
+ * `@react-navigation/native` define `background: 'rgb(255, 255, 255)'`
+ * (blanco puro), distinto del ivory `#f5f1ea` que usa el resto de la app
+ * vía NativeWind. Cuando NativeWind no aplicaba un className por race
+ * con CSS bundle (raro pero ocurre en dev/release edge cases), el
+ * fondo del Stack quedaba blanco RN sobre el cual los componentes
+ * ivory se veían "lavados" / "sin tema SystemQR".
+ *
+ * Este custom theme declara los mismos tokens como base del Stack —
+ * NativeWind sigue siendo la fuente de verdad para componentes con
+ * className, pero el fondo Stack también está aligned, eliminando el
+ * salto visual. Tokens copiados de `tailwind.config.js`:
+ *
+ *   - primary: #f97316 (orange-500)
+ *   - background: #f5f1ea (ivory)
+ *   - card: #ffffff
+ *   - text/foreground: #171717 (near-black)
+ *   - border: #e4decf
+ *   - notification (destructive): #ef4444
+ */
+const SystemQRTheme: Theme = {
+  ...DefaultTheme,
+  dark: false,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: "#f97316",
+    background: "#f5f1ea",
+    card: "#ffffff",
+    text: "#171717",
+    border: "#e4decf",
+    notification: "#ef4444",
+  },
+};
 
 // SS3 (audit Claude Code CLI 2026-04-28) — el listener AppState fue
 // MOVIDO al useEffect de RootLayoutNav. Antes estaba registrado a
@@ -163,8 +201,14 @@ function RootLayoutNav() {
     );
   }
 
+  // SS5: usar custom SystemQRTheme en vez de DefaultTheme RN para que el
+  // fondo del Stack quede ivory y no blanco puro. `colorScheme` siempre es
+  // "light" por G-M38 — el ternario queda como hook para futura reactivación
+  // dark mode (cuando se porten tokens del web). Ver SystemQRTheme const arriba.
+  const theme = colorScheme === "light" ? SystemQRTheme : DarkTheme;
+
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={theme}>
       {/* SyncBanner va FUERA del Stack para persistir en todas las tabs
           y la pantalla de login. Su visibilidad la decide el propio
           componente según el estado del store. */}
