@@ -54,7 +54,14 @@ services:
         condition: service_healthy
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    # M9k 2026-04-28 — pin major.minor en lugar de :latest. El tag :latest
+    # produce drift no controlado entre rebuilds (un `docker pull` puede
+    # traer una versión nueva con UI o schema breaking changes el lunes
+    # cuando el viernes andaba). 8.14 es la última estable de la serie 8
+    # validada con esta config; al actualizar a 9.x o superior, probar
+    # primero en local porque el schema interno de pgadmin migra (puede
+    # requerir backup del volumen `pos-pgadmin-data`).
+    image: dpage/pgadmin4:8.14
     container_name: pos-pgadmin
     restart: unless-stopped
     environment:
