@@ -248,6 +248,10 @@ model AperturaCaja {
   @@index([cajaId])
   @@index([usuarioId])
   @@index([estado])
+  // SCH3 (migration 20260428000000) — partial unique index a nivel SQL
+  // (no expresable en Prisma schema): solo UNA apertura puede estar
+  // ABIERTA por caja a la vez. Previene race condition de doble apertura.
+  // Index: aperturas_caja_caja_id_estado_abierta_unique
   @@map("aperturas_caja")
 }
 
@@ -393,5 +397,10 @@ model MobileRelease {
   @@unique([platform, version])
   @@unique([platform, versionCode])
   @@index([platform, isLatest])
+  // SCH3 (migration 20260428000000) — partial unique index a nivel SQL:
+  // solo UN release puede ser is_latest=true por platform. Previene
+  // race condition al publicar dos releases simultáneamente sin que el
+  // toggle atómico del POST cubra ambas conexiones concurrentes.
+  // Index: mobile_releases_platform_is_latest_unique
   @@map("mobile_releases")
 }
