@@ -232,6 +232,13 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 1ae8226 | fix(dashboard): React #418 hydration (timeZone es-CL) + Recharts width(-1) en sparkline |
+| d823990 | fix(deploy): aplicar `prisma migrate deploy` en cada deploy via container ad-hoc (incidente schema desync, gotcha 96) |
+| 5c469c0 | chore(gitignore): excluir `.claude/launch.json` + `.claude/scheduled_tasks.lock` runtime |
+| 4ac93ac | chore(sentry): filtrar `Error: aborted` (Node http abortIncoming, ruido browser/Cloudflare cancel) |
+| 6b1db35 | feat(caja): admin `/cajas` CRUD + auditoría `/caja/movimientos` + `lib/nav-active.ts` (longest-prefix) — completa F-9 admin |
+| 0d9c417 | fix(privacy): scrub PII en console.error pre-Sentry (gotcha 100) — 3 callsites login + comentario en error.tsx por gotcha 90 |
+| 9d31048 | chore(actions): bump actions/checkout 4.2.2 → 6.0.2 (Dependabot PR #3) |
 | a6feb73 | chore(mobile): R2 custom domain `apk-dy-pos.zgamersa.com` reemplaza `pub-*.r2.dev` (rate-limited) |
 | b01fe99 | fix(auth): redirect a `/login` sin `callbackUrl` — URL limpia + cierra vector open-redirect |
 | 4dbdd63 | fix(mobile): `apps/mobile/.npmrc` con hoisted linker + remueve `@shopify/react-native-skia` directo (transitivo de victory-native) |
@@ -439,6 +446,20 @@ $transaction:
 
 95. **Worktrees branched de main viejo deben rebasearse antes de squash-merge** — F-9 worktree (`worktree-agent-a848a7aa`) fue creado desde commit `5b67622` (pre-F-5). Al volver al main para integrar, main había avanzado (08e4d33, 8863f82, 1f89fda). Sin rebase, `git merge --squash` introduciría conflictos en `dependabot.yml`/`ci.yml`. Pattern canónico: **DENTRO del worktree** correr `git fetch origin && git rebase origin/main` antes de hacer el commit final. Luego desde main: `git merge --squash <branch>`. Después: `git worktree remove <path> -f -f` (doble `-f` necesario si el agente sigue lockeando vía pid file en `.git/worktrees/<name>/locked`).
 
+96. **`prisma migrate deploy` en cada deploy via container ad-hoc — Dockerfile multi-stage NO copia `prisma/`** — incidente prod 2026-04-27: deploy de F-3 + F-9 dejó BD sin `ventas.deleted_at` ni tablas `cajas`/`aperturas_caja`/`movimientos_caja`/`pagos_venta` → `P2022 column does not exist` en runtime → `/` devuelve 500 con digest. Causa raíz: el container `pos-web` corre código nuevo pero la BD se creó con `db push` al inicio y nunca aplicó migraciones. El Dockerfile multi-stage solo copia el cliente Prisma generado (no `packages/db/prisma/`) → imposible correr `migrate deploy` desde el container. Fix canónico (`scripts/deploy.sh` fase 5b/6, commit `d823990`): (a) `tar -czf prisma-migrations.tar.gz packages/db/prisma/`, (b) `scp` al VPS `/tmp/`, (c) `docker run --rm --network pos-chile-network -v /tmp/prisma:/app -e DATABASE_URL=postgresql://...@pos-postgres:5432/... node:22-alpine sh -c "cd /app && npx -y prisma@6.x migrate deploy"`, (d) cleanup `/tmp`. Las migraciones IDEMPOTENTES (gotcha 91) hacen seguro re-correr en cada deploy aunque no haya pendientes. Pattern usable también para `prisma db seed` post-deploy.
+
+97. **`Date.toLocaleString` sin `timeZone` causa React #418 (text content mismatch)** — observado 2026-04-27 en `/` dashboard `ultimas-ventas.tsx`: server (Docker en UTC) renderiza fechas con TZ del proceso, browser cliente las renderiza con TZ local del usuario → strings divergen → React error #418. Fix (commit `1ae8226`): forzar `timeZone: "America/Santiago"` explícito en el `Intl.DateTimeFormat` o `formatFechaHora()`. Regla general: **cualquier formateo de fecha visible en SSR debe declarar timeZone explícito** — nunca confiar en TZ del runtime. Aplica a `formatFecha`, `formatFechaHora`, `formatHora`, formatters de reportes/boletas. Ya cubría dashboard chart pero no las "últimas ventas".
+
+98. **Recharts `<ResponsiveContainer>` SSR width(-1) — diferir mount al cliente con flag `useEffect`** — pattern ya conocido para `VentasChart` (gotcha 44), pero olvidado al crear `Sparkline`. Síntoma: warning console "width(-1) height(-1) of chart should be greater than 0" en cada render SSR. Fix (commit `1ae8226`): `const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), []); return mounted ? <ResponsiveContainer>...</ResponsiveContainer> : <div className="placeholder" />`. **Replicable a cualquier wrapper Recharts** que viva en server component árbol. Considerar extraer helper `<ChartMount>` reusable si aparece más de 3×.
+
+99. **Sentry "Error: aborted" del Node `_http_server abortIncoming` es ruido — filtrar en `beforeSend`** — abortIncoming ocurre cuando cliente cierra conexión antes que server termine response (browser refresh, fetch cancelado, Cloudflare health-check con timeout corto). Sentry lo marca super_low actionability — NO es bug nuestro. Fix (commit `4ac93ac`, `sentry.server.config.ts`): en `beforeSend(event, hint)` chequear `hint?.originalException?.message === "aborted"` o `event.exception?.values?.[0]?.value?.match(/^aborted$/i)` → `return null` (drop). Mantiene señal real (errors aplicativos) sin contaminar dashboard. Pattern aplicable a otros errors transientes conocidos (ECONNRESET, EPIPE de clientes que se desconectan).
+
+100. **`console.error(err)` con objetos Prisma loguea PII raw a stdout — fix selectivo** — `error.meta.target` y a veces los parámetros de query incluyen `email`, `rut` u otros campos que `beforeSend` de Sentry sanitiza pero `console.error` escribe a stdout del container ANTES (Sentry lo recoge después). Si el container forwardea logs a Datadog/CloudWatch/journald, queda PII en plaintext. Fix canónico (commit `0d9c417`, 3 callsites en `login/actions.ts:127`, `api/v1/auth/login/route.ts:166` y un tercero): cambiar `console.error("[ctx] message:", error.message, error)` → `console.error("[ctx] message:", error.name + ": " + error.message)`. El stack completo va a Sentry donde `beforeSend` aplica `pseudonymize`. **Regla**: nunca pasar el objeto error completo a `console.error`/`console.log` en code paths que vean PII. Ver también gotcha 90 (split privacy.ts edge/server).
+
+101. **Client component que importa enum desde `@repo/db` crashea bundle browser** — observado al crear `caja/movimientos/nuevo/movimiento-form.tsx`: el `'use client'` form importaba `TipoMovimientoCaja` del Prisma enum vía `@repo/db`, pero `packages/db/src/client.ts` evalúa `process.env.POS_DATABASE_URL` en module-scope → bundle browser tira `Cannot read property of undefined (reading 'POS_DATABASE_URL')` o falla silente al hidratar. Fix canónico (commit `6b1db35`): replicar el enum como string union local en el client component (`type TipoMovimientoCaja = "INGRESO" | "EGRESO" | "VENTA" | "DEVOLUCION" | "AJUSTE"`). Server actions sí pueden importar de `@repo/db`. **Regla**: `@repo/db` solo desde server runtime. Para shared types entre server/client, usar `@repo/api-client/types` (Zod-based, sin Node deps) o copiar local.
+
+102. **Routing con prefijos comunes requiere longest-prefix-match para "active link"** — observado en sidebar tras agregar `/cajas` (admin) junto a `/caja` (POS): `pathname.startsWith("/caja")` matcheaba ambas, marcaba ambas activas a la vez. Y `/caja/movimientos` también disparaba `/caja` activo. Fix canónico (commit `6b1db35`, `lib/nav-active.ts`): helper `isNavActive(pathname, href)` que (a) requiere boundary `/` después del prefijo (`/caja` no matchea `/cajas`), (b) elige el match **más largo** entre rutas candidatas (`/caja/movimientos` gana sobre `/caja`). Reusable desde sidebar + mobile-nav. Pattern aplicable a cualquier nav con submenús.
+
 89. **Skill custom `privacy-compliance` existe en `.claude/skills/` — activado y listo** — creado 2026-04-23 para resolver el gap del CEO ("Privacy Policy URL pública — borrador legal + página /privacidad"). Cubre Ley 19.628 + Ley 21.719 + Apple App Privacy + Google Data Safety con foco exclusivo en el stack POS Chile. **280 KB · 6240 líneas · 14 archivos** (1 SKILL.md + 8 references + 3 scripts Python funcionales + 3 templates production-ready). Invocable con `/privacy-compliance`. Incluye `pii_scanner.py` que detectó 15 campos PII del schema actual + 2 findings high genuinos (usos de console.log con PII sin `pseudonymize()` — pendiente de arreglar antes de activar Sentry en prod). **Local-only** (`.claude/skills/` gitignored). Plan de rollout multi-agente en `docs/privacy-rollout-plan.md` con 5 fases A-E distribuidas entre CLI/Worktree/Cowork/Gemini/Pierre; cubre endpoints ARCOP+, consent banner, RAT, DPAs, app privacy + data safety forms. **Comparación con bar existente**: senior-security = 44 KB, senior-architect = 72 KB, mobile-design = 268 KB, privacy-compliance = 280 KB (tier más alto del ecosistema). No duplicar contenido legal en `memory/context/` — el skill es la fuente de verdad; memory/ solo apunta al skill.
 
 ---
@@ -592,3 +613,25 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 - Sentry DSN: pegar en GH secrets como `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN`
 - Renovate App: install desde GitHub Marketplace
 - EAS submit iOS: requiere Apple Developer account interactivo
+
+## Sesión 2026-04-27 — Stabilization F-3+F-9 prod + UX polish
+
+**Contexto**: post-merge de F-3+F-9 a prod, deploy expuso 2 incidentes runtime (schema desync + React #418) + ruido Sentry detectado + admin gap en UI cajas. Cierre con PR #3 Dependabot mergeada.
+
+### Decisiones técnicas
+
+- **Incidente schema desync prod (gotcha 96)**: deploy F-3+F-9 dejó BD sin columnas/tablas → P2022 → 500 en `/`. Causa: Dockerfile no copia `prisma/`, `deploy.sh` nunca aplicaba migrations. Fix definitivo: nueva fase 5b/6 que tar+scp+`migrate deploy` via container `node:22-alpine` ad-hoc unido a `pos-chile-network`. Migrations idempotentes (gotcha 91) hacen seguro re-correrlas.
+- **PII en console.error pre-Sentry**: el `beforeSend` de Sentry pseudonimiza, pero `console.error(err)` con objetos Prisma escribe `meta.target` (email/rut) a stdout del container ANTES → si forwarder de logs (Datadog/journald) lo captura, leak. Fix en 3 callsites login: `error.name + ": " + error.message` only. Error completo va a Sentry filtrado. Comentario explícito en `error.tsx` del por qué NO usa `captureExceptionSafe` (gotcha 90).
+- **Sentry filter "Error: aborted"**: abortIncoming Node http es ruido (browser cancela / Cloudflare health-check). `beforeSend` retorna null si match. Mejora signal-to-noise sin perder bugs reales.
+- **Admin /cajas + /caja/movimientos auditoría**: cierra gap operativo de F-9 (antes requería SQL para gestionar registradoras y auditar movimientos). CRUD ADMIN-only en `/cajas`. `/caja/movimientos` con filtros (rango, tipo, caja, usuario, apertura, motivo) + 5 cards totales + cap 1000 filas. CAJERO ve solo sus aperturas.
+- **`lib/nav-active.ts` longest-prefix**: resolución doble — `/caja` no matchea `/cajas` (boundary `/`) y `/caja/movimientos` gana sobre `/caja` (más específico). Reusable desde sidebar + mobile-nav.
+- **Client components NO importan `@repo/db`** (gotcha 101): replicar enums local. Aplica también a futuros forms con enums (`Rol`, `MetodoPago`, `AuditAccion`).
+- **React #418 + Recharts width(-1)**: timeZone "America/Santiago" explícito en `formatFechaHora` (`ultimas-ventas`) + sparkline gate de mount con `useEffect` (mismo pattern que `VentasChart` ya tenía).
+- **Dependabot PR #3 mergeada**: actions/checkout 4.2.2 → 6.0.2. Confirma que el flujo Dependabot post-tightening (gotcha 94) funciona — solo bumps de github-actions, sin avalanche npm.
+- **`.gitignore` artifacts Claude Code**: `.claude/launch.json` + `.claude/scheduled_tasks.lock` runtime-only.
+
+### Pendientes user-only
+
+- Verificar en prod browser que `/` carga sin error #418 ni warnings sparkline (smoke test post-deploy).
+- Sentry dashboard: confirmar que "Error: aborted" ya NO aparece como issue.
+- Si llegan más migraciones manuales: usar IDEMPOTENT defensive pattern (gotcha 91) — generar baseline solo desde `prisma migrate dev` cuando posible.

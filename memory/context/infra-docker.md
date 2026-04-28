@@ -244,13 +244,21 @@ docker compose down -v
 # Desarrollo local (apunta a localhost:5432)
 pnpm db:migrate dev --name nombre_migracion
 
-# Deploy migraciones en prod (no interactivo)
-docker compose run --rm pos-web \
-  pnpm --filter @repo/db prisma migrate deploy
+# Deploy migraciones en prod — vive en scripts/deploy.sh (commit d823990)
+./scripts/deploy.sh
+# → fase 5b/6: tar + scp + container ad-hoc node:22-alpine que corre
+#   `npx prisma@6.x migrate deploy` unido a pos-chile-network
+#   (resuelve pos-postgres:5432 por DNS interno).
 ```
 
 > [!danger] Nunca `db:push` en producción
 > `prisma db:push` es para dev — aplica schema sin crear archivo de migración. En prod siempre `migrate deploy` para historial y rollback. `db:push` ignora migraciones pendientes → estado divergente.
+
+> [!warning] Dockerfile NO copia `packages/db/prisma/`
+> El multi-stage builder solo copia el cliente Prisma generado al final stage para reducir tamaño (gotcha 96). Consecuencia: **NO se puede correr `prisma migrate deploy` desde el container `pos-web`** — falta `schema.prisma` y la carpeta `migrations/`. La fase 5b/6 de `deploy.sh` resuelve esto empaquetando localmente y corriendo `migrate deploy` en un container `node:22-alpine` ad-hoc.
+
+> [!info] Migraciones manuales DEBEN ser idempotentes
+> Las migraciones escritas a mano (no generadas por `prisma migrate dev`) deben usar `CREATE TABLE IF NOT EXISTS`, `ALTER TYPE ... ADD VALUE IF NOT EXISTS`, `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` para FKs, `CREATE INDEX IF NOT EXISTS`. Razón (gotcha 91): la dev DB suele tener drift por `db:push` durante experimentación; sin idempotencia falla el primer `migrate deploy` post-baseline. Pattern aplicado en `20260426*_*/migration.sql` (F-3 + F-9).
 
 ## Arquitectura de red (local)
 
