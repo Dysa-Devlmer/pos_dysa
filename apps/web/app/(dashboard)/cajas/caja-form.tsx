@@ -20,7 +20,7 @@ import {
   crearCaja,
   type CajaInput,
 } from "./actions";
-import type { CajaRow } from "./cajas-table";
+import type { CajaRow } from "./types";
 
 interface CajaFormProps {
   open: boolean;

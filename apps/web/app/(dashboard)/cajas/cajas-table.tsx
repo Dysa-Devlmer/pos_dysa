@@ -15,14 +15,7 @@ import { estadoBadge } from "@/lib/badge-styles";
 
 import { eliminarCaja } from "./actions";
 import { CajaForm } from "./caja-form";
-
-export interface CajaRow {
-  id: number;
-  nombre: string;
-  ubicacion: string | null;
-  activa: boolean;
-  aperturas: number;
-}
+import type { CajaRow } from "./types";
 
 export interface CajasTableProps {
   data: CajaRow[];

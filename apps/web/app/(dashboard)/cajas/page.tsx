@@ -3,7 +3,8 @@ import { prisma } from "@repo/db";
 
 import { auth } from "@/auth";
 
-import { CajasTable, type CajaRow } from "./cajas-table";
+import { CajasTable } from "./cajas-table";
+import type { CajaRow } from "./types";
 
 export const dynamic = "force-dynamic";
 
