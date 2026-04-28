@@ -24,6 +24,10 @@ export interface UltimasVentasProps {
   data: UltimaVentaRow[];
 }
 
+// IMPORTANTE: timeZone explícito "America/Santiago" — sin él, el server (UTC en
+// Docker) y el browser (TZ local) producen strings distintos y dispara React
+// error #418 (hydration mismatch: "Text content does not match server-rendered
+// HTML"). Forzar Chile en ambos lados garantiza que el texto SSR === client.
 function formatFechaHora(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -33,6 +37,7 @@ function formatFechaHora(iso: string): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Santiago",
   }).format(d);
 }
 

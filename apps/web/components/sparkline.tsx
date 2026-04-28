@@ -31,6 +31,12 @@ export function Sparkline({
   const id = React.useId();
   const gradientId = `sparkline-gradient-${id.replace(/:/g, "-")}`;
 
+  // ResponsiveContainer mide el padre en el primer render; en SSR el tamaño es 0
+  // → Recharts loguea "width(-1) height(-1) of chart should be greater than 0".
+  // Diferimos el mount al efecto cliente para evitar el warning.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
   const strokeColor =
     color ??
     (tone === "positive"
@@ -51,6 +57,7 @@ export function Sparkline({
 
   return (
     <div className={cn("w-full", className)} style={{ height }} aria-hidden>
+      {mounted ? (
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={series} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
           <defs>
@@ -73,6 +80,7 @@ export function Sparkline({
           />
         </AreaChart>
       </ResponsiveContainer>
+      ) : null}
     </div>
   );
 }
