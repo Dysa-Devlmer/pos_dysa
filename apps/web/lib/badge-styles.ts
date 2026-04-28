@@ -41,17 +41,6 @@ export function estadoBadge(activo: boolean): string {
   return activo ? SOFT_BADGE.success : SOFT_BADGE.muted;
 }
 
-// ─── Stock (derivado del stock vs alertaStock) ────────────────────────────
-export function stockBadge(
-  stock: number,
-  alertaStock: number,
-): { variant: "destructive" | "warning" | null; className: string } {
-  if (stock <= 0) return { variant: "destructive", className: SOFT_BADGE.destructive };
-  if (stock <= alertaStock)
-    return { variant: "warning", className: SOFT_BADGE.warning };
-  return { variant: null, className: "" };
-}
-
 // ─── Tipo de devolución ───────────────────────────────────────────────────
 export function devolucionBadge(esTotal: boolean): string {
   return esTotal ? SOFT_BADGE.destructive : SOFT_BADGE.warning;
