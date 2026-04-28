@@ -48,6 +48,11 @@ function MetodoPagoBadge({ metodo }: { metodo: Venta["metodoPago"] }) {
     DEBITO: "bg-primary/10 text-primary",
     CREDITO: "bg-warning/10 text-warning",
     TRANSFERENCIA: "bg-muted text-foreground",
+    // F-9 split tender (commit 60d5dd9): cuando una venta combina ≥2 métodos
+    // de pago, Prisma persiste `metodoPago = MIXTO` y el detalle queda en
+    // Pago[]. Color accent (chart-4 rosado) para distinguirlo visualmente
+    // de los métodos puros — en futuro se puede iconificar con un split icon.
+    MIXTO: "bg-accent text-accent-foreground",
   };
   return (
     <View className={`${map[metodo]} rounded-full px-2 py-0.5`}>
