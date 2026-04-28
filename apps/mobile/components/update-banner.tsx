@@ -1,7 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Modal,
@@ -190,22 +189,9 @@ export function UpdateBanner() {
   );
 }
 
-/**
- * Variante "loading" no exportada — no la uso porque un spinner en el
- * arranque por un update check es UX ruidoso. Si el fetch falla
- * silenciosamente, no pasa nada. Si tiene éxito, aparece el banner.
- * Si quieres debuggear, exportá este helper temporalmente.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _DebugLoadingBanner() {
-  const { isLoading } = useUpdateCheck();
-  if (!isLoading) return null;
-  return (
-    <View className="flex-row items-center justify-center gap-2 bg-muted px-4 py-1">
-      <ActivityIndicator size="small" color="#666" />
-      <Text className="text-muted-foreground text-xs">
-        Verificando actualizaciones…
-      </Text>
-    </View>
-  );
-}
+// _DebugLoadingBanner removido (M9c, 2026-04-28). Era un componente helper
+// no exportado con leading underscore que llamaba `useUpdateCheck()` adentro
+// y disparaba `react-hooks/rules-of-hooks` (ESLint no reconoce el patrón
+// `_PascalCase` como componente). Si hace falta debuggear el estado loading
+// del update check, recrear el componente con nombre `DebugLoadingBanner`
+// (sin underscore) y exportarlo temporalmente.
