@@ -18,6 +18,8 @@ aliases:
 **Aprobado por CEO:** ✅ 2026-04-22
 **Estado:** 🔄 M1-M6 completos — M7 prep listo (runbook + app.json + privacy rollout plan) — bloqueado esperando Pierre (cuentas Apple/Google, assets diseño, abogado Dysa, app records manuales en stores)
 
+> **🆕 2026-04-27 — Sprint Mobile QA pendiente:** El CEO + Claude Code CLI generaron `reporte.md` (1436 líneas, raíz del repo) con auditoría estática profunda del mobile. Define **Plan M1-M23** (numeración independiente del M1-M7 original — son fixes, no fases). Standby autorizado a actuar; arrancar por P0 (M1 expo-font useFonts, M2 theme tokens, M3 tabs colorScheme, M4 SafeArea, M5 authStore cascade, M6 Idempotency-Key, M7 AppState leak, M8 jest-expo, M9 ListEmptyComponent). **Hallazgo madre:** `expo-font` instalado pero `useFonts()` nunca llamado → fallback silencioso a system-ui (causa real "se ve horrible"). **Corrección crítica:** F-10 marcado cerrado pero a11y wiring nunca ocurrió (0 `accessibilityLabel/Role/hitSlop` en toda la app).
+
 ---
 
 ## 🚨 REGLA ABSOLUTA — Producción intocable hasta M7
