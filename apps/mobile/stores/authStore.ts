@@ -63,12 +63,36 @@ export const useAuthStore = create<AuthState>((set) => ({
    * en el apiClient para requests protegidas. No valida la firma del token
    * — eso lo hará el server al primer request.
    *
+   * SS4 (audit Claude Code CLI 2026-04-28) — `getItemAsync` puede tardar
+   * 5-10 segundos la primera ejecución en devices nuevos sin Keystore
+   * inicializado, o colgarse indefinidamente en devices con Keystore
+   * corrupto (raro pero observado post-update Android). Sin timeout, el
+   * splash queda permanente y el usuario interpreta como "app colgada".
+   *
+   * Race con timeout de 3 segundos: si SecureStore no responde, asumimos
+   * "sin token" y dejamos que el guard de routing redirija a login. El
+   * usuario puede iniciar sesión normalmente; en el peor caso re-tipea
+   * sus credenciales una vez.
+   *
    * TODO M3: decodificar claims del JWT para popular `user` sin hit al
    * servidor, o llamar GET /api/v1/auth/me para refrescar el user.
    */
   bootstrap: async () => {
+    const SECURE_STORE_TIMEOUT_MS = 3000;
+
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await Promise.race<string | null>([
+        SecureStore.getItemAsync(TOKEN_KEY),
+        new Promise<string | null>((resolve) =>
+          setTimeout(() => {
+            console.warn(
+              "[authStore] SecureStore.getItemAsync excedió 3s — asumimos sin token",
+            );
+            resolve(null);
+          }, SECURE_STORE_TIMEOUT_MS),
+        ),
+      ]);
+
       if (token) {
         apiClient.setToken(token);
         set({ token, isLoading: false });
