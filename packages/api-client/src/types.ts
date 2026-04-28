@@ -157,11 +157,40 @@ export const VentaSchema = z.object({
 export type Venta = z.infer<typeof VentaSchema>;
 
 /**
+ * Pago individual dentro de una venta — F-9 split tender.
+ *
+ * Replica `PagoSchema` del server (`apps/web/app/api/v1/ventas/route.ts:73`)
+ * sin el refine MIXTO: el server valida que un pago individual no sea
+ * MIXTO (porque MIXTO solo aplica al rollup de la venta), pero acá lo
+ * dejamos al runtime del server para no duplicar lógica que pueda
+ * desincronizarse. El cliente mobile debería usar valores puros
+ * (EFECTIVO/DEBITO/CREDITO/TRANSFERENCIA) al construir Pago[].
+ *
+ * CV2 — agregado 2026-04-28 (audit Claude Code CLI).
+ */
+export const PagoSchema = z.object({
+  metodo: MetodoPagoSchema,
+  monto: z.number().int().positive(),
+  referencia: z.string().max(100).optional(),
+});
+export type Pago = z.infer<typeof PagoSchema>;
+
+/**
  * Body para POST /api/v1/ventas.
  *
  * OJO — el server espera `items` (no `detalles`). El field `detalles` solo
  * existe en el response (VentaSchema). Este schema está alineado con el
  * handler real en apps/web/app/api/v1/ventas/route.ts.
+ *
+ * F-9 split tender (commit 60d5dd9, audit 2026-04-26):
+ * - Si la venta tiene un solo método, el cliente puede mandar
+ *   `metodoPago: "EFECTIVO"` (legacy single-payment, mobile pre-F9).
+ * - Si la venta tiene ≥2 métodos, el cliente DEBE mandar `pagos: [...]`
+ *   con la lista detallada. El server calcula `metodoPago` rollup
+ *   (= método único o MIXTO si hay >1).
+ * - `montoRecibido` es opcional, solo aplica al componente EFECTIVO
+ *   del split tender. Si se omite, server lo computa automáticamente
+ *   desde la suma de pagos en efectivo.
  *
  * Descuentos: M6+ (todavía no soportado por el server).
  */
@@ -174,7 +203,13 @@ export const CrearVentaRequestSchema = z.object({
       }),
     )
     .min(1),
-  metodoPago: MetodoPagoSchema,
+  // metodoPago legacy: si NO viene `pagos`, se usa para compat single-payment.
+  metodoPago: MetodoPagoSchema.optional(),
+  // CV2 (split tender): array de pagos cuando la venta combina ≥2 métodos.
+  pagos: z.array(PagoSchema).min(1).optional(),
+  // CV3: monto efectivo recibido. El server computa `vuelto = recibido -
+  // sumaEfectivo` (-1 si negativo). Solo sentido si hay pago EFECTIVO.
+  montoRecibido: z.number().int().min(0).optional(),
   clienteId: z.number().int().nullable().optional(),
 });
 export type CrearVentaRequest = z.infer<typeof CrearVentaRequestSchema>;

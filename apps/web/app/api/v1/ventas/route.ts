@@ -82,7 +82,13 @@ const PagoSchema = z.object({
 
 const CreateVentaSchema = z.object({
   items: z.array(ItemSchema).min(1),
-  clienteId: z.number().int().positive().optional(),
+  // CV3 (audit 2026-04-28) — `.nullable()` agregado para alinear con
+  // Prisma (`clienteId Int?`) y con el shared schema mobile que envía
+  // `null` cuando la venta no tiene cliente asociado. Sin nullable, un
+  // POST {clienteId: null} caía a 400 silenciosamente. La rama Prisma
+  // ya manejaba ambos undefined y null como "sin cliente"; esto solo
+  // alinea el contract de input.
+  clienteId: z.number().int().positive().nullable().optional(),
   // metodoPago legacy: si NO viene `pagos`, se usa para compatibilidad mobile/CLI.
   metodoPago: z.nativeEnum(MetodoPago).optional(),
   pagos: z.array(PagoSchema).min(1).optional(),
