@@ -232,6 +232,7 @@ $transaction:
 
 | Hash | Descripción |
 |------|-------------|
+| 24167c9 | perf(ux): elimina jank tab refocus (`backdrop-blur` removido de surfaces always-on) + cachea perfil header con `unstable_cache` 5min + revalidateTag(`usuario:{id}`) en 4 callsites |
 | 1ae8226 | fix(dashboard): React #418 hydration (timeZone es-CL) + Recharts width(-1) en sparkline |
 | d823990 | fix(deploy): aplicar `prisma migrate deploy` en cada deploy via container ad-hoc (incidente schema desync, gotcha 96) |
 | 5c469c0 | chore(gitignore): excluir `.claude/launch.json` + `.claude/scheduled_tasks.lock` runtime |
@@ -460,6 +461,10 @@ $transaction:
 
 102. **Routing con prefijos comunes requiere longest-prefix-match para "active link"** — observado en sidebar tras agregar `/cajas` (admin) junto a `/caja` (POS): `pathname.startsWith("/caja")` matcheaba ambas, marcaba ambas activas a la vez. Y `/caja/movimientos` también disparaba `/caja` activo. Fix canónico (commit `6b1db35`, `lib/nav-active.ts`): helper `isNavActive(pathname, href)` que (a) requiere boundary `/` después del prefijo (`/caja` no matchea `/cajas`), (b) elige el match **más largo** entre rutas candidatas (`/caja/movimientos` gana sobre `/caja`). Reusable desde sidebar + mobile-nav. Pattern aplicable a cualquier nav con submenús.
 
+103. **`backdrop-filter: blur` causa jank al volver de tab-freeze (Chromium Memory Saver / Safari background freeze / Firefox throttle)** — síntoma reportado 2026-04-27: al cambiar de pestaña y volver, la web "tarda unos segundos y se ve borrosa". Causa: el blur GPU-pesado tarda 1-2 frames extra al recomponer la capa cuando el compositor sale de tab-freeze. Más visible en surfaces always-on (header global, sticky table headers). Fix canónico (commit `24167c9`): **eliminar blur de surfaces persistentes** (`components/header.tsx`, `components/data-table.tsx` sticky thead, tooltips Recharts) — usar bg sólido. **Mantener blur ON-DEMAND** (mobile drawer overlay) porque solo aparece cuando se abre, costo aceptable. Regla: si el surface está visible 100% del tiempo en el viewport, NO usar `backdrop-filter`; si aparece on-demand <30% del tiempo, OK.
+
+104. **`unstable_cache` para queries del layout dashboard — invalidar con `revalidateTag` desde TODAS las mutations** — el layout corre en CADA navegación del dashboard; sin cache, el `prisma.usuario.findUnique` para mostrar avatar/nombre del header cuesta 30-80ms de Postgres por click. Pattern canónico (commit `24167c9`, `app/(dashboard)/layout.tsx`): envolver en `unstable_cache(fn, ["dashboard-perfil", String(userId)], { revalidate: 300, tags: [`usuario:${userId}`] })`. **CRÍTICO**: agregar `revalidateTag(\`usuario:${id}\`)` en TODOS los callsites que mutan `Usuario` — sin esto, cambio de avatar/nombre tarda hasta 5min en reflejarse. En POS Chile son 4 callsites: `perfil/actions.ts::actualizarPerfil`, `usuarios/actions.ts::actualizarUsuario`, `api/perfil/avatar/route.ts::POST`, `api/v1/usuarios/me/route.ts::PUT`. Pattern aplicable a cualquier query frequent-read low-write (config global, session preferences, branding por tenant).
+
 89. **Skill custom `privacy-compliance` existe en `.claude/skills/` — activado y listo** — creado 2026-04-23 para resolver el gap del CEO ("Privacy Policy URL pública — borrador legal + página /privacidad"). Cubre Ley 19.628 + Ley 21.719 + Apple App Privacy + Google Data Safety con foco exclusivo en el stack POS Chile. **280 KB · 6240 líneas · 14 archivos** (1 SKILL.md + 8 references + 3 scripts Python funcionales + 3 templates production-ready). Invocable con `/privacy-compliance`. Incluye `pii_scanner.py` que detectó 15 campos PII del schema actual + 2 findings high genuinos (usos de console.log con PII sin `pseudonymize()` — pendiente de arreglar antes de activar Sentry en prod). **Local-only** (`.claude/skills/` gitignored). Plan de rollout multi-agente en `docs/privacy-rollout-plan.md` con 5 fases A-E distribuidas entre CLI/Worktree/Cowork/Gemini/Pierre; cubre endpoints ARCOP+, consent banner, RAT, DPAs, app privacy + data safety forms. **Comparación con bar existente**: senior-security = 44 KB, senior-architect = 72 KB, mobile-design = 268 KB, privacy-compliance = 280 KB (tier más alto del ecosistema). No duplicar contenido legal en `memory/context/` — el skill es la fuente de verdad; memory/ solo apunta al skill.
 
 ---
@@ -629,9 +634,13 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 - **React #418 + Recharts width(-1)**: timeZone "America/Santiago" explícito en `formatFechaHora` (`ultimas-ventas`) + sparkline gate de mount con `useEffect` (mismo pattern que `VentasChart` ya tenía).
 - **Dependabot PR #3 mergeada**: actions/checkout 4.2.2 → 6.0.2. Confirma que el flujo Dependabot post-tightening (gotcha 94) funciona — solo bumps de github-actions, sin avalanche npm.
 - **`.gitignore` artifacts Claude Code**: `.claude/launch.json` + `.claude/scheduled_tasks.lock` runtime-only.
+- **Tab refocus jank UX (commit `24167c9`)**: bug reportado por usuario "al volver a la pestaña, la web tarda y se ve borrosa". Doble fix: (a) `backdrop-filter: blur` removido de surfaces always-on (header, sticky table headers, Recharts tooltips) — gotcha 103; (b) `unstable_cache` 5min sobre el `findUnique` del perfil en `(dashboard)/layout.tsx` con `revalidateTag(\`usuario:{id}\`)` agregado en 4 callsites de mutación — gotcha 104.
+- **Reporte ejecutivo `reporte.md`** generado en raíz para entregar al CEO + Worktree (470 líneas, 11 secciones). Consolida estado del audit, epics cerrados (F-1/F-2/F-3/F-5/F-7/F-9/F-10), pendientes (F-6/F-8/F-11/F-12/F-13/F-14/F-15), incidentes 2026-04-26→27, faltantes user-only, score 78-82/100. Documento vivo — appendear ahí en lugar de crear paralelos.
 
 ### Pendientes user-only
 
 - Verificar en prod browser que `/` carga sin error #418 ni warnings sparkline (smoke test post-deploy).
 - Sentry dashboard: confirmar que "Error: aborted" ya NO aparece como issue.
 - Si llegan más migraciones manuales: usar IDEMPOTENT defensive pattern (gotcha 91) — generar baseline solo desde `prisma migrate dev` cuando posible.
+- 2 errores TS bloqueantes CI antes del primer push: `restaurar-boton.tsx` import `restaurarVenta` + `badge-styles.ts` falta `MIXTO`.
+- Decidir si `reporte.md` se commitea como `docs(reporte): ...` separado o se mueve a `docs/reporte.md` permanente.
