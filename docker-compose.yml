@@ -3,6 +3,13 @@ services:
     image: postgres:16-alpine
     container_name: pos-postgres
     restart: unless-stopped
+    # M9l 2026-04-28 — límites de recursos para evitar memory leak runaway
+    # tumbando el VPS. Postgres con dataset SMB típico (1-3 clientes,
+    # ~10k ventas/mes) opera cómodo bajo 512m. shared_buffers default
+    # alpine es 128 MB, así que dejamos ~3× headroom para work_mem +
+    # connections + WAL.
+    mem_limit: 512m
+    cpus: 1.0
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pos_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pos_secret_2025}
@@ -28,6 +35,13 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: pos-web
     restart: unless-stopped
+    # M9l 2026-04-28 — Next.js standalone con Prisma + Sentry + react-pdf
+    # arranca en ~150-200 MB y bajo carga (PDF generation, dashboard charts)
+    # puede subir a 800-1200 MB. Cap a 2g previene OOM-killer del VPS y
+    # da margen para varias requests concurrentes. CPU 1.5 permite que
+    # PDF/XLSX rendering use múltiples cores sin acaparar el host.
+    mem_limit: 2g
+    cpus: 1.5
     environment:
       POS_DATABASE_URL: postgresql://${POSTGRES_USER:-pos_admin}:${POSTGRES_PASSWORD:-pos_secret_2025}@postgres:5432/${POSTGRES_DB:-pos_chile_db}?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-generar-con-openssl-rand-base64-32}
@@ -64,6 +78,12 @@ services:
     image: dpage/pgadmin4:8.14
     container_name: pos-pgadmin
     restart: unless-stopped
+    # M9l 2026-04-28 — pgAdmin Python con varios workers gunicorn corre
+    # cómodo bajo 512m. Si se accede frecuentemente puede subir, pero al
+    # ser una herramienta admin (no usuario final) un cap conservador
+    # protege al VPS sin afectar UX real.
+    mem_limit: 512m
+    cpus: 0.5
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@pos-chile.cl}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-pgadmin_secret_2025}
