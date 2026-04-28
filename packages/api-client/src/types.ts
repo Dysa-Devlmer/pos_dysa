@@ -95,6 +95,13 @@ export const MetodoPagoSchema = z.enum([
   "DEBITO",
   "CREDITO",
   "TRANSFERENCIA",
+  // F-9 split tender (commit 60d5dd9 + migration 20260426010000):
+  // cuando una venta combina ≥2 métodos, Prisma persiste `metodoPago = MIXTO`
+  // en la tabla raíz y el detalle queda en `Pago[]`. Sin este valor en el
+  // enum, GET /api/v1/ventas crashea en mobile al hacer .parse() porque zod
+  // rechaza el string MIXTO devuelto por el server. Identificado en CCC audit
+  // 2026-04-28 (CV1, reporte.md adenda V).
+  "MIXTO",
 ]);
 export type MetodoPago = z.infer<typeof MetodoPagoSchema>;
 
