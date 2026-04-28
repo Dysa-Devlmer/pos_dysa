@@ -244,6 +244,67 @@ ssh_run "
 
 success "Docker compose ejecutado en VPS"
 
+# ─── 5b. Prisma migrate deploy ───────────────────────────────────────────────
+# Por qué este paso existe (gotcha 96 — incidente 2026-04-27):
+#   El Dockerfile multi-stage NO incluye `packages/db/prisma/` en la imagen
+#   final (solo el cliente generado), así que NO podemos correr migrate
+#   desde el container `pos-web`. Si la BD de prod queda atrás respecto al
+#   schema, la app crashea con P2022 en runtime ("column does not exist").
+#
+# Estrategia: subir prisma/ al VPS y correr `migrate deploy` desde un
+# container `node:22-alpine` ad-hoc en la red `pos-chile-network` para que
+# pueda resolver `pos-postgres:5432` por DNS interno.
+#
+# Las migrations son idempotentes (IF NOT EXISTS / DO $$ EXCEPTION) — es
+# seguro re-correrlas. Si no hay pendientes, prisma reporta "Already in sync".
+header "5b/6 · Prisma migrate deploy"
+
+log "Empaquetando migrations locales..."
+PRISMA_TARBALL="/tmp/pos-prisma-$(date +%s).tar.gz"
+tar -czf "$PRISMA_TARBALL" -C packages/db prisma/
+
+log "Transfiriendo migrations al VPS..."
+scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
+  "$PRISMA_TARBALL" "${VPS_USER}@${VPS_HOST}:/tmp/pos-prisma.tar.gz"
+rm -f "$PRISMA_TARBALL"
+
+log "Aplicando migrations en BD de prod..."
+ssh_run "
+  set -e
+  cd /tmp
+  rm -rf pos-prisma && mkdir pos-prisma
+  tar -xzf pos-prisma.tar.gz -C pos-prisma
+  rm -f pos-prisma.tar.gz
+
+  POSTGRES_USER=\$(grep '^POSTGRES_USER=' ${VPS_DIR}/.env.docker | cut -d= -f2-)
+  POSTGRES_PASSWORD=\$(grep '^POSTGRES_PASSWORD=' ${VPS_DIR}/.env.docker | cut -d= -f2-)
+  POSTGRES_DB=\$(grep '^POSTGRES_DB=' ${VPS_DIR}/.env.docker | cut -d= -f2-)
+  DB_URL=\"postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@pos-postgres:5432/\${POSTGRES_DB}\"
+
+  # Esperar a que postgres esté ready después del recreate
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if docker exec pos-postgres pg_isready -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" &>/dev/null; then
+      echo 'Postgres listo'
+      break
+    fi
+    echo \"Esperando postgres (\$i/10)...\"
+    sleep 2
+  done
+
+  docker run --rm \
+    --network pos-chile-network \
+    -v /tmp/pos-prisma/prisma:/app/prisma:ro \
+    -e POS_DATABASE_URL=\"\$DB_URL\" \
+    -e DATABASE_URL=\"\$DB_URL\" \
+    -w /app \
+    node:22-alpine \
+    sh -c 'npx -y prisma@6.19.3 migrate deploy --schema=/app/prisma/schema.prisma'
+
+  rm -rf /tmp/pos-prisma
+"
+
+success "Migrations aplicadas en BD de prod"
+
 # ─── 6. Health check ─────────────────────────────────────────────────────────
 header "6/6 · Health Check"
 
