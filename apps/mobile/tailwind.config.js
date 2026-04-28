@@ -18,12 +18,18 @@ module.exports = {
     "./hooks/**/*.{ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
-  // Gotcha G-M36 — `important: "html"` solo afecta web (CSS specificity).
-  // En native, nativewind/preset lo descarta (no hay cascade). Garantiza que
-  // las utilities de Tailwind ganen sobre los átomos `r-*` que inyecta
-  // react-native-web después del bundle CSS.
-  important: "html",
-  darkMode: ["class", "[data-theme='dark']"],
+  // 2026-04-28 — `important: "html"` REMOVIDO (gotcha G-M36 obsoleto).
+  //
+  // 2026-04-28 (M0.5) — `darkMode` simplificado a `"class"`. La forma
+  // `["class", "[data-theme='dark']"]` hacía que `nativewind/preset` emitiera
+  // la directiva `@cssInterop set darkMode attribute data-theme='dark';` en el
+  // CSS generado. Esa directiva es API de NativeWind 4.2.x y solo la entiende
+  // `react-native-css-interop@0.2.x`; sin embargo `nativewind@4.1.23` (la versión
+  // que pinneamos para evitar el bug de css-interop@0.2.3) declara dep en
+  // `css-interop@0.1.22`, cuyo `lightningcss` revienta con
+  // `SyntaxError: Unexpected token Ident("set")` al toparse con `@cssInterop`.
+  // Mismatch de packaging upstream — ver gotcha G-M43.
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
