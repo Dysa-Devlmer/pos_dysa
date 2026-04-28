@@ -1,10 +1,29 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "globalDependencies": ["**/.env.*local", "**/.env"],
-  "globalEnv": ["NODE_ENV", "DATABASE_URL"],
+  "globalDependencies": ["**/.env.*local", "**/.env", "tsconfig.json"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "POS_DATABASE_URL",
+    "NEXTAUTH_SECRET",
+    "AUTH_SECRET",
+    "NEXTAUTH_URL",
+    "NEXT_PUBLIC_URL",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "SENTRY_DSN",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "PII_LOG_SALT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "^db:generate"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "!**/*.test.{ts,tsx}",
+        "!**/__tests__/**"
+      ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
@@ -13,16 +32,37 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "inputs": [
+        "**/*.{ts,tsx,js,jsx,mjs,cjs}",
+        "package.json",
+        "eslint.config.{js,mjs,cjs,ts}",
+        ".eslintrc*",
+        ".eslintignore"
+      ],
+      "outputs": []
     },
     "type-check": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^db:generate"],
+      "inputs": [
+        "**/*.{ts,tsx}",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "outputs": []
     },
     "test": {
       "dependsOn": ["^db:generate"],
-      "outputs": []
+      "inputs": [
+        "**/*.{ts,tsx,js,jsx}",
+        "package.json",
+        "vitest.config.*",
+        "jest.config.*"
+      ],
+      "outputs": ["coverage/**"]
     },
     "db:generate": {
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/client/**"],
       "cache": false
     },
     "db:push": {
