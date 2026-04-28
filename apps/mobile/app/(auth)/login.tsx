@@ -7,8 +7,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
 } from "react-native";
+// SS2 (audit Claude Code CLI 2026-04-28) — usar SafeAreaView de
+// react-native-safe-area-context (ya en deps mobile) en vez del de
+// react-native, que está deprecated y NO respeta gesture insets dinámicos
+// en Android 12+ (gestos navigation) ni Dynamic Island en iPhone 14+.
+// Síntoma observable: en device real, los <TextInput> de email/password
+// quedaban tapados por status bar superior o teclado, impidiendo que el
+// usuario tipee → "no entra al login".
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
