@@ -53,17 +53,19 @@ const queryClient = new QueryClient({
   },
 });
 
-// React Query no sabe de AppState en RN → hook manual para que los queries
-// se refresquen al volver a foreground (equivalente a window focus en web).
-AppState.addEventListener("change", (status: AppStateStatus) => {
-  focusManager.setFocused(status === "active");
-  // Al volver a foreground, intentar drenar la queue offline (M5). El
-  // syncStore internamente chequea isOnline + isSyncing y retorna
-  // "offline"/"skipped" si no corresponde.
-  if (status === "active") {
-    void useSyncStore.getState().syncNow();
-  }
-});
+// SS3 (audit Claude Code CLI 2026-04-28) — el listener AppState fue
+// MOVIDO al useEffect de RootLayoutNav. Antes estaba registrado a
+// module-scope (al evaluar el archivo), lo que generaba dos problemas:
+//
+//   1. RACE CONDITION: si el primer "change → active" llegaba antes que
+//      `initDb()` creara la tabla `sync_queue`, `syncNow()` crasheaba con
+//      "table does not exist" silenciosamente. Ahora el guard
+//      `useSyncStore.getState().isReady` evita el flush hasta que
+//      `bootstrap()` haya completado initDb + counts iniciales.
+//
+//   2. NO CLEANUP: hot-reload en dev re-evaluaba el módulo y registraba
+//      múltiples listeners (memory leak observable). El listener dentro
+//      del useEffect se desuscribe con `subscription.remove()`.
 
 /**
  * Route guard global — M2 Auth.
@@ -124,6 +126,23 @@ function RootLayoutNav() {
       }
     })();
   }, [bootstrap, syncBootstrap]);
+
+  // SS3 — AppState listener con cleanup. React Query no sabe de AppState
+  // en RN, así que avisamos manualmente al focusManager y disparamos un
+  // sync drain al volver a foreground. Guard `isReady` evita correr
+  // syncNow() antes de que initDb() haya creado las tablas.
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (status: AppStateStatus) => {
+        focusManager.setFocused(status === "active");
+        if (status === "active" && useSyncStore.getState().isReady) {
+          void useSyncStore.getState().syncNow();
+        }
+      },
+    );
+    return () => subscription.remove();
+  }, []);
 
   useProtectedRoute(token, isLoading);
 

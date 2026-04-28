@@ -39,6 +39,13 @@ type SyncState = {
   pendingCount: number;
   failedCount: number;
   lastSync: Date | null;
+  // SS3 (audit Claude Code CLI 2026-04-28) — flag para evitar race condition
+  // entre `AppState change → "active"` y `bootstrap()`. El listener de
+  // _layout.tsx llamaba `syncNow()` al cambiar a foreground, pero si eso
+  // ocurría antes de que `initDb()` creara la tabla `sync_queue`, syncNow
+  // crasheaba con "table does not exist". Ahora bootstrap() setea isReady
+  // al final y el listener consulta este flag antes de drenar la queue.
+  isReady: boolean;
 
   bootstrap: () => Promise<void>;
   refreshCounts: () => Promise<void>;
@@ -64,6 +71,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   pendingCount: 0,
   failedCount: 0,
   lastSync: null,
+  isReady: false,
 
   bootstrap: async () => {
     // Estado inicial de NetInfo (awaited — evita un frame con isOnline
@@ -98,6 +106,12 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (get().isOnline) {
       void get().refreshProductosCache();
     }
+
+    // SS3: marcar el store como listo. Después de este punto, syncNow()
+    // es safe — initDb() ya completó (lo asegura RootLayoutNav que awaitea
+    // initDb() ANTES de syncBootstrap()), y los counts iniciales ya están
+    // computados.
+    set({ isReady: true });
   },
 
   refreshProductosCache: async () => {
