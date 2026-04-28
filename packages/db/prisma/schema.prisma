@@ -122,10 +122,18 @@ model Categoria {
 }
 
 model Producto {
-  id           Int      @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   nombre       String
   descripcion  String?
-  codigoBarras String   @unique @map("codigo_barras")
+  codigoBarras String  @unique @map("codigo_barras")
+  // ⚠ SCH1 deferred to F-8 SII sprint (2026-04-28).
+  // PostgreSQL Int4 max es 2.147B CLP. Migración a BigInt postergada
+  // porque (a) ticket SMB promedio es $50k = 43.000× under limit, (b)
+  // operación B2B con IVA bloqueada hasta F-8 SII por decisión CEO D1,
+  // (c) hacer la migración hoy = 6-8h breaking changes en TS types.
+  // GUARDRAIL ACTIVO: CHECK constraint productos_precio_int4_guardrail_chk
+  // (migration 20260428030000) falla con error claro si precio > 1.5B.
+  // Migration path documentado en el header de esa migration.
   precio       Int
   stock        Int      @default(0)
   alertaStock  Int      @default(5) @map("alerta_stock")
@@ -178,6 +186,9 @@ model Venta {
   id             Int        @id @default(autoincrement())
   numeroBoleta   String     @unique @map("numero_boleta")
   fecha          DateTime   @default(now())
+  // ⚠ SCH1 deferred — ver comentario en Producto.precio.
+  // GUARDRAILS ACTIVOS: ventas_subtotal_int4_guardrail_chk +
+  // ventas_total_int4_guardrail_chk (migration 20260428030000).
   subtotal       Int
   descuentoPct   Decimal    @default(0) @map("descuento_pct") @db.Decimal(5, 2)
   descuentoMonto Int        @default(0) @map("descuento_monto")
