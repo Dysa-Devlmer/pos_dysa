@@ -87,6 +87,19 @@ module.exports = {
         md: "10px",
         sm: "8px",
       },
+      // SS1 (2026-04-28) — Inter mapeada por weight, cargada en
+      // app/_layout.tsx vía `useFonts()` de @expo-google-fonts/inter.
+      // En NativeWind 4 hay que registrar las variantes weight como
+      // fontFamily values (no como fontWeight) porque RN no resuelve
+      // weights dinámicamente igual que web — busca un fontFamily
+      // específico por nombre. Sin este mapping, `font-medium` sigue
+      // cayendo a system-ui aunque la font esté loaded.
+      fontFamily: {
+        sans: ["Inter_400Regular"],
+        medium: ["Inter_500Medium"],
+        semibold: ["Inter_600SemiBold"],
+        bold: ["Inter_700Bold"],
+      },
     },
   },
   plugins: [],

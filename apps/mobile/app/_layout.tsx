@@ -12,6 +12,17 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
+// SS1 (audit Claude Code CLI 2026-04-28) — `expo-font` estaba instalado
+// pero `useFonts()` nunca se llamaba → fallback silencioso a `system-ui`
+// (Roboto Android, San Francisco iOS) en lugar de Inter (aproximación
+// a Geist que usa el web). Causa #1 de "se ve genérico/sin diseño".
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 
 // Mantener el splash hasta que el bootstrap termine — sin esto, en release
 // el splash con dark backgroundColor #000000 queda visible para siempre
@@ -136,6 +147,18 @@ function useProtectedRoute(token: string | null, isLoading: boolean) {
 function RootLayoutNav() {
   const { token, isLoading, bootstrap } = useAuth();
   const syncBootstrap = useSyncStore((s) => s.bootstrap);
+
+  // SS1 — cargar fonts Inter para que NativeWind aplique tipografía
+  // custom alineada con web (que usa Geist via next/font/google). Inter
+  // es la aproximación funcional más cercana disponible para RN.
+  // `useFonts` retorna [loaded, error] — bloqueamos render hasta loaded.
+  // Si error, seguimos con system fonts (degradación silenciosa).
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
   // Forzamos light mode — gotcha G-M38. La paleta SystemQR (#f5f1ea ivory +
   // #171717 near-black) esta diseñada solo para light. Si dejamos que
   // useColorScheme() lea prefers-color-scheme y entre en DarkTheme, React
@@ -184,16 +207,21 @@ function RootLayoutNav() {
 
   useProtectedRoute(token, isLoading);
 
-  // Ocultar splash una vez que el auth bootstrap terminó. Si esto no se
-  // llama, el splash nativo queda permanente → pantalla negra (en dark)
-  // o blanca (en light) sin forma de recuperarse.
+  // Ocultar splash una vez que el auth bootstrap Y las fonts terminaron.
+  // Si esto no se llama, el splash nativo queda permanente → pantalla
+  // negra (en dark) o blanca (en light) sin forma de recuperarse.
+  // SS1 — antes solo esperaba `isLoading`; ahora también espera `fontsLoaded`
+  // (con fallback a `fontError` para no colgar la app si Google Fonts no
+  // resuelve — ej. device offline en primer arranque).
+  const ready = !isLoading && (fontsLoaded || !!fontError);
+
   useEffect(() => {
-    if (!isLoading) {
+    if (ready) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isLoading]);
+  }, [ready]);
 
-  if (isLoading) {
+  if (!ready) {
     return (
       <View className="bg-background flex-1 items-center justify-center">
         <ActivityIndicator size="large" color="#f97316" />
