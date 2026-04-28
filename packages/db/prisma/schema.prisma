@@ -47,18 +47,21 @@ model Usuario {
   password  String
   rol       Rol      @default(CAJERO)
   activo    Boolean  @default(true)
-  avatar    String?  // Data URL base64 (JPEG 200x200 comprimido, ~50-100 KB)
+  avatar    String? // Data URL base64 (JPEG 200x200 comprimido, ~50-100 KB)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  ventas         Venta[]
-  ventasBorradas Venta[]      @relation("VentaDeletedBy")
-  accounts       Account[]
-  sessions       Session[]
-  devoluciones   Devolucion[]
-  auditLogs      AuditLog[]
-  aperturasCaja  AperturaCaja[]
-  movimientosCaja MovimientoCaja[]
+  ventas               Venta[]
+  ventasBorradas       Venta[]          @relation("VentaDeletedBy")
+  clientesBorrados     Cliente[]        @relation("ClienteDeletedBy")
+  devolucionesBorradas Devolucion[]     @relation("DevolucionDeletedBy")
+  movimientosBorrados  MovimientoCaja[] @relation("MovimientoCajaDeletedBy")
+  accounts             Account[]
+  sessions             Session[]
+  devoluciones         Devolucion[]
+  auditLogs            AuditLog[]
+  aperturasCaja        AperturaCaja[]
+  movimientosCaja      MovimientoCaja[]
 
   @@map("usuarios")
 }
@@ -144,30 +147,40 @@ model Producto {
 }
 
 model Cliente {
-  id            Int       @id @default(autoincrement())
-  rut           String    @unique
-  nombre        String
-  email         String?
-  telefono      String?
-  direccion     String?
-  compras       Int       @default(0)
-  ultimaCompra  DateTime? @map("ultima_compra")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id           Int       @id @default(autoincrement())
+  rut          String    @unique
+  nombre       String
+  email        String?
+  telefono     String?
+  direccion    String?
+  compras      Int       @default(0)
+  ultimaCompra DateTime? @map("ultima_compra")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Soft-delete (F-3 extension audit 2026-04-28) — borrar físicamente
+  // un cliente cae las FK de ventas a NULL perdiendo trazabilidad
+  // histórica. Soft-delete preserva el vínculo para reportes Z y
+  // compliance Ley 21.719 (data retention SII = 6 años).
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        Int?      @map("deleted_by")
+  deletionReason   String?   @map("deletion_reason")
+  deletedByUsuario Usuario?  @relation("ClienteDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   ventas Venta[]
 
   @@index([rut])
+  @@index([deletedAt])
   @@map("clientes")
 }
 
 model Venta {
-  id           Int        @id @default(autoincrement())
-  numeroBoleta String     @unique @map("numero_boleta")
-  fecha        DateTime   @default(now())
+  id             Int        @id @default(autoincrement())
+  numeroBoleta   String     @unique @map("numero_boleta")
+  fecha          DateTime   @default(now())
   subtotal       Int
-  descuentoPct   Decimal  @default(0) @db.Decimal(5, 2) @map("descuento_pct")
-  descuentoMonto Int      @default(0) @map("descuento_monto")
+  descuentoPct   Decimal    @default(0) @map("descuento_pct") @db.Decimal(5, 2)
+  descuentoMonto Int        @default(0) @map("descuento_monto")
   impuesto       Int
   total          Int
   metodoPago     MetodoPago @default(EFECTIVO) @map("metodo_pago")
@@ -181,10 +194,10 @@ model Venta {
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
   // Soft-delete (F-3 audit) — los listados activos filtran por deletedAt = null
-  deletedAt       DateTime? @map("deleted_at")
-  deletedBy       Int?      @map("deleted_by")
-  deletionReason  String?   @map("deletion_reason")
-  deletedByUsuario Usuario? @relation("VentaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        Int?      @map("deleted_by")
+  deletionReason   String?   @map("deletion_reason")
+  deletedByUsuario Usuario?  @relation("VentaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   // F-9: Caja con split tender
   // - aperturaId: FK a la AperturaCaja activa al momento de la venta (audit + cierre Z).
@@ -193,10 +206,10 @@ model Venta {
   // - metodoPago se mantiene en la tabla raíz por back-compat con queries existentes
   //   (filtros, reportes, dashboard). Se popula con el método único si pagos.length==1
   //   o con MIXTO si hay >1 método.
-  aperturaId     Int?         @map("apertura_id")
-  apertura       AperturaCaja? @relation(fields: [aperturaId], references: [id], onDelete: SetNull)
-  montoRecibido  Int?         @map("monto_recibido")
-  vuelto         Int?
+  aperturaId    Int?          @map("apertura_id")
+  apertura      AperturaCaja? @relation(fields: [aperturaId], references: [id], onDelete: SetNull)
+  montoRecibido Int?          @map("monto_recibido")
+  vuelto        Int?
 
   detalles     DetalleVenta[]
   devoluciones Devolucion[]
@@ -228,22 +241,22 @@ model Caja {
 }
 
 model AperturaCaja {
-  id                   Int            @id @default(autoincrement())
-  cajaId               Int            @map("caja_id")
-  caja                 Caja           @relation(fields: [cajaId], references: [id])
-  usuarioId            Int            @map("usuario_id")
-  usuario              Usuario        @relation(fields: [usuarioId], references: [id])
-  montoInicial         Int            @map("monto_inicial")
-  fechaApertura        DateTime       @default(now()) @map("fecha_apertura")
-  fechaCierre          DateTime?      @map("fecha_cierre")
-  montoFinalDeclarado  Int?           @map("monto_final_declarado")
-  montoFinalSistema    Int?           @map("monto_final_sistema")
-  diferencia           Int?
-  observaciones        String?
-  estado               EstadoApertura @default(ABIERTA)
+  id                  Int            @id @default(autoincrement())
+  cajaId              Int            @map("caja_id")
+  caja                Caja           @relation(fields: [cajaId], references: [id])
+  usuarioId           Int            @map("usuario_id")
+  usuario             Usuario        @relation(fields: [usuarioId], references: [id])
+  montoInicial        Int            @map("monto_inicial")
+  fechaApertura       DateTime       @default(now()) @map("fecha_apertura")
+  fechaCierre         DateTime?      @map("fecha_cierre")
+  montoFinalDeclarado Int?           @map("monto_final_declarado")
+  montoFinalSistema   Int?           @map("monto_final_sistema")
+  diferencia          Int?
+  observaciones       String?
+  estado              EstadoApertura @default(ABIERTA)
 
-  ventas       Venta[]
-  movimientos  MovimientoCaja[]
+  ventas      Venta[]
+  movimientos MovimientoCaja[]
 
   @@index([cajaId])
   @@index([usuarioId])
@@ -256,18 +269,28 @@ model AperturaCaja {
 }
 
 model MovimientoCaja {
-  id          Int                 @id @default(autoincrement())
-  aperturaId  Int                 @map("apertura_id")
-  apertura    AperturaCaja        @relation(fields: [aperturaId], references: [id], onDelete: Cascade)
-  tipo        TipoMovimientoCaja
-  monto       Int
-  motivo      String
-  usuarioId   Int                 @map("usuario_id")
-  usuario     Usuario             @relation(fields: [usuarioId], references: [id])
-  fecha       DateTime            @default(now())
+  id         Int                @id @default(autoincrement())
+  aperturaId Int                @map("apertura_id")
+  apertura   AperturaCaja       @relation(fields: [aperturaId], references: [id], onDelete: Cascade)
+  tipo       TipoMovimientoCaja
+  monto      Int
+  motivo     String
+  usuarioId  Int                @map("usuario_id")
+  usuario    Usuario            @relation(fields: [usuarioId], references: [id])
+  fecha      DateTime           @default(now())
+
+  // Soft-delete (F-3 extension 2026-04-28) — movimientos manuales
+  // (INGRESO/EGRESO/RETIRO/AJUSTE) son la base del cierre Z. Borrar
+  // físicamente desbalancea el reporte sin dejar rastro. Soft-delete
+  // preserva integridad contable + auditoría.
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        Int?      @map("deleted_by")
+  deletionReason   String?   @map("deletion_reason")
+  deletedByUsuario Usuario?  @relation("MovimientoCajaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   @@index([aperturaId])
   @@index([fecha])
+  @@index([deletedAt])
   @@map("movimientos_caja")
 }
 
@@ -292,17 +315,17 @@ model PagoVenta {
 // ─────────────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id         Int          @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   tabla      String
-  registroId Int          @map("registro_id")
+  registroId Int         @map("registro_id")
   accion     AuditAccion
-  usuarioId  Int          @map("usuario_id")
+  usuarioId  Int         @map("usuario_id")
   diff       Json?
-  fecha      DateTime     @default(now())
+  fecha      DateTime    @default(now())
   ip         String?
-  userAgent  String?      @map("user_agent")
+  userAgent  String?     @map("user_agent")
 
-  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([tabla, registroId])
   @@index([fecha])
@@ -315,8 +338,8 @@ model DetalleVenta {
   precioUnitario Int @map("precio_unitario")
   subtotal       Int
 
-  ventaId    Int      @map("venta_id")
-  venta      Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId Int   @map("venta_id")
+  venta   Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 
   productoId Int      @map("producto_id")
   producto   Producto @relation(fields: [productoId], references: [id])
@@ -338,11 +361,20 @@ model Devolucion {
   creadoPor Int     @map("creado_por")
   usuario   Usuario @relation(fields: [creadoPor], references: [id])
 
+  // Soft-delete (F-3 extension 2026-04-28) — una devolución mal hecha
+  // (cantidad equivocada, motivo incorrecto) ya no se borra físicamente.
+  // Soft-delete deja rastro de la operación + razón.
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        Int?      @map("deleted_by")
+  deletionReason   String?   @map("deletion_reason")
+  deletedByUsuario Usuario?  @relation("DevolucionDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
   items DevolucionItem[]
 
   @@index([ventaId])
   @@index([fecha])
   @@index([creadoPor])
+  @@index([deletedAt])
   @@map("devoluciones")
 }
 
@@ -383,16 +415,16 @@ enum MobilePlatform {
 }
 
 model MobileRelease {
-  id          String          @id @default(cuid())
-  platform    MobilePlatform  @default(ANDROID)
-  version     String          // semver: "1.0.0"
-  versionCode Int             // android versionCode: 1, 2, 3... (ios: buildNumber)
-  apkUrl      String          @map("apk_url")     // Cloudflare R2 URL pública
-  notes       String?         @db.Text            // changelog visible al usuario
-  minVersion  String?         @map("min_version") // forceUpdate si installed < minVersion
-  isLatest    Boolean         @default(false) @map("is_latest")
-  publishedAt DateTime        @default(now()) @map("published_at")
-  publishedBy Int?            @map("published_by") // usuario.id del admin que publicó
+  id          String         @id @default(cuid())
+  platform    MobilePlatform @default(ANDROID)
+  version     String // semver: "1.0.0"
+  versionCode Int // android versionCode: 1, 2, 3... (ios: buildNumber)
+  apkUrl      String         @map("apk_url") // Cloudflare R2 URL pública
+  notes       String?        @db.Text // changelog visible al usuario
+  minVersion  String?        @map("min_version") // forceUpdate si installed < minVersion
+  isLatest    Boolean        @default(false) @map("is_latest")
+  publishedAt DateTime       @default(now()) @map("published_at")
+  publishedBy Int?           @map("published_by") // usuario.id del admin que publicó
 
   @@unique([platform, version])
   @@unique([platform, versionCode])
