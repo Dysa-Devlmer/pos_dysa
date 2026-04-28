@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@repo/db";
+import { sanitizeFilename } from "@repo/domain";
 import { auth } from "@/auth";
 import { CHILE_TZ, parseRangoDesdeURL } from "@/lib/reportes-fecha";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
@@ -160,7 +161,11 @@ export async function GET(request: Request) {
   // ─── Buffer y Response ────────────────────────────────────
   const buffer = await workbook.xlsx.writeBuffer();
   const body   = new Uint8Array(buffer as ArrayBuffer);
-  const filename = `reporte-ventas_${desdeYMD}_a_${hastaYMD}.xlsx`;
+  // sanitizeFilename: defense-in-depth contra CRLF injection en
+  // Content-Disposition (XLS1 audit). Aunque desdeYMD/hastaYMD vienen
+  // ya validadas como YYYY-MM-DD, el helper protege si en el futuro
+  // se incluyen valores de usuario en el filename.
+  const filename = sanitizeFilename(`reporte-ventas_${desdeYMD}_a_${hastaYMD}.xlsx`);
 
   return new Response(body, {
     status: 200,

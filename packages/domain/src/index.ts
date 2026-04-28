@@ -13,3 +13,4 @@ export { calcularIVA } from "./calcularIVA";
 export { calcularDesglose, type DesgloseVenta } from "./calcularDesglose";
 export { validarRUT } from "./validarRUT";
 export { formatRUT } from "./formatRUT";
+export { sanitizeFilename } from "./sanitizeFilename";

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 
 import { prisma } from "@repo/db";
+import { sanitizeFilename } from "@repo/domain";
 import { auth } from "@/auth";
 import {
   CHILE_TZ,
@@ -127,7 +128,11 @@ export async function GET(request: Request) {
     />,
   );
 
-  const filename = `reporte-ventas_${desdeYMD}_a_${hastaYMD}.pdf`;
+  // sanitizeFilename: defense-in-depth contra CRLF injection en
+  // Content-Disposition (PDF3 audit). desdeYMD/hastaYMD vienen
+  // validadas como YYYY-MM-DD por parseRangoDesdeURL — el helper
+  // sigue siendo barrera por si futura iteración incluye user input.
+  const filename = sanitizeFilename(`reporte-ventas_${desdeYMD}_a_${hastaYMD}.pdf`);
   const body = new Uint8Array(buffer);
 
   return new Response(body, {
