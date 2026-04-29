@@ -139,7 +139,11 @@ function useProtectedRoute(token: string | null, isLoading: boolean) {
     if (!token && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (token && inAuthGroup) {
-      router.replace("/(tabs)");
+      // Día 5 — redirect directo a la tab Caja (default landing post-login).
+      // Antes era `/(tabs)` que rompía el typed routes de expo-router 6
+      // (el grupo sin index.tsx no es ruta válida). `/caja` SÍ está en
+      // los typed routes generados.
+      router.replace("/caja");
     }
   }, [token, isLoading, segments, router]);
 }

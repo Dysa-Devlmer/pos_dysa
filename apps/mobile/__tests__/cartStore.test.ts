@@ -14,8 +14,13 @@
  *   + "test": "jest" en package.json scripts
  *   + jest.config.js con preset: 'jest-expo'
  */
+import type { Producto } from "@repo/api-client";
+
 import { useCartStore } from "../stores/cartStore";
 
+// Mock parcial: cartStore solo lee id/nombre/precio/stock del Producto.
+// Castamos via `unknown` para evitar `as any` (que oculta typos) sin tener
+// que poblar 15+ campos del shape Prisma completo.
 const productoMock = {
   id: 1,
   nombre: "Almuerzo ejecutivo",
@@ -24,7 +29,7 @@ const productoMock = {
   codigoBarras: "ALM-001",
   categoriaId: 1,
   alertaStock: 2,
-} as never;
+} as unknown as Producto;
 
 describe("cartStore", () => {
   beforeEach(() => {
