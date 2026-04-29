@@ -2,7 +2,7 @@
 
 **Estado**: ✅ Aceptada
 **Fecha**: 2026-04-29
-**Decidido por**: `[OWNER_NAME]` (CEO/Owner)
+**Decidido por**: `Pierre Benites Solier` (CEO/Owner)
 **Asesor técnico**: Cowork (verificador independiente)
 
 ## Contexto
@@ -33,7 +33,7 @@ Cada cliente que adquiere licencia recibe:
    - `pos-pgadmin` (admin DB para soporte)
 
 2. **Su propio dominio o subdominio**:
-   - Subdominio default: `<cliente-slug>.[BRAND_DOMAIN]`
+   - Subdominio default: `<cliente-slug>.dypos.zgamersa.com`
    - O dominio propio (cliente provisiona DNS, nosotros configuramos SSL).
 
 3. **APK mobile con branding del cliente**:

@@ -1,9 +1,8 @@
-# Visión del Proyecto
+# Visión del Proyecto — DyPos CL
 
-> **⚠️ DOCUMENTO CON PLACEHOLDERS** — los campos `[BRAND_NAME]`, `[OWNER_NAME]`,
-> `[OWNER_COMPANY]`, `[CONTACT_EMAIL]`, `[PRICING_MODEL]` se completan tras la
-> sesión de planeación SaaS (2026-04-29). Mientras tanto el archivo refleja
-> la dirección estratégica acordada.
+> **Documento autoritativo** — refleja la decisión estratégica confirmada
+> con `Pierre Benites Solier` (`Dyon Labs`) en la sesión 2026-04-29.
+> Cualquier cambio a esta visión requiere aprobación explícita del owner.
 
 ---
 
@@ -26,7 +25,7 @@ profesionalismo ni arquitectura escalable.
 
 ## 2. Propuesta de valor
 
-`[BRAND_NAME]` es un sistema POS dual web + mobile diseñado específicamente
+`DyPos CL` es un sistema POS dual web + mobile diseñado específicamente
 para el comerciante SMB chileno:
 
 - **Web** (Next.js 15 RSC) para administración: catálogo, reportes,
@@ -43,7 +42,7 @@ para el comerciante SMB chileno:
 
 ## 3. Diferenciación frente a competencia
 
-| Feature | Bsale | Defontana | `[BRAND_NAME]` |
+| Feature | Bsale | Defontana | `DyPos CL` |
 |---|---|---|---|
 | **e-boleta SII** | Plan extra ($+) | Incluido (enterprise) | ✅ Incluido (post F-8) |
 | **App mobile offline** | Limitada | No | ✅ Sí, primera clase |
@@ -51,23 +50,36 @@ para el comerciante SMB chileno:
 | **Kardex/inventario** | Plan extra | Sí | ✅ Sí (post F-12) |
 | **Despliegue dedicado** | Multi-tenant compartido | On-premise opcional caro | ✅ Por default |
 | **Lock-in / data portability** | Alto (SQL propietario) | Medio | ✅ Bajo (Postgres estándar, dump trivial) |
-| **Precio target SMB** | $50-150k/mes plan completo | $300k+/mes | `[PRICING_MODEL]` |
+| **Precio target SMB** | $50-150k/mes plan completo | $300k+/mes | $24.990–$84.990/mes según plan (ver [PRICING-STRATEGY.md](./PRICING-STRATEGY.md)) |
 
 ---
 
 ## 4. Modelo de negocio
 
-`[PRICING_MODEL]` — confirmar tras decisión CEO:
+**Modelo confirmado** (sesión 2026-04-29):
 
-- 🟢 Licencia perpetua única (cliente paga setup, queda dueño)
-- 🟢 Suscripción mensual con soporte
-- 🟢 Híbrido (setup + monthly support)
+**Suscripción mensual managed** — Dyon Labs hostea el VPS dedicado de cada
+cliente como parte del servicio. Sin setup fee de barrera (ver razón en
+[PRICING-STRATEGY.md](./PRICING-STRATEGY.md)).
 
-**Hosting**: cada cliente recibe su propio deployment dedicado. El cliente
-puede:
-- Arrendar el VPS gestionado por `[OWNER_COMPANY]` (fee mensual incluye host).
-- Self-hosted en su propia infraestructura (entregamos Docker Compose +
-  documentación de operación).
+3 planes:
+
+| Plan | Precio (CLP/mes) | Target |
+|---|---|---|
+| **Starter** | $24.990 | Comercio chico (1 punto venta, hasta 500 ventas/mes) |
+| **Pro** ⭐ | $44.990 | Comercio mediano (1-2 sucursales, hasta 5.000 ventas/mes) |
+| **Business** | $84.990 | Multi-sucursal, branding custom, API access, ventas ilimitadas |
+
+Add-on opcional **Onboarding Premium** $150.000 para clientes que quieran
+instalación + capacitación presencial 4h en sus instalaciones.
+
+Detalles + benchmark mercado + estrategia de lanzamiento en
+[PRICING-STRATEGY.md](./PRICING-STRATEGY.md).
+
+**Hosting**: el owner (Dyon Labs) hostea el VPS de cada cliente. El cliente
+NO se hace cargo de infraestructura — la promesa del producto es "olvidate
+del fierro, andá a tu negocio". Self-hosted NO se ofrece (excepción solo
+si cliente exige y firma waiver de soporte, $1.500.000 license perpetua).
 
 ---
 
@@ -81,7 +93,7 @@ puede:
 ┌──────────────────────────────────────────────────────────────┐
 │  Cliente "FERRETERÍA EL CLAVO" (ejemplo)                     │
 │                                                              │
-│   Subdominio:  ferreteriaelclavo.[BRAND_DOMAIN]              │
+│   Subdominio:  ferreteriaelclavo.dypos.zgamersa.com              │
 │   ó dominio propio (ej: pos.elclavo.cl)                     │
 │                                                              │
 │   ┌──────────────────────────────────────────────────────┐  │
@@ -101,7 +113,7 @@ puede:
 
 ┌──────────────────────────────────────────────────────────────┐
 │  Cliente "PANADERÍA DOÑA MARÍA"                              │
-│   Subdominio:  donamaria.[BRAND_DOMAIN]                      │
+│   Subdominio:  donamaria.dypos.zgamersa.com                      │
 │   VPS:         su propio Docker Compose                     │
 │   BD:          su propio Postgres                           │
 │   APK mobile:  branded "Doña María POS"                     │
@@ -180,14 +192,14 @@ Ver [docs/stack.md](./stack.md) (próximo) y [memory/context/stack-tech.md](../m
 |---|---|---|
 | **MVP listo** | Score técnico audit | 80/100 (hoy ~78/100) |
 | **Primer cliente real** | F-8 SII deployable | T+8 semanas |
-| **5 clientes pagantes** | Revenue mensual | `[TARGET_MRR]` |
+| **5 clientes pagantes** | Revenue mensual | $225k CLP MRR (5× Pro $44.990) |
 | **20 clientes pagantes** | Decisión migrar multi-tenant | T+12 meses |
 
 ---
 
 ## 9. Misión personal del autor
 
-`[OWNER_NAME]` (`[OWNER_COMPANY]`) creó este proyecto con la convicción de que
+`Pierre Benites Solier` (`Dyon Labs`) creó este proyecto con la convicción de que
 **el comerciante SMB chileno merece tecnología empresarial sin complicaciones
 empresariales**.
 
@@ -201,9 +213,9 @@ El sistema es:
 
 ## 10. Quién mantiene el proyecto
 
-`[OWNER_NAME]` — `[CONTACT_EMAIL]`
+`Pierre Benites Solier` — `private@zgamersa.com`
 
-Repositorio: privado, propietario `[OWNER_NAME]`.
+Repositorio: privado, propietario `Pierre Benites Solier`.
 Licensing: ver `LICENSE` (propiedad intelectual privada, derechos limitados de
 uso por cliente con licencia activa).
 

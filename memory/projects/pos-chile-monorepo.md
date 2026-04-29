@@ -18,17 +18,37 @@ aliases:
 
 > **🆕 2026-04-29 — PIVOT a SaaS confirmed.** El proyecto deja de ser
 > "single-tenant para uso propio" y se convierte en **POS-as-a-Service
-> con licencias vendibles**. Modelo elegido: **deployment dedicado por
-> cliente (Camino C)** — cada cliente con licencia recibe su propio
-> Docker Compose (web + postgres + pgadmin) con dominio/subdominio
-> propio, BD aislada, APK mobile con su branding. Aislamiento físico
-> imposibilita leak entre clientes (compliance Ley 21.719 trivial).
-> Decisión + alternativas en `docs/adr/001-arquitectura-saas-deployment-dedicado.md`.
-> Plan futuro de migración a multi-tenant compartido (cuando >20
-> clientes pagantes) en `docs/adr/002-multi-tenant-future-migration.md`.
-> La web actual `dy-pos.zgamersa.com` queda como **demo permanente**
-> del owner para presentar a prospects. Visión completa en
-> `docs/VISION.md`.
+> con licencias vendibles**.
+>
+> **Identidad oficial** (sesión 2026-04-29):
+> - Nombre del producto: **DyPos CL** (no más POS Chile / SystemQR / Dysa POS)
+> - Owner: **Pierre Benites Solier** — empresa **Dyon Labs**
+> - Email contacto/DPO: **private@zgamersa.com**
+> - Atribución commits: `Co-Authored-By: Ulmer Solier <bpier@zgamersa.com>`
+>
+> **Modelo elegido**: deployment dedicado por cliente (Camino C) +
+> hosting managed por Dyon Labs (cliente NO se hace cargo del fierro).
+> Cada cliente con licencia recibe su propio Docker Compose (web +
+> postgres + pgadmin) con dominio/subdominio propio, BD aislada, APK
+> mobile con su branding. Aislamiento físico = imposible leak entre
+> clientes.
+>
+> **Pricing (recomendación pendiente confirmación)**: Starter $24.990 /
+> Pro $44.990 / Business $84.990 CLP/mes. Setup gratis. Onboarding
+> Premium $150.000 opcional. Detalles en `docs/PRICING-STRATEGY.md`.
+>
+> **Distribución APK**: `apk-dypos.zgamersa.com` (subdominio confirmado).
+>
+> **Backup**: disco externo USB manual por ahora — el script
+> `scripts/backup-project.sh` ya soporta override `BACKUP_DEST=/Volumes/...`.
+>
+> **Mobile editar venta**: NO se permite en mobile (anti-fraude). Solo
+> ADMIN web puede con audit log + razón obligatoria. Filosofía completa
+> en `docs/SALES-PHILOSOPHY.md`.
+>
+> Decisiones autoritativas: `memory/decisions/2026-04-29-saas-pivot-decisions.md`.
+> Visión: `docs/VISION.md`. ADRs: `docs/adr/001-*.md`, `docs/adr/002-*.md`.
+> Web actual `dy-pos.zgamersa.com` queda como **demo permanente** del owner.
 
 ## Mapa de contexto
 

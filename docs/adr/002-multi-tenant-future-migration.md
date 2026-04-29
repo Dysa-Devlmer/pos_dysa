@@ -2,7 +2,7 @@
 
 **Estado**: 📋 Planeación — no ejecutar hasta que se cumpla el trigger
 **Fecha**: 2026-04-29
-**Decidido por**: `[OWNER_NAME]` (CEO/Owner)
+**Decidido por**: `Pierre Benites Solier` (CEO/Owner)
 **Asesor técnico**: Cowork
 
 ## Contexto
@@ -40,7 +40,7 @@ cuando se cumpla el trigger.
 2. **Cada modelo del schema agrega `tenantId Int`** (NOT NULL en producción).
 3. **Prisma middleware global** intercepta TODAS las queries y agrega
    automáticamente `where: { tenantId }` basado en el contexto del request.
-4. **Subdominios** mapean a tenantId: `ferreteriaelclavo.[BRAND_DOMAIN]` →
+4. **Subdominios** mapean a tenantId: `ferreteriaelclavo.dypos.zgamersa.com` →
    middleware resuelve `tenantId = 17`.
 5. **Backups por tenant** con `pg_dump --where="tenant_id = 17"` (o tablas
    particionadas por `tenantId` para mayor performance).

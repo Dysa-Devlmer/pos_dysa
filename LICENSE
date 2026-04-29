@@ -1,0 +1,120 @@
+DyPos CL — Licencia Comercial Propietaria
+Copyright (c) 2026 Pierre Benites Solier — Dyon Labs.
+Todos los derechos reservados.
+
+================================================================================
+
+1. PROPIEDAD INTELECTUAL
+
+   El software DyPos CL (en adelante, "el Software"), incluyendo su código
+   fuente, documentación, diseños de interfaz, esquemas de base de datos,
+   scripts de despliegue, assets gráficos y todo material asociado, es
+   propiedad exclusiva de Pierre Benites Solier, operando bajo la marca
+   comercial Dyon Labs (en adelante, "el Propietario").
+
+   El Software NO es de código abierto. La presencia del código en
+   repositorios accesibles (privados o no) NO constituye una autorización
+   para usar, copiar, modificar, distribuir o comercializar el mismo.
+
+2. USO PERMITIDO
+
+   El uso del Software está restringido a:
+
+   a) El Propietario, sin limitaciones.
+
+   b) Clientes con licencia activa vigente, en los términos del contrato
+      comercial firmado con Dyon Labs. La licencia activa es no-exclusiva,
+      no-transferible, limitada al período pagado y al uso definido en el
+      contrato (típicamente: operación de UN punto de venta o cadena de
+      puntos especificada en el contrato, por la entidad legal indicada).
+
+   c) Colaboradores autorizados (empleados, contratistas, agentes) del
+      Propietario, en función de las tareas asignadas, con confidencialidad
+      requerida.
+
+3. RESTRICCIONES
+
+   Sin autorización escrita previa del Propietario, está PROHIBIDO:
+
+   - Copiar, distribuir, sublicenciar o vender el Software o partes de él.
+   - Aplicar ingeniería inversa, descompilar o desensamblar el Software,
+     excepto en la medida estrictamente permitida por la ley aplicable.
+   - Crear obras derivadas basadas en el Software para fines comerciales
+     o académicos.
+   - Eliminar, alterar u ocultar avisos de derechos de autor, marcas
+     comerciales o atribuciones del Software.
+   - Usar el Software para crear un producto competitivo similar en
+     mercado SMB POS de Chile o Latinoamérica.
+
+4. PROPIEDAD DEL CLIENTE SOBRE SUS DATOS
+
+   El cliente con licencia vigente es propietario exclusivo de los datos
+   operacionales generados durante el uso del Software (catálogo de
+   productos, ventas, clientes, reportes). El Propietario:
+
+   - NO accede a los datos del cliente sin autorización explícita.
+   - Provee mecanismos de exportación de datos (pg_dump, CSV) a solicitud.
+   - Garantiza retención de datos según Ley 21.719 (6 años para datos
+     fiscales SII).
+   - Designa Data Protection Officer (DPO): Pierre Benites Solier
+     (private@zgamersa.com).
+
+   En caso de cancelación de licencia, el cliente recibe un dump completo
+   de su base de datos en formato PostgreSQL estándar dentro de los 30 días
+   posteriores. Después de ese plazo los datos del cliente pueden ser
+   eliminados del sistema según la política de retención.
+
+5. SOPORTE Y GARANTÍAS
+
+   El alcance del soporte está definido por el contrato comercial. Por
+   defecto:
+
+   - El Software se provee "TAL CUAL" (AS-IS) en su versión actual.
+   - El Propietario hace esfuerzo razonable para mantener uptime y
+     compatibilidad, pero no garantiza disponibilidad 100% ni ausencia
+     de errores.
+   - Los SLAs específicos de respuesta a incidentes se definen en el
+     contrato según el plan contratado (Starter / Pro / Business).
+   - Actualizaciones de seguridad críticas se aplican sin costo adicional
+     a clientes con licencia activa.
+
+6. LIMITACIÓN DE RESPONSABILIDAD
+
+   En la máxima medida permitida por la ley chilena:
+
+   - El Propietario no es responsable por daños indirectos, lucro cesante,
+     pérdida de datos no atribuible a fallo directo del Software, ni
+     interrupción de actividades comerciales del cliente que excedan
+     situaciones documentadas en SLA.
+   - La responsabilidad máxima del Propietario en cualquier reclamo está
+     limitada al monto pagado por el cliente en los 12 meses anteriores
+     al incidente.
+
+7. PROPIEDAD INTELECTUAL DE TERCEROS
+
+   El Software incorpora bibliotecas open source de terceros bajo sus
+   licencias respectivas (MIT, Apache 2.0, BSD-3-Clause, etc.). El listado
+   completo de dependencias y sus licencias está disponible en el archivo
+   `THIRD-PARTY-LICENSES.md` (a generar).
+
+   El cumplimiento de las licencias de terceros es responsabilidad del
+   Propietario en su rol de redistribuidor.
+
+8. JURISDICCIÓN Y LEY APLICABLE
+
+   Esta licencia se rige por las leyes de la República de Chile.
+   Cualquier disputa será resuelta en los tribunales ordinarios de
+   Santiago de Chile, con renuncia expresa a cualquier otro fuero.
+
+9. CONTACTO
+
+   Para licenciamiento comercial, soporte, denuncias de seguridad o
+   consultas legales:
+
+   Pierre Benites Solier
+   Dyon Labs
+   Email: private@zgamersa.com
+
+================================================================================
+
+VERSIÓN: 1.0 — Vigente desde 2026-04-29
