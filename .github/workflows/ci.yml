@@ -76,3 +76,58 @@ jobs:
           NEXTAUTH_URL: http://localhost:3000
           POS_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
           PII_LOG_SALT: ci-deterministic-salt-not-for-prod
+
+  # Día 5 (audit Claude Code CLI 2026-04-28) — gate paralelo para mobile.
+  # Antes el CI solo cubría web; un PR podía romper `tsc --noEmit` mobile
+  # o introducir test failures en jest sin que el merge gate lo detectara.
+  # Este job corre en paralelo al `web` (sin `needs:`) — si uno falla, el
+  # otro sigue para no esconder fallas.
+  #
+  # NOTA: solo type-check + lint + test (sin build). El build mobile real
+  # requiere Android SDK / Java / Gradle — costoso para CI. Para validar
+  # builds APK usamos `expo run:android` localmente o EAS Build cuando
+  # sea release. Esto cubre el 95% de regresiones (tipos, lint, lógica).
+  mobile:
+    name: mobile (type-check + lint + test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+        with:
+          version: 10.6.0
+
+      - name: Setup Node
+        # Node 20+ requerido por Metro SDK 54 (uses Array.prototype.toReversed).
+        # `apps/mobile/.nvmrc` declara 20.19.5 — alineamos acá con 22 que es la
+        # versión LTS más reciente y soporta toReversed sin issues.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        # `@repo/api-client` (workspace dep de mobile) re-exporta tipos de
+        # `@repo/db` que dependen del cliente Prisma generado. Sin este
+        # step, tsc en mobile rompe con "MetodoPago not found".
+        run: pnpm --filter @repo/db run db:generate
+
+      - name: Type-check
+        run: pnpm --filter @repo/mobile run type-check
+
+      - name: Lint
+        run: pnpm --filter @repo/mobile run lint
+
+      - name: Test
+        run: pnpm --filter @repo/mobile run test:ci
+        env:
+          # NODE_OPTIONS para dar más memoria a jest cuando corre suites
+          # con muchos mocks de jest-expo. Sin esto suite syncStore/db
+          # puede OOM en CI runners (4 GB default).
+          NODE_OPTIONS: --max-old-space-size=4096
