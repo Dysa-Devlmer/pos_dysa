@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pre-commit hook — POS Chile.
+# Versionado en .husky/ (DX1, audit Claude Code CLI 2026-04-28).
+#
+# Antes vivía en `.git/hooks/pre-commit` (no versionado). Cualquier
+# máquina nueva o agente que clonase el repo arrancaba SIN el guardrail
+# de secrets. Ahora husky lo sincroniza automático en `pnpm install`
+# (script `prepare`), y este archivo SÍ va a git.
+#
+# Bypass (solo emergencias): `git commit --no-verify`
+
+set -eu
+
+# ─── 1. Bloqueo de secretos en staged diff ─────────────────────────────
+# Patterns conocidos de tokens GitHub/Anthropic/OpenAI/Google/AWS/Slack
+# + URLs con basic-auth (https://user:pass@github.com/...).
+PATTERNS='ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36}|ghu_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{80,}|sk-ant-[A-Za-z0-9_-]{40,}|sk-proj-[A-Za-z0-9_-]{40,}|AIza[A-Za-z0-9_-]{35}|AKIA[A-Z0-9]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|https://[A-Za-z0-9_.:-]+@(github\.com|gitlab\.com|bitbucket\.org)'
+
+DIFF=$(git diff --cached --no-color --unified=0)
+if [ -n "$DIFF" ]; then
+  HITS=$(printf '%s\n' "$DIFF" | grep -noE "$PATTERNS" || true)
+  if [ -n "$HITS" ]; then
+    printf '\033[31m❌ COMMIT BLOQUEADO — se detectaron secretos/credenciales:\033[0m\n\n'
+    printf '%s\n' "$HITS" | awk -F: '{prefix=substr($2,1,6); suffix=substr($2,length($2)-3); printf "  línea %s:  %s…%s\n", $1, prefix, suffix}'
+    printf '\n\033[33mOpciones:\033[0m\n'
+    printf '  1. Quita el secreto del archivo y usa variables de entorno (.env en .gitignore)\n'
+    printf '  2. Si es falso positivo: git commit --no-verify\n'
+    exit 1
+  fi
+fi
+
+# ─── 2. Lint-staged sobre archivos modificados ─────────────────────────
+# Corre eslint --fix solo sobre los staged files (no sobre todo el repo).
+# Configuración en root package.json campo `lint-staged`.
+#
+# Nota perf: si lint-staged no encuentra archivos relevantes, exit 0
+# inmediato sin overhead. Si encuentra, corre eslint solo en el filtro
+# que matchea — no es como `pnpm lint` que escanea todo.
+pnpm exec lint-staged

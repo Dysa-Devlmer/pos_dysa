@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Post-commit hook — POS Chile.
+# Versionado en .husky/ (DX1, audit Claude Code CLI 2026-04-28).
+#
+# Dos responsabilidades (no romper ninguna):
+# 1. Auto-captura cada commit en memory/.pending-notes (procesado por
+#    /session-end). Sin esto, los commits pasan sin trail estructurado
+#    para futuros agentes.
+# 2. Trigger estructural: si el commit tocó manifests del monorepo
+#    (package.json, schema.prisma, tsconfig, etc.), dispara rescan del
+#    profile en background para que PROJECT_PROFILE.json refleje los
+#    cambios de stack (nuevos packages, deps, schema, etc.).
+#
+# Background: ambos pasos son fire-and-forget. NO bloquean al
+# desarrollador esperando. Si fallan, el commit YA está hecho — no hay
+# rollback posible aquí (ni queremos uno; sería UX horrible).
+
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PENDING_NOTES="$REPO_ROOT/memory/.pending-notes"
+COMMIT_SHA=$(git rev-parse HEAD)
+COMMIT_MSG=$(git log -1 --format='%s')
+COMMIT_FILES=$(git show --name-only --format='' HEAD)
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# ─── 1. Auto-captura para /session-end ─────────────────────────────────
+mkdir -p "$REPO_ROOT/memory"
+{
+  printf '\n--- COMMIT %s @ %s ---\n' "$COMMIT_SHA" "$TIMESTAMP"
+  printf '%s\n\n' "$COMMIT_MSG"
+  printf 'Files:\n%s\n' "$COMMIT_FILES"
+} >> "$PENDING_NOTES"
+
+# ─── 2. Trigger rescan de profile (si tocó manifests) ──────────────────
+# Si el commit modificó archivos de manifest del monorepo, lanzar el
+# rescan del profile en background (sub-shell, no bloquea).
+MANIFEST_PATTERN='package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|tsconfig.*\.json|schema\.prisma|docker-compose\.yml|\.env\.example'
+if echo "$COMMIT_FILES" | grep -qE "$MANIFEST_PATTERN"; then
+  # Sub-shell + nohup + & = totalmente desacoplado. Output a /dev/null
+  # para no contaminar terminal del developer.
+  if [ -x "$REPO_ROOT/.claude/scripts/rescan-profile.sh" ]; then
+    (nohup "$REPO_ROOT/.claude/scripts/rescan-profile.sh" >/dev/null 2>&1 &)
+  fi
+fi
+
+exit 0
