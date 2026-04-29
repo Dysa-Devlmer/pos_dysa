@@ -16,6 +16,20 @@ aliases:
 **Stack:** Next.js 15.5 + Prisma 6.19 + PostgreSQL 16 + Tailwind v4 + NextAuth v5-beta.31
 **Patrón:** Turborepo 2.9 monorepo con pnpm 10.6.0
 
+> **🆕 2026-04-29 — PIVOT a SaaS confirmed.** El proyecto deja de ser
+> "single-tenant para uso propio" y se convierte en **POS-as-a-Service
+> con licencias vendibles**. Modelo elegido: **deployment dedicado por
+> cliente (Camino C)** — cada cliente con licencia recibe su propio
+> Docker Compose (web + postgres + pgadmin) con dominio/subdominio
+> propio, BD aislada, APK mobile con su branding. Aislamiento físico
+> imposibilita leak entre clientes (compliance Ley 21.719 trivial).
+> Decisión + alternativas en `docs/adr/001-arquitectura-saas-deployment-dedicado.md`.
+> Plan futuro de migración a multi-tenant compartido (cuando >20
+> clientes pagantes) en `docs/adr/002-multi-tenant-future-migration.md`.
+> La web actual `dy-pos.zgamersa.com` queda como **demo permanente**
+> del owner para presentar a prospects. Visión completa en
+> `docs/VISION.md`.
+
 ## Mapa de contexto
 
 - [[stack-tech]] — versiones exactas, deps por feature, gotchas por capa
