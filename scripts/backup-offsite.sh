@@ -8,16 +8,24 @@
 # Este script es un TEMPLATE. NO ejecutar en prod hasta que:
 #   1. Pierre decida provider (Backblaze B2 / S3 / Wasabi / R2 — DR-10).
 #   2. Pierre cree bucket + Application Key (scope: write-only al bucket).
-#   3. Variables OFFSITE_BACKUP_* estén en /opt/dypos-cl/.env.docker.
+#   3. Variables OFFSITE_BACKUP_* estén en $APP_DIR/.env.docker.
 #
 # Hasta entonces, este script falla rápido con mensaje claro si falta config.
 #
+# === PATHS ===
+# El path del deploy actual es /opt/pos-chile (ver scripts/deploy.sh:24
+# `VPS_DIR="/opt/pos-chile"`). Tenants futuros pueden usar otro APP_DIR
+# vía variable de ambiente. Default: /opt/pos-chile.
+#
 # === USO (cuando esté operativo) ===
 #   sudo crontab -e
-#   0 3 * * *  /opt/dypos-cl/scripts/backup-offsite.sh >> /var/log/dypos-backup-offsite.log 2>&1
+#   0 3 * * *  /opt/pos-chile/scripts/backup-offsite.sh >> /var/log/dypos-backup-offsite.log 2>&1
+#
+# Para tenants con otro path:
+#   0 3 * * *  APP_DIR=/opt/<tenant> /opt/<tenant>/scripts/backup-offsite.sh >> ...
 #
 # === SEGURIDAD ===
-# - El script asume que las credenciales viven en /opt/dypos-cl/.env.docker
+# - El script asume que las credenciales viven en $APP_DIR/.env.docker
 #   (chmod 600, owner root). NUNCA hardcodear keys en este archivo.
 # - El script sube el dump cifrado en reposo en el bucket; activar encryption
 #   server-side al crear el bucket.
@@ -28,7 +36,8 @@ set -euo pipefail
 
 # ─── Carga de config ────────────────────────────────────────────────────────
 
-ENV_FILE="${ENV_FILE:-/opt/dypos-cl/.env.docker}"
+APP_DIR="${APP_DIR:-/opt/pos-chile}"
+ENV_FILE="${ENV_FILE:-$APP_DIR/.env.docker}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/dypos-cl-db}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -141,9 +150,13 @@ exit 0
 #      gunzip -c /tmp/restore-test.sql.gz | \
 #        docker exec -i pos-postgres psql -U pos_admin -d restore_test
 #
-#   4. Verificar conteo de registros críticos (Venta, Producto, Cliente):
-#      docker exec pos-postgres psql -U pos_admin -d restore_test \
-#        -c "SELECT COUNT(*) FROM \"Venta\";"
+#   4. Verificar conteo de registros críticos. Las tablas reales en Postgres
+#      están en snake_case (ver @@map en packages/db/prisma/schema.prisma):
+#      docker exec pos-postgres psql -U pos_admin -d restore_test -c \
+#        "SELECT 'ventas' AS tabla, COUNT(*) FROM ventas
+#         UNION ALL SELECT 'productos', COUNT(*) FROM productos
+#         UNION ALL SELECT 'clientes', COUNT(*) FROM clientes
+#         UNION ALL SELECT 'audit_logs', COUNT(*) FROM audit_logs;"
 #
 #   5. Drop la BD de prueba:
 #      docker exec pos-postgres dropdb -U pos_admin restore_test

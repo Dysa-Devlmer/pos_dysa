@@ -36,7 +36,7 @@ estado existente.
 
 2. SSH al VPS
    ├─ apt update + instala docker, docker-compose-plugin, nginx, certbot
-   ├─ crea /opt/dypos-cl/ con permisos correctos
+   ├─ crea /opt/pos-chile/ con permisos correctos
    └─ crea /var/backups/dypos-cl-db/ + /var/www/apks/{android,ios} (UID 1001)
 
 3. Configurar nginx
@@ -83,7 +83,7 @@ Pierre debe:
 ## 5. Estructura de archivos en el VPS
 
 ```
-/opt/dypos-cl/
+/opt/pos-chile/
 ├── docker-compose.yml          # copia del repo
 ├── .env.docker                 # secretos del tenant (chmod 600)
 ├── apps/web/Dockerfile         # build context

@@ -112,8 +112,8 @@ Manual:
 
 ```bash
 ssh root@<VPS>
-cd /opt/dypos-cl
-git -C /opt/dypos-cl reset --hard <commit_anterior>  # solo si hay clone
+cd /opt/pos-chile
+git -C /opt/pos-chile reset --hard <commit_anterior>  # solo si hay clone
 # o revertir docker image al tag anterior:
 docker compose pull
 docker compose up -d --force-recreate

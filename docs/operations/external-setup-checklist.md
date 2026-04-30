@@ -153,7 +153,11 @@ Alternativa: BetterStack (free 10 monitors, status page incluida).
      - HTTP Method: `GET`
      - **Keyword Monitoring:** activar
        - Keyword Type: `exists`
-       - Keyword Value: `"ok":true`
+       - Keyword Value: `"status":"ok"`
+       - (Nota: `/api/health` retorna JSON
+         `{"status":"ok","database":"connected","version":"2.0.0",...}`
+         — verificado en prod. Si UptimeRobot tiene problemas matcheando
+         JSON compacto, fallback aceptable: solo HTTP 200.)
      - HTTP status codes considered up: `200`
 3. **Alert Contacts to Notify:** seleccionar/crear contacto email
    (`pierre@dyonlabs.cl` o equivalente).
@@ -165,7 +169,7 @@ Alternativa: BetterStack (free 10 monitors, status page incluida).
 |---------|-------|
 | Type | HTTP(s) |
 | Interval | 5 min |
-| Keyword | `"ok":true` |
+| Keyword | `"status":"ok"` |
 | HTTP method | GET |
 | Timeout | 30s |
 | Alert when down for | 1 ciclo (5 min) |
@@ -231,7 +235,7 @@ S3-compatible.
 | Credencial | Dónde vive | Quién accede |
 |-----------|-----------|--------------|
 | SSH deploy key (`pos_deploy_ed25519`) | `~/.ssh/` Pierre + `authorized_keys` VPS | Pierre + agentes con permiso |
-| `.env.docker` VPS | `/opt/dypos-cl/.env.docker` chmod 600 | Solo Pierre |
+| `.env.docker` VPS | `/opt/pos-chile/.env.docker` chmod 600 | Solo Pierre |
 | `NEXTAUTH_SECRET` | `.env.docker` | Solo Pierre |
 | `POS_DATABASE_URL` (password) | `.env.docker` | Solo Pierre |
 | `SENTRY_DSN` web | `.env.docker` | Solo Pierre |
