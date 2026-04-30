@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "POS Chile",
+    name: "DyPos CL",
     short_name: "POS",
     description: "Sistema de punto de venta profesional",
     start_url: "/",

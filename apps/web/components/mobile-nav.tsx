@@ -110,7 +110,7 @@ export function MobileNav({ rol, alertasStockCount = 0 }: MobileNavProps) {
                 <Link
                   href="/"
                   className="flex items-center gap-2.5"
-                  aria-label="POS Chile — Ir al dashboard"
+                  aria-label="DyPos CL — Ir al dashboard"
                 >
                   <span
                     aria-hidden
@@ -123,7 +123,7 @@ export function MobileNav({ rol, alertasStockCount = 0 }: MobileNavProps) {
                   </span>
                   <span className="flex flex-col leading-tight">
                     <span className="text-[15px] font-semibold tracking-tight text-foreground">
-                      POS Chile
+                      DyPos CL
                     </span>
                     <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                       Panel de control

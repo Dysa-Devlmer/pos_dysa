@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 /**
- * Política de Privacidad — POS Chile.
+ * Política de Privacidad — DyPos CL.
  *
  * Página pública bajo `/privacidad` (excluida del middleware NextAuth).
  * Contenido renderizado como JSX estático: sin fs.readFile, sin MDX, sin
@@ -18,9 +18,9 @@ import type { Metadata } from "next";
  */
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad — POS Chile",
+  title: "Política de Privacidad — DyPos CL",
   description:
-    "Política de Privacidad y tratamiento de datos personales de POS Chile conforme a la Ley N° 19.628 y Ley N° 21.719 de Chile.",
+    "Política de Privacidad y tratamiento de datos personales de DyPos CL conforme a la Ley N° 19.628 y Ley N° 21.719 de Chile.",
   robots: { index: true, follow: true },
 };
 
@@ -61,7 +61,7 @@ export default function PrivacidadPage() {
           </p>
         </aside>
 
-        <h1>Política de Privacidad — POS Chile</h1>
+        <h1>Política de Privacidad — DyPos CL</h1>
 
         <p>
           <strong>Versión:</strong> {DYSA.version}
@@ -73,7 +73,7 @@ export default function PrivacidadPage() {
           En <strong>{DYSA.razonSocial}</strong> respetamos su privacidad y nos
           tomamos en serio la protección de sus datos personales. Esta Política
           describe cómo recopilamos, usamos, compartimos y protegemos sus datos
-          cuando utiliza <strong>POS Chile</strong> (en adelante, el
+          cuando utiliza <strong>DyPos CL</strong> (en adelante, el
           &ldquo;Servicio&rdquo;), disponible en el sitio web{" "}
           <a href={DYSA.sitio}>{DYSA.sitio}</a>.
         </p>
@@ -201,7 +201,7 @@ export default function PrivacidadPage() {
         <h2>6. Categorías de titulares</h2>
         <ul>
           <li>
-            Clientes de locales que utilizan POS Chile (personas naturales).
+            Clientes de locales que utilizan DyPos CL (personas naturales).
           </li>
           <li>Empleados autorizados para operar el Servicio.</li>
           <li>Visitantes del sitio web público.</li>
@@ -337,7 +337,7 @@ export default function PrivacidadPage() {
 
         <h2>12. Tratamiento automatizado</h2>
         <p>
-          POS Chile <strong>no realiza</strong> decisiones automatizadas con
+          DyPos CL <strong>no realiza</strong> decisiones automatizadas con
           efectos jurídicos significativos (crédito, contratación, beneficios).
           El sistema utiliza reglas automáticas solo para funciones operativas
           internas (alertas de stock bajo), que no afectan sus derechos.

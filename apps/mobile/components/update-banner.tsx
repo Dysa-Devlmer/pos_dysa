@@ -75,7 +75,7 @@ export function UpdateBanner() {
           </Text>
           <Text className="text-muted-foreground mt-3 text-center text-base">
             Tu versión {installedVersion} ya no es compatible. Actualiza a la
-            versión {remote.version} para continuar usando POS Chile.
+            versión {remote.version} para continuar usando DyPos CL.
           </Text>
           {remote.notes ? (
             <ScrollView

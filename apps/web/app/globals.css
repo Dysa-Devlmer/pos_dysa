@@ -9,7 +9,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ════════════════════════════════════════════════════════════════════
-   POS CHILE — SystemQR Palette
+   DyPos CL — Color Palette (anteriormente "DyPos CL Palette")
    Naranja primario (#f97316) · Ámbar acento · Emerald success
    Light: ivory cálido (#f5f1ea) · Dark: negro profundo (#0a0a0a)
    ════════════════════════════════════════════════════════════════════ */
@@ -18,7 +18,7 @@
   color-scheme: light;
   --radius: 0.75rem;
 
-  /* Fondos ivory cálido (inspirado en panel derecho de SystemQR) */
+  /* Fondos ivory cálido (inspirado en panel derecho de DyPos CL) */
   --background: oklch(0.97 0.008 80);      /* #f5f1ea ivory */
   --foreground: oklch(0.22 0 0);           /* #171717 near-black */
   --card: oklch(1 0 0);                     /* blanco puro */
@@ -84,7 +84,7 @@
 .dark {
   color-scheme: dark;
 
-  /* Fondos oscuros (dashboard SystemQR) */
+  /* Fondos oscuros (dashboard DyPos CL) */
   --background: oklch(0.155 0 0);          /* #0a0a0a */
   --foreground: oklch(0.98 0 0);           /* #fafafa */
   --card: oklch(0.2 0 0);                   /* #141414 */

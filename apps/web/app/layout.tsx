@@ -29,15 +29,15 @@ const jetbrainsMono = JetBrains_Mono({
 checkEnv();
 
 export const metadata: Metadata = {
-  title: { default: "POS Chile", template: "%s | POS Chile" },
+  title: { default: "DyPos CL", template: "%s | DyPos CL" },
   description:
     "Sistema de punto de venta profesional para negocios chilenos",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000",
   ),
-  applicationName: "POS Chile",
+  applicationName: "DyPos CL",
   openGraph: {
-    title: "POS Chile",
+    title: "DyPos CL",
     description:
       "Sistema de punto de venta profesional para negocios chilenos",
     type: "website",

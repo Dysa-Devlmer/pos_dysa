@@ -23,14 +23,6 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-
-// Mantener el splash hasta que el bootstrap termine — sin esto, en release
-// el splash con dark backgroundColor #000000 queda visible para siempre
-// (sin llamada a hideAsync en algun lado). En dev no se nota porque Metro
-// ya lo desmonta solo al cargar el bundle.
-SplashScreen.preventAutoHideAsync().catch(() => {
-  // Si ya se dismisseó (race con auto-hide en algunos devices), no es error.
-});
 import {
   QueryClient,
   QueryClientProvider,
@@ -44,6 +36,14 @@ import { useSyncStore } from "@/stores/syncStore";
 import { initDb } from "@/db/client";
 import { SyncBanner } from "@/components/sync-banner";
 import { UpdateBanner } from "@/components/update-banner";
+
+// Mantener el splash hasta que el bootstrap termine — sin esto, en release
+// el splash con dark backgroundColor #000000 queda visible para siempre
+// (sin llamada a hideAsync en algun lado). En dev no se nota porque Metro
+// ya lo desmonta solo al cargar el bundle.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Si ya se dismisseó (race con auto-hide en algunos devices), no es error.
+});
 
 /**
  * React Query client — singleton para toda la app mobile.
@@ -66,7 +66,7 @@ const queryClient = new QueryClient({
 });
 
 /**
- * SystemQRTheme — theme React Navigation alineado con la paleta SystemQR.
+ * DyPosCLTheme — theme React Navigation alineado con la paleta DyPos CL.
  *
  * SS5 (audit Claude Code CLI 2026-04-28): el `DefaultTheme` de
  * `@react-navigation/native` define `background: 'rgb(255, 255, 255)'`
@@ -74,7 +74,7 @@ const queryClient = new QueryClient({
  * vía NativeWind. Cuando NativeWind no aplicaba un className por race
  * con CSS bundle (raro pero ocurre en dev/release edge cases), el
  * fondo del Stack quedaba blanco RN sobre el cual los componentes
- * ivory se veían "lavados" / "sin tema SystemQR".
+ * ivory se veían "lavados" / "sin tema DyPos CL".
  *
  * Este custom theme declara los mismos tokens como base del Stack —
  * NativeWind sigue siendo la fuente de verdad para componentes con
@@ -88,7 +88,7 @@ const queryClient = new QueryClient({
  *   - border: #e4decf
  *   - notification (destructive): #ef4444
  */
-const SystemQRTheme: Theme = {
+const DyPosCLTheme: Theme = {
   ...DefaultTheme,
   dark: false,
   colors: {
@@ -163,7 +163,7 @@ function RootLayoutNav() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  // Forzamos light mode — gotcha G-M38. La paleta SystemQR (#f5f1ea ivory +
+  // Forzamos light mode — gotcha G-M38. La paleta DyPos CL (#f5f1ea ivory +
   // #171717 near-black) esta diseñada solo para light. Si dejamos que
   // useColorScheme() lea prefers-color-scheme y entre en DarkTheme, React
   // Navigation pinta fondo #010101 mientras `text-foreground` queda en
@@ -233,11 +233,11 @@ function RootLayoutNav() {
     );
   }
 
-  // SS5: usar custom SystemQRTheme en vez de DefaultTheme RN para que el
+  // SS5: usar custom DyPosCLTheme en vez de DefaultTheme RN para que el
   // fondo del Stack quede ivory y no blanco puro. `colorScheme` siempre es
   // "light" por G-M38 — el ternario queda como hook para futura reactivación
-  // dark mode (cuando se porten tokens del web). Ver SystemQRTheme const arriba.
-  const theme = colorScheme === "light" ? SystemQRTheme : DarkTheme;
+  // dark mode (cuando se porten tokens del web). Ver DyPosCLTheme const arriba.
+  const theme = colorScheme === "light" ? DyPosCLTheme : DarkTheme;
 
   return (
     <ThemeProvider value={theme}>

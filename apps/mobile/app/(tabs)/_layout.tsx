@@ -14,9 +14,9 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
  * Decisiones:
  * - MaterialIcons directo (mejor cobertura cross-platform que SF Symbols
  *   fallback del template; IconSymbol solo mapeaba 4 nombres).
- * - Colores tomados de la paleta SystemQR (tailwind.config.js): primary
+ * - Colores tomados de la paleta DyPos CL (tailwind.config.js): primary
  *   naranja #f97316 activo, neutro #737373 inactivo.
- * - Light forzado por G-M38 (la paleta SystemQR está tuneada solo para
+ * - Light forzado por G-M38 (la paleta DyPos CL está tuneada solo para
  *   light; en dark el texto #171717 queda invisible sobre #0a0a0a). El
  *   fix SS6 (audit Claude Code CLI 2026-04-28) hardcodea `isDark=false`
  *   para evitar el split visual jarring que ocurría cuando el OS tenía

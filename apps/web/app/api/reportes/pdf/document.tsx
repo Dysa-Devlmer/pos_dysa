@@ -223,7 +223,7 @@ export function ReporteDocument({
         {/* Header */}
         <View style={styles.header} fixed>
           <View>
-            <Text style={styles.brand}>POS Chile</Text>
+            <Text style={styles.brand}>DyPos CL</Text>
             <Text style={styles.brandSub}>Reporte de Ventas</Text>
           </View>
           <View style={styles.meta}>
@@ -320,7 +320,7 @@ export function ReporteDocument({
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text>POS Chile · Sistema de punto de venta</Text>
+          <Text>DyPos CL · Sistema de punto de venta</Text>
           <Text
             style={styles.pageNum}
             render={({ pageNumber, totalPages }) =>

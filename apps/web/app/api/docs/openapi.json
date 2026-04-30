@@ -1,10 +1,10 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "POS Chile API v1",
-    "description": "API REST del sistema POS Chile. Requiere autenticación NextAuth (cookie de sesión). Rate limit: 100 req/min por IP.",
+    "title": "DyPos CL API v1",
+    "description": "API REST del sistema DyPos CL. Requiere autenticación NextAuth (cookie de sesión). Rate limit: 100 req/min por IP.",
     "version": "1.0.0",
-    "contact": { "name": "POS Chile" }
+    "contact": { "name": "DyPos CL" }
   },
   "servers": [
     { "url": "/api/v1", "description": "Producción / Desarrollo local" }

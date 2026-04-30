@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "POS Chile",
+    "name": "DyPos CL",
     "slug": "pos-chile-mobile",
     "version": "1.0.4",
     "runtimeVersion": {
@@ -16,7 +16,7 @@
       "bundleIdentifier": "cl.zgamersa.poschile",
       "buildNumber": "5",
       "infoPlist": {
-        "NSCameraUsageDescription": "POS Chile usa la cámara para escanear códigos de barras de productos en la caja.",
+        "NSCameraUsageDescription": "DyPos CL usa la cámara para escanear códigos de barras de productos en la caja.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
@@ -92,7 +92,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "POS Chile necesita la cámara para escanear códigos de barras de productos.",
+          "cameraPermission": "DyPos CL necesita la cámara para escanear códigos de barras de productos.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

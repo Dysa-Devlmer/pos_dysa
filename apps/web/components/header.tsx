@@ -23,7 +23,7 @@ export function Header({
       {/* Mobile: hamburger + brand */}
       <div className="flex items-center gap-3 md:hidden">
         <MobileNav rol={user.rol} alertasStockCount={alertasStockCount} />
-        <span className="text-base font-bold">POS Chile</span>
+        <span className="text-base font-bold">DyPos CL</span>
       </div>
 
       <div className="ml-auto">

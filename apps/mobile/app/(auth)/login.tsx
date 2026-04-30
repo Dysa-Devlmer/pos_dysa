@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Pantalla de login — POS Chile mobile.
+ * Pantalla de login — DyPos CL mobile.
  *
  * UX mobile-first (ver skill mobile-design):
  * - Touch targets ≥ 44pt (Pressable con min-h-12)
@@ -55,7 +55,7 @@ export default function LoginScreen() {
           {/* Header / Brand */}
           <View className="mt-16">
             <Text className="text-foreground text-4xl font-bold tracking-tight">
-              POS Chile
+              DyPos CL
             </Text>
             <Text className="text-muted-foreground mt-2 text-base">
               Ingresa a tu cuenta
@@ -71,7 +71,7 @@ export default function LoginScreen() {
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                placeholder="admin@pos-chile.cl"
+                placeholder="admin@dypos-cl.cl"
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 autoCorrect={false}

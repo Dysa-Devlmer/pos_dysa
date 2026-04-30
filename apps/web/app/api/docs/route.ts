@@ -5,9 +5,9 @@ import { ApiReference } from "@scalar/nextjs-api-reference";
 export const GET = ApiReference({
   url: "/api/docs/spec",
   theme: "default",
-  pageTitle: "POS Chile — API v1",
+  pageTitle: "DyPos CL — API v1",
   metaData: {
-    title: "POS Chile API v1",
-    description: "Documentación interactiva de la API REST del sistema POS Chile",
+    title: "DyPos CL API v1",
+    description: "Documentación interactiva de la API REST del sistema DyPos CL",
   },
 });

@@ -1,5 +1,5 @@
 {
-  "name": "pos-chile",
+  "name": "dypos-cl-monorepo",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",

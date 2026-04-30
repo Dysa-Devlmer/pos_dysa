@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   });
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "POS Chile";
+  workbook.creator = "DyPos CL";
   workbook.created = new Date();
 
   // ─── Hoja 1: Ventas ───────────────────────────────────────
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
   }
 
   // Título
-  const titleRow = wsResumen.addRow(["Reporte de Ventas — POS Chile"]);
+  const titleRow = wsResumen.addRow(["Reporte de Ventas — DyPos CL"]);
   titleRow.font = { bold: true, size: 14 };
 
   wsResumen.addRow([]);

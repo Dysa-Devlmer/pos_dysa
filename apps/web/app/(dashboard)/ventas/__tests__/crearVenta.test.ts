@@ -1,5 +1,5 @@
 /**
- * Unit tests — crearVenta server action — POS Chile web.
+ * Unit tests — crearVenta server action — DyPos CL web.
  *
  * F-6 (audit Claude Code CLI 2026-04-28) test #1 prioritario: cubre la
  * server action más crítica del sistema. Una regresión silenciosa en

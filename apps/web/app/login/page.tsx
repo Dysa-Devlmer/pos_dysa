@@ -64,7 +64,7 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-lg font-semibold tracking-tight">
-              POS Chile
+              DyPos CL
             </span>
             <span className="text-xs text-white/50">
               Punto de venta inteligente
@@ -109,7 +109,7 @@ export default function LoginPage() {
           transition={{ delay: 0.6 }}
           className="relative flex items-center justify-between text-xs text-white/40"
         >
-          <span>© {new Date().getFullYear()} POS Chile</span>
+          <span>© {new Date().getFullYear()} DyPos CL</span>
           <span className="font-mono">v1.0.0</span>
         </motion.div>
 
@@ -159,7 +159,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <span className="text-base font-semibold tracking-tight">
-              POS Chile
+              DyPos CL
             </span>
           </div>
 
@@ -181,7 +181,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="admin@pos-chile.cl"
+                placeholder="admin@dypos-cl.cl"
                 required
                 autoComplete="email"
                 autoFocus
@@ -260,7 +260,7 @@ export default function LoginPage() {
           </p>
 
           <p className="mt-6 text-center text-xs text-muted-foreground lg:hidden">
-            © {new Date().getFullYear()} POS Chile · v1.0.0
+            © {new Date().getFullYear()} DyPos CL · v1.0.0
           </p>
         </motion.div>
       </section>

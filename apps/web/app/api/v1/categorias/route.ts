@@ -4,7 +4,7 @@ import { requireAuth, requireRateLimit, jsonOk } from "../_helpers";
 /**
  * GET /api/v1/categorias — listado completo ordenado por nombre.
  *
- * Sin paginación: el universo de categorías en un POS Chile real rara
+ * Sin paginación: el universo de categorías en un DyPos CL real rara
  * vez supera las ~50 filas, y el mobile las usa para:
  *   1. Filtro en el listado de productos (selector).
  *   2. Pantalla read-only de M6 ("Categorías").
