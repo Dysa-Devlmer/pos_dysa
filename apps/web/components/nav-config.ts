@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Wallet,
   ArrowLeftRight,
+  Smartphone,
 } from "lucide-react";
 
 export type NavItem = {
@@ -70,6 +71,12 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
       { href: "/cajas", label: "Cajas", icon: Wallet, adminOnly: true },
+      {
+        href: "/mobile-releases",
+        label: "Mobile APK",
+        icon: Smartphone,
+        adminOnly: true,
+      },
       { href: "/docs", label: "API Docs", icon: Code2, adminOnly: true },
     ],
   },
