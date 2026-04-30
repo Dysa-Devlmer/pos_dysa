@@ -884,3 +884,136 @@ genere para un cliente nuevo:
    funcional (es la demo del owner para prospects).
 5. **Push fallido** — investigar GitHub branch protection antes de
    intentar más commits.
+
+---
+
+## Sesión 2026-04-30 — Cierre Bloques 3-7 SaaS pivot DyPos CL
+
+**Contexto**: continuación de la sesión 2026-04-29. Pierre confirmó las 8
+respuestas a la planeación SaaS. Ejecución sistemática Bloques 3-7 + cierre.
+
+### Decisiones técnicas y commits
+
+**Workaround del push (G-M51)**: ayer el `git push origin main` falló
+silenciosamente. Investigado hoy: `osxkeychain` interactive prompt sin TTY
+hace que git push se cuelgue. Fix verificado: `GIT_TERMINAL_PROMPT=0
+GIT_ASKPASS=true git push origin main --porcelain`. Sirve para automation
+y CI. Documentado en gotcha G-M51 abajo.
+
+**Bloque 3 — Branding (commit `7bbf9d7`)**: rebrand find/replace en 20
+archivos (apps/web + apps/mobile + package.json root). Todos los nombres
+flotantes ("POS Chile", "pos-chile", "SystemQR", "Dysa POS") → "DyPos CL"
+en UI visible y "dypos-cl" en slugs. Decisión técnica: NO se cambian los
+IDs técnicos `slug: "pos-chile-mobile"`, `scheme: "poschile"`,
+`bundleIdentifier: "cl.zgamersa.poschile"` porque cambiarlos = nueva app
+en stores + reset data del APK ya instalado en device físico de Pierre.
+Cuando se publique a Play/App Store, decidir vía ADR si mantener IDs
+legacy o migrar a `cl.dyonlabs.dyposcl`.
+
+**Bloque 4 — provision-tenant.sh (commit `1af557b`)**: script bash
+~520 líneas que automatiza creación de un cliente nuevo con su propio
+Docker Compose en `~/Dyon-Tenants/<slug>/`. Genera 5 archivos:
+docker-compose.yml (con puertos únicos calculados por hash MD5 del slug
+% 100 para offset 0-99), .env.docker (con secretos rotables generados
+con openssl rand -base64 32), seed-admin.sql (INSERT idempotente),
+tenant-info.json (metadata para soporte), README.md (operación cliente).
+Validaciones: slug kebab-case, RUT formato CL, plan en {starter, pro,
+business}. Verificado generando demo "ferreteria-demo" con éxito.
+
+**Bloque 5 — UI admin mobile releases + nginx runbook (commit `48f369b`)**:
+- `/dashboard/mobile-releases` con 3 server actions (publicarRelease,
+  eliminarRelease, marcarLatest) + form upload APK + listing por
+  plataforma con badges latest/build/minVersion. Solo accesible para
+  rol ADMIN. APKs guardados en `APK_STORAGE_DIR` (default
+  `/var/www/apks/<platform>/`). Anti-rollback check (versionCode debe
+  ser mayor al latest actual). Max 100 MB por APK.
+- `docs/setup/nginx-apk-distribution.md` — runbook completo para
+  configurar el subdominio `apk-dypos.zgamersa.com`: DNS Cloudflare,
+  vhost nginx con SSL Let's Encrypt, MIME types, cache headers, bind
+  mount Docker → host filesystem (UID 1001), troubleshooting, backup
+  con rclone a R2.
+- nav-config.ts entry "Mobile APK" en grupo Administración (admin only).
+
+**Bloque 6 — Mobile editar cliente + perfil (commit `b3ccf4e`)**: cierra
+gap reportado por owner. App móvil ya permitía CREAR cliente y CAMBIAR
+password, pero NO permitía editar campos básicos:
+- 2 schemas nuevos en `@repo/api-client`: ActualizarClienteRequestSchema
+  (RUT inmutable) + ActualizarUsuarioMeRequestSchema (solo nombre por
+  ahora; email es identificador login JWT subject).
+- Rename `apps/mobile/app/(tabs)/mas/clientes/[id].tsx` →
+  `[id]/index.tsx` para habilitar sub-rutas en expo-router.
+- Nueva pantalla `[id]/editar.tsx` con form pre-poblado, validaciones
+  cliente-side (email, nombre obligatorio), manejo 404/422/400 con
+  Alerts específicos. RUT mostrado read-only con explicación.
+- Botón "Editar cliente" agregado al detalle.
+- Perfil mobile: edición inline del nombre con TextInput + Guardar/
+  Cancelar. Email read-only con texto explicativo. Avatar (mobile)
+  queda DEFERRED como follow-up: requiere `expo-image-picker` no
+  instalado, base64 ~50-100 KB inflaría JWT/sessión, necesita
+  validación tamaño + recorte.
+
+**Bloque 7 — Deploy a prod**:
+- Backup BD prod manual antes (25 KB sql.gz en /tmp del VPS).
+- Backup local del proyecto: 143 MB en 5s.
+- `./scripts/deploy.sh` ejecutado. Las 4 migrations (SCH3 + SCH2 + F-3
+  ext + SCH1 guardrail) aplicaron limpio en producción.
+- Smoke test desde VPS: `pos-web Up healthy`, `/api/health` retorna
+  `{"status":"ok","database":"connected","version":"2.0.0"}`.
+- `.env.docker` actualizado con APK_STORAGE_DIR + APK_PUBLIC_BASE_URL
+  (gitignored, no commiteado).
+
+### Gotchas nuevos
+
+- **G-M51 (git push hang con osxkeychain)**: cuando git push pide
+  credenciales y no hay TTY (background tasks, scripts no-interactivos),
+  el comando se cuelga indefinidamente. Workaround verificado:
+  `GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=true git push origin main`. La
+  combinación deshabilita el prompt interactivo y obliga a usar
+  credenciales ya guardadas en keychain. Si las credenciales están
+  inválidas, falla limpio con exit 1 en lugar de colgarse.
+
+- **G-M52 (deploy.sh prompts dobles)**: el script pide 2 confirmaciones
+  ("¿Correr build local?" y "¿Proceder con deploy?"). Para automation:
+  `printf 'n\ndeploy\n' | ./scripts/deploy.sh`. La 'n' al primer
+  prompt skipea el build local; "deploy" al segundo confirma.
+
+- **G-M53 (deploy.sh NO backupea BD prod)**: el rollback automático del
+  script restaura el directorio `/opt/pos-chile` (código + configs) pero
+  NO la BD. Antes de aplicar migrations destructivas, hacer manual:
+  `ssh ... "cd /opt/pos-chile && docker exec pos-postgres pg_dump ... | gzip > /tmp/pre-deploy-...sql.gz"`.
+
+### Estado final sesión
+
+- Commits hoy: 4 (Bloque 3-6) + 1 push pendiente del workaround push.
+- Backlog: 31 → 27 ítems críticos (-13%). Total acumulado: 62 → 27
+  desde el audit inicial (-56%).
+- Tests: web 91 + mobile 46 = 137 pasando. tsc verde web + mobile.
+- **Producción deployada con todo el stack actualizado**. Las migraciones
+  SCH2/SCH3/F-3 ext/SCH1 ahora viven en prod.
+- UI mobile releases ya disponible en `/dashboard/mobile-releases`
+  cuando se complete el setup nginx (manual, runbook listo).
+- Script provision-tenant.sh listo para crear el primer cliente real.
+
+### Pendientes operacionales (manuales, no código)
+
+🟡 **Setup nginx + DNS** para `apk-dypos.zgamersa.com`:
+- Cloudflare DNS A record
+- nginx vhost (config en runbook)
+- SSL Let's Encrypt: `certbot --nginx -d apk-dypos.zgamersa.com`
+- mkdir + chown /var/www/apks/{android,ios} (UID 1001)
+- bind mount en docker-compose.yml prod: `/var/www/apks:/var/www/apks`
+
+🟡 **F-13 Sentry mobile** sigue diferida — requiere rebuild APK +
+crear proyecto Sentry. Cuando Pierre tenga tiempo de reinstalar APK
+en Xiaomi.
+
+🟡 **F-8 SII e-boleta** sigue diferida — requiere RFC 4 proveedores DTE
+(OpenFactura, Haulmer, SimpleAPI, Bsale API) + decisión Pierre. 6-8
+semanas calendario, no es código.
+
+🟡 **F-6 tests web restantes** — eliminarVenta + crearDevolucion.
+Setup F-6 ya está commiteado, escribir esos 2 tests es trabajo de
+2-3h sesión dedicada.
+
+🟡 **`reporte.md` untracked** — sigue siendo gestionado por CCC, no
+commitear desde Cowork.
