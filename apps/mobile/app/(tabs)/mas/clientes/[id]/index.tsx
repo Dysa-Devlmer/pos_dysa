@@ -175,6 +175,19 @@ export default function ClienteDetalleScreen() {
           </View>
         ) : null}
 
+        {/* Bloque 6 (2026-04-30) — botón Editar agregado para cerrar gap
+            "no se puede editar cliente desde mobile" reportado por owner. */}
+        <TouchableOpacity
+          onPress={() => router.push(`/(tabs)/mas/clientes/${clienteId}/editar` as never)}
+          activeOpacity={0.8}
+          className="bg-primary mb-2 flex-row items-center justify-center gap-2 rounded-xl px-4 py-3"
+        >
+          <MaterialIcons name="edit" size={20} color="#ffffff" />
+          <Text className="text-primary-foreground font-semibold">
+            Editar cliente
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={handleDelete}
           activeOpacity={0.8}

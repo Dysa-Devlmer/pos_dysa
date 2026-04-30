@@ -334,6 +334,35 @@ export const CrearClienteRequestSchema = z.object({
 });
 export type CrearClienteRequest = z.infer<typeof CrearClienteRequestSchema>;
 
+/**
+ * Bloque 6 (sesión 2026-04-30) — payload PUT /api/v1/clientes/[id].
+ * El RUT no se permite editar (es identificador único + integridad
+ * histórica de ventas asociadas). Resto de campos son opcionales en
+ * el sentido HTTP PUT-as-PATCH: los que vengan se actualizan, los
+ * ausentes quedan iguales.
+ */
+export const ActualizarClienteRequestSchema = z.object({
+  nombre: z.string().min(1).max(200),
+  email: z.string().email().optional().or(z.literal("")),
+  telefono: z.string().optional().or(z.literal("")),
+  direccion: z.string().optional().or(z.literal("")),
+});
+export type ActualizarClienteRequest = z.infer<
+  typeof ActualizarClienteRequestSchema
+>;
+
+/**
+ * Bloque 6 — payload PUT /api/v1/usuarios/me. El email NO se edita
+ * (es el identificador de login + token JWT subject). Avatar es data
+ * URL base64 (gotcha 13) — mobile NO lo expone en este sprint.
+ */
+export const ActualizarUsuarioMeRequestSchema = z.object({
+  nombre: z.string().min(1).max(200),
+});
+export type ActualizarUsuarioMeRequest = z.infer<
+  typeof ActualizarUsuarioMeRequestSchema
+>;
+
 export const CategoriaSchema = z.object({
   id: z.number().int(),
   nombre: z.string(),
