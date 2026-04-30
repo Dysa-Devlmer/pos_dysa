@@ -677,6 +677,61 @@ export async function editarVenta(
       if (!c) return { ok: false, error: "Cliente no encontrado" };
     }
 
+    // ─── Resolver pagos para venta editada (Fase 0.1 fix split tender) ──
+    //
+    // Bug previo (pre-2026-04-30): editarVenta NO sincronizaba PagoVenta[],
+    // montoRecibido, ni vuelto. El total de la venta cambiaba pero los
+    // PagoVenta[] del original quedaban intactos. Resultado: invariante
+    // `total === sum(pagos.monto)` violada silenciosamente. Reportes Z
+    // desbalanceados, riesgo fraude latente.
+    //
+    // Fix: replicar exactamente la lógica de crearVenta (mismo invariante).
+    // Si caller no envía `pagos`, fallback a single payment del metodoPago
+    // legacy. La transacción borrará los PagoVenta viejos y creará nuevos.
+    const pagosInput: Array<{
+      metodo: MetodoPago;
+      monto: number;
+      referencia?: string;
+    }> =
+      data.pagos && data.pagos.length > 0
+        ? data.pagos
+        : [
+            {
+              metodo: data.metodoPago ?? ventaVieja.metodoPago,
+              monto: desglose.total,
+            },
+          ];
+
+    const sumaPagos = pagosInput.reduce((a, p) => a + p.monto, 0);
+    const sumaEfectivo = pagosInput
+      .filter((p) => p.metodo === MetodoPago.EFECTIVO)
+      .reduce((a, p) => a + p.monto, 0);
+    const hayEfectivo = sumaEfectivo > 0;
+
+    if (sumaPagos !== desglose.total) {
+      return {
+        ok: false,
+        error: `La suma de pagos (${sumaPagos}) no coincide con el total (${desglose.total})`,
+      };
+    }
+
+    let vueltoNuevo: number | null = null;
+    let montoRecibidoNuevo: number | null = null;
+    if (hayEfectivo) {
+      const recibido = data.montoRecibido ?? sumaEfectivo;
+      if (recibido < sumaEfectivo) {
+        return {
+          ok: false,
+          error: `Monto recibido (${recibido}) menor al efectivo declarado (${sumaEfectivo})`,
+        };
+      }
+      montoRecibidoNuevo = recibido;
+      vueltoNuevo = recibido - sumaEfectivo;
+    }
+
+    const metodoPagoFlat: MetodoPago =
+      pagosInput.length === 1 ? pagosInput[0]!.metodo : MetodoPago.MIXTO;
+
     const ventaActualizada = await prisma.$transaction(async (tx) => {
       // ─── 1. REVERTIR efectos de la venta vieja ──
       for (const d of ventaVieja.detalles) {
@@ -704,8 +759,14 @@ export async function editarVenta(
         });
       }
 
-      // ─── 2. Actualizar la venta (reemplazar detalles) ──
+      // ─── 2. Actualizar la venta (reemplazar detalles + pagos) ──
+      // Borrar detalles + pagos viejos. Los pagos NUEVOS se crean con el
+      // nested create del update (Prisma maneja la transaccionalidad).
+      // Sin estos deleteMany, los pagos viejos quedarían huérfanos y el
+      // invariante total === sum(pagos.monto) se rompería.
       await tx.detalleVenta.deleteMany({ where: { ventaId: id } });
+      await tx.pagoVenta.deleteMany({ where: { ventaId: id } });
+
       const v = await tx.venta.update({
         where: { id },
         data: {
@@ -714,10 +775,19 @@ export async function editarVenta(
           descuentoMonto: descuentoMontoEfectivo,
           impuesto: desglose.iva,
           total: desglose.total,
-          metodoPago: data.metodoPago ?? ventaVieja.metodoPago,
+          metodoPago: metodoPagoFlat,
+          montoRecibido: montoRecibidoNuevo,
+          vuelto: vueltoNuevo,
           clienteId: data.clienteId ?? null,
           usuarioId,
           detalles: { create: detallesNuevos },
+          pagos: {
+            create: pagosInput.map((p) => ({
+              metodo: p.metodo,
+              monto: p.monto,
+              referencia: p.referencia ?? null,
+            })),
+          },
         },
         select: { id: true, numeroBoleta: true, fecha: true },
       });
