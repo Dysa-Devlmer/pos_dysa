@@ -707,3 +707,180 @@ El callback `session` solo estaba en `auth.ts` (Node), el middleware edge no lo 
 - **Pierre**: entregar 5 placeholders DYSA (razón social, RUT, dirección, email DPO, teléfono) para reemplazar en `apps/web/app/privacidad/page.tsx`.
 - **CLI (cuando autorizado)**: ejecutar día 1 = 15 quick wins (M9n hooksPath relativo, sync MetodoPago entre paquetes, isDark=false default mobile, etc.).
 - `reporte.md` sigue UNTRACKED — decidir si commitear como `docs/reporte-2026-04-28.md` o mantener volátil hasta que el plan F-1..F-15 esté en ejecución.
+
+---
+
+## Sesión 2026-04-28 / 29 — Cierre Día 1-5 + Pivot SaaS DyPos CL
+
+**Contexto**: Worktree (rol Cowork por sesión) ejecuta 28 commits cubriendo
+Día 1-5 del plan CCC + pivot estratégico a SaaS. Sesión maratónica que pasa
+de "estabilizar mobile" → "establecer DyPos CL como producto comercial".
+
+### Decisiones técnicas (28 commits, agrupadas)
+
+**Día 1 — Quick wins (13 commits)**: M9c hook violation `_DebugLoadingBanner`,
+M9d `.env.example` con NEXT_PUBLIC_SENTRY_DSN/URL/AUTH_SECRET, TURBO cache
+fix (lint/type-check sin `^build`, inputs explícitos, globalEnv 12 vars),
+infra Docker M9k (pgadmin pin 8.14) + M9l (mem_limit/cpus en 3 services) +
+M9m (HEALTHCHECK Dockerfile), deps muertas M9g (web: @radix-ui/react-label,
+@repo/ui, date-fns) + M9h (mobile: expo-image, expo-system-ui, victory-native
+~3 MB bundle), CV1 follow-up MIXTO badge mobile, M9o avatar.tsx + stockBadge,
+M9p circular dep cajas (extraer types.ts), PDF3+XLS1 sanitizeFilename helper,
+CV2-3 split tender shared schema + clienteId nullable.
+
+**Día 2 — SS1-SS6 mobile UX (6 commits)**: SS6 tab bar isDark=false fijo,
+SS2 SafeAreaView import desde `react-native-safe-area-context`, SS3 AppState
+listener movido a useEffect con cleanup + nuevo flag `syncStore.isReady`,
+SS5 SystemQRTheme custom para React Navigation (background ivory en vez de
+blanco), SS4 SecureStore.getItemAsync con timeout 3s race (evita app
+colgada en Keystore corrupto), SS1 useFonts gate carga Inter 4 weights antes
+del primer render. **Verificación visual real en device**: app instalada vía
+push manual a `/sdcard/Download/` + open desde Mi File Manager (MIUI bloquea
+adb install incluso con toggle USB Security ON), login renderizando con
+tipografía Inter Bold + ivory background + SafeArea respetada.
+
+**Día 3-4 — Schema hardening (4 commits)**: SCH3 partial unique
+`AperturaCaja(caja_id) WHERE estado='ABIERTA'` + `MobileRelease(platform)
+WHERE is_latest=true` (con limpieza pre-constraint de duplicados existentes),
+SCH2 23 CHECK constraints DB-level (precio/stock/cantidad/montos
+non-negative + descuentoPct entre 0-100 + monto pagos/devolución positivo),
+F-3 extension soft-delete a Cliente + Devolucion + MovimientoCaja (3
+columnas nuevas + FK SET NULL + helpers `CLIENTES_VISIBLES` /
+`DEVOLUCIONES_VISIBLES` / `MOVIMIENTOS_CAJA_VISIBLES`), SCH1 INT→BigInt
+deferred a F-8 SII sprint con guardrail intermedio: 4 CHECK constraints
+con cap 1.5B CLP que fallan con error claro antes del overflow real
+(2.147B), migration path documentado en SQL + schema.prisma.
+
+**Día 5 — Testing infra (4 commits)**: jest-expo + 25 tests pasando + tsc
+mobile 100% limpio (los 23 errores TS pre-existentes desaparecen tras
+agregar @types/jest), CI mobile gate paralelo al `web` (job
+`mobile (type-check + lint + test:ci)`), syncStore.test.ts + authStore.test.ts
+con 21 tests críticos del path offline-first/auth, husky + lint-staged
+versionados como DX1 (incluye hook funcionando end-to-end al primer commit
+post-install).
+
+**F-6 piloto (1 commit)**: setup global Vitest con `prismaMock`
+(DeepMockProxy + vitest-mock-extended), `authMock`, `revalidatePathMock`,
+auto-wire `vi.mock` para `@repo/db` / `@/auth` / `next/cache` /
+`next/navigation`. 11 tests `crearVenta` happy + error paths (8 cubiertos)
+sin tocar BD real. Total 91 tests web pasando.
+
+**Pivot SaaS DyPos CL (3 commits)**:
+- `scripts/backup-project.sh` — backup completo del proyecto a path
+  externo con timestamp + git SHA + dirty flag, rotación N snapshots,
+  exclusiones para que pese ~138MB en 5s (vs 6.5GB con node_modules +
+  builds + .turbo + releases).
+- `docs/VISION.md` + `docs/adr/001-arquitectura-saas-deployment-dedicado.md`
+  + `docs/adr/002-multi-tenant-future-migration.md` — visión, decisión
+  Camino C (deployment dedicado por cliente, no multi-tenant compartido),
+  trigger explícito para migrar a Camino A (>20 clientes, costo VPSs
+  >$250/mes, F-8 SII en 5+ clientes, coverage tests >70%, CEO confirma).
+- `docs/PRICING-STRATEGY.md` (research mercado SMB Chile + 3 planes
+  $24.990/$44.990/$84.990) + `docs/SALES-PHILOSOPHY.md` (mobile NO edita
+  ventas, anti-fraude documentado) + `LICENSE` (propietaria con DPO
+  Pierre Benites Solier — `private@zgamersa.com`) + `SECURITY.md`
+  (canal disclosure, scope, SLAs por severidad, cumplimiento Ley 19.628 +
+  21.719). Identidad oficial: producto **DyPos CL**, owner **Pierre
+  Benites Solier**, empresa **Dyon Labs**, atribución commits
+  `Co-Authored-By: Ulmer Solier <bpier@zgamersa.com>` (a partir de
+  commit `03e8a66+`; history previa con Co-Authored-By Claude se
+  mantiene como rastro honesto).
+
+### Gotchas nuevos detectados (G-M45 a G-M50)
+
+- **G-M45 — pnpm path en `transformIgnorePatterns` de jest-expo**:
+  las deps reales viven en `node_modules/.pnpm/<pkg>@<ver>_<hash>/node_modules/<pkg>/`.
+  El regex default no las matchea (espera `node_modules/<pkg>/`), causa
+  `SyntaxError: Cannot use import statement outside a module` en
+  `react-native/jest/setup.js` y `expo-modules-core/.../*.ts`. Fix:
+  prefix opcional `(?:.*?node_modules/)?` antes de la lista de paquetes
+  + patrón `[\\w-]*` para cubrir scopes (`expo-*`, `@expo/*`,
+  `@react-native-*`).
+- **G-M46 — jest-expo 54 incompatible con jest 30**: peer dep wants
+  `^27 || ^28 || ^29`. Pin `jest@^29.7.0` + `@types/jest@^29.5.14` o
+  romperá con `jest-watch-typeahead` peer warning + posibles fallos
+  runtime.
+- **G-M47 — APK install bloqueado por MIUI Security incluso con
+  toggle "USB Security" ON**: `adb install` retorna
+  `INSTALL_FAILED_USER_RESTRICTED`. Workaround verificado: `adb push
+  apk /sdcard/Download/` + abrir manualmente desde Mi File Manager.
+  Posiblemente requiere SIM activa + Mi account logueada en Xiaomi
+  para destrabar.
+- **G-M48 — Dev build mobile sin Metro corriendo se queda en splash**:
+  el APK dev build (`expo run:android`) NO embebe el bundle JS, lo
+  descarga de Metro al arrancar. Si Metro no está up + `adb reverse
+  tcp:8081 tcp:8081` no está activo, app queda en logo. Para test en
+  device con APK release real, usar `expo build` o EAS Build (que
+  embebe bundle).
+- **G-M49 — Branch protection main bloquea push directo si hay status
+  check requerido pendiente**: `web (type-check + lint + test + build)`
+  exigido. Workaround temporal: bypass habilitado para push directo,
+  pero hoy 2026-04-29 falló silenciosamente sin mensaje. Investigar
+  mañana — posiblemente race con CI run anterior incompleto.
+- **G-M50 — `DyPos CL` es la marca canónica**, no más `POS Chile` /
+  `SystemQR` / `Dysa POS` / `pos-chile`. Pendiente Bloque 3 mañana
+  para find/replace en código (UI, README, package.json, app.json
+  mobile manifest). Mientras tanto la documentación SaaS ya usa el
+  nombre correcto.
+
+### Estado final sesión
+
+- **Commits totales**: 28 (Día 1: 13 / Día 2: 6 / Día 3-4: 4 / Día 5: 4
+  / SaaS pivot: 3) + 2 commits memory previos = 30 commits sesión.
+- **Backlog**: 62 → 31 ítems críticos (-50%).
+- **Tests**: mobile 0 → 46, web 80 → 91. CI gate web + mobile activos.
+- **Schema DB**: 0 → 27 CHECK constraints + 2 partial uniques + 4 modelos
+  con soft-delete + 4 guardrails Int4.
+- **Docs estratégicos**: VISION + 2 ADRs + LICENSE + SECURITY +
+  PRICING-STRATEGY + SALES-PHILOSOPHY + decisiones autoritativas
+  en `memory/decisions/2026-04-29-saas-pivot-decisions.md`.
+- **Backup script** funcional + verificado.
+- **Push pendiente**: 3 commits locales (`03e8a66`, `4b10aa8`,
+  `01571d0`) — falla por branch protection, retomar mañana.
+
+### Bloques pendientes para próxima sesión (mañana)
+
+🔴 **Bloque 3 (Branding)**: find/replace en código y configs.
+- `apps/web/app/login/page.tsx` y headers → "DyPos CL"
+- `apps/mobile/app.json` (`name`, `slug`, `displayName`) → "DyPos CL"
+- `apps/mobile/app/(auth)/login.tsx` título → "DyPos CL"
+- `package.json` raíz `name` (¿`dypos-cl-monorepo`?)
+- README.md raíz reescrito profesional
+- PWA manifest web
+
+🔴 **Bloque 4 (Multi-tenant prep)**: `scripts/provision-tenant.sh` que
+genere para un cliente nuevo:
+- Carpeta `~/Dyon-Tenants/<slug>/` con docker-compose.yml + .env.docker
+  pre-poblado
+- Postgres seed inicial (admin user, IVA 19% Chile, monedas CLP)
+- DNS subdominio (manual o via API Cloudflare si aplica)
+- APK build con branding
+
+🔴 **Bloque 5 (UI admin mobile releases + nginx APK)**:
+- `/dashboard/mobile-releases` con form upload + form publicar
+- nginx vhost `apk-dypos.zgamersa.com` servir `/var/www/apks/`
+
+🔴 **Bloque 6 (Mobile gaps)**:
+- Editar cliente desde mobile (PATCH `/api/v1/clientes/:id`)
+- Editar perfil propio completo (nombre + avatar, no solo password)
+
+🔴 **Bloque 7 (Deploy a prod)**:
+- `scripts/backup-project.sh` antes
+- `./scripts/deploy.sh` con todo lo acumulado
+- Verificación browser incógnito gotcha 77
+
+🔴 **Bloque 8 (cierre)**:
+- Resolver branch protection push fallido
+- `/session-end` final + push
+
+### Notas para Cowork al iniciar próxima sesión
+
+1. **Cargar PRIMERO** `memory/decisions/2026-04-29-saas-pivot-decisions.md`
+   — todo el contexto SaaS está ahí.
+2. **NO re-preguntar** las 8 decisiones — Pierre las contestó.
+3. **Continuar desde Bloque 3** (branding) — tiene mayor dependencia
+   downstream.
+4. **Verificar** que la web actual `dy-pos.zgamersa.com` siga ON y
+   funcional (es la demo del owner para prospects).
+5. **Push fallido** — investigar GitHub branch protection antes de
+   intentar más commits.
