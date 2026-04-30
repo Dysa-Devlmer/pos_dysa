@@ -69,6 +69,16 @@ jobs:
         env:
           # Salt determinístico para tests reproducibles. NO usar en prod.
           PII_LOG_SALT: ci-deterministic-salt-not-for-prod
+          # `@repo/db` valida que POS_DATABASE_URL exista al cargarse (ver
+          # packages/db/src/client.ts:5). Aunque los tests usen prismaMock
+          # (vi.mock de @repo/db), el factory hace `vi.importActual` para
+          # obtener los enums reales — eso ejecuta el módulo y dispara la
+          # validación. Mock URL OK porque Prisma client real nunca conecta
+          # en tests (todas las llamadas pasan por el mock).
+          POS_DATABASE_URL: postgresql://ci-mock:ci-mock@localhost:5432/ci_mock_db
+          DATABASE_URL: postgresql://ci-mock:ci-mock@localhost:5432/ci_mock_db
+          NEXTAUTH_SECRET: ci-mock-secret-32-chars-long-enough-for-jwt
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Build
         run: pnpm --filter web run build
