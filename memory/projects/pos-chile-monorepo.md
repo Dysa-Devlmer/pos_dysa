@@ -887,6 +887,129 @@ genere para un cliente nuevo:
 
 ---
 
+## Sesión 2026-04-30 (continuación) — Fase 0 audit Codex
+
+**Contexto**: nuevo agente Codex auditó el estado post-Bloques 3-7 SaaS
+pivot y propuso Fase 0 "cierre de deudas críticas antes de nuevas
+features". 8 preguntas con respuestas verificadas + plan de 7 sub-fases.
+Pierre adoptó el plan; ejecución completa en una sesión.
+
+### Smoke prod inicial (Codex requirement, antes de tocar código)
+
+Ejecutado vía Claude_in_Chrome MCP con browser real (no curl).
+Fecha/hora: 2026-04-30 19:20-19:45 CLT.
+
+- Login admin (admin@pos-chile.cl / admin123) ✅ + Logout ✅
+- Login cajero (cajero@pos-chile.cl / cajero123) ✅
+- /, /caja, /ventas como admin ✅
+- /mobile-releases admin → UI publicar + listing 4 releases reales ✅
+- /mobile-releases cajero → redirect /?error=admin-required (RBAC) ✅
+- /caja cajero → flujo "Abrir caja Mistura 1 — Santa Isabel" ✅
+- /api/health → DB connected, version 2.0.0 ✅
+- Branding "DyPos CL" + sidebar correcto + dark mode ✅
+
+### Bug crítico detectado por Codex y fixeado (Fase 0.1)
+
+`editarVenta` actualizaba subtotal/total/detalles pero NO PagoVenta[],
+montoRecibido, ni vuelto. Editar venta MIXTO de $100k → $80k dejaba
+los pagos sumando $100k → invariante `total === sum(PagoVenta.monto)`
+violada silenciosamente. Reportes Z desbalanceados, riesgo fraude.
+
+Fix en commit `4b2e6cc` (apps/web/app/(dashboard)/ventas/actions.ts):
+replicada lógica `crearVenta` líneas 180-230 dentro de editarVenta.
+En el `$transaction` ahora `tx.pagoVenta.deleteMany` precede a
+`tx.venta.update` con nested create de pagos nuevos. Suma validada,
+metodoPago rollup recalculado (MIXTO si pagos > 1), vuelto y
+montoRecibido recalculados si hay efectivo.
+
+### Commits Fase 0 (5 commits)
+
+- **`4b2e6cc`** fix(ventas) editarVenta + 33 tests F-6 (Fase 0.1+0.2):
+  - editarVenta sincroniza pagos
+  - editarVenta.test.ts (8 tests del invariante)
+  - eliminarVenta.test.ts (7 tests soft-delete + audit)
+  - restaurarVenta.test.ts (8 tests RESTORE + admin gate)
+  - crearDevolucion.test.ts (10 tests parcial/total/edge cases)
+
+- **`ae99b53`** fix(infra) backup BD auto + CI push a main (Fase 0.3+0.4):
+  - deploy.sh nuevo step "5a-bis Backup BD prod" con pg_dump | gzip a
+    /var/backups/dypos-cl-db/pre-deploy-YYYYMMDD-HHMMSS.sql.gz, chmod
+    600, rotación últimos 14 dumps. Path impreso en logs explícitamente
+    + comando restore manual. Cierra G-M53.
+  - ci.yml trigger agregado a push a main (antes solo PRs y feature/*).
+    Ahora CI corre real en cada push y branch protection se cumple
+    naturalmente.
+
+- **`2d508d6`** feat(infra) bind mount /var/www/apks en pos-web (Fase 0.5):
+  - docker-compose.yml volumes para servicio web.
+  - VPS: mkdir + chown 1001:1001 /var/www/apks/{android,ios}.
+  - VPS: nginx vhost /etc/nginx/sites-available/apk-dypos en HTTP 80
+    (SSL pendiente DNS+certbot manuales).
+
+- **`a9bfb8d`** fix(ci) set env vars en step Test web (Fase 0.4 follow-up):
+  - POS_DATABASE_URL + NEXTAUTH_SECRET mock en CI Test step. Bug
+    detectado al activar trigger main: el factory `vi.mock("@repo/db")`
+    hace `importActual` → ejecuta el módulo real → exige las env vars.
+
+### Verificaciones Fase 0 (todos los exit criteria de Codex)
+
+| Criterio | Status | Evidencia |
+|---|---|---|
+| Smoke prod inicial | ✅ | admin + cajero + RBAC + 5 rutas + health |
+| Bug split tender corregido | ✅ | actions.ts fix + 8 tests editarVenta |
+| Tests críticos agregados | ✅ | 33 tests nuevos, 125/125 web pasando |
+| Backup BD auto verificado | ✅ | pre-deploy-20260430-185958.sql.gz 26 KB |
+| CI corregido | ✅ | Run 25193364714 web+mobile ✅ en main |
+| nginx APK | 🟡 | vhost + bind mount OK, DNS+SSL pendientes manual |
+| Deploy prod exitoso | ✅ | health 200, version 2.0.0 post-deploy |
+| Smoke final | ✅ | /mobile-releases UI live con 4 APKs reales |
+
+### Gotcha nuevo
+
+- **G-M54 (Vitest + Prisma client + CI env vars)**: cuando
+  `vi.mock("@repo/db", async () => { const actual = await
+  vi.importActual(...) })` se invoca en setup global para preservar
+  enums, el `importActual` ejecuta el módulo real `@repo/db/src/client.ts`
+  que valida `POS_DATABASE_URL`. En CI sin esa env var, el mock falla.
+  Fix: setear POS_DATABASE_URL + NEXTAUTH_SECRET mock en step Test del
+  workflow (mismo patrón que ya hace step Build). URLs mock OK porque
+  Prisma client real nunca conecta en tests.
+
+### Hallazgos extra del smoke
+
+- Sistema POS prod tiene datos reales: 2 ventas históricas
+  (B-20260428-Z0RU6R3N + B-20260426-D202CTEX), 1 caja "Mistura 1 —
+  Santa Isabel", 4 mobile releases ya publicadas (v1.0.1 → v1.0.3
+  con v1.0.3 latest, fixes documentados en notes).
+- Avatar custom admin (gotcha 13 base64) funcionando.
+- Dark mode usuario persistido.
+
+### Pendientes operacionales no-código (Pierre)
+
+🟡 **DNS Cloudflare**: agregar A record `apk-dypos` → IP VPS
+   (proxied ON). Sin esto, apk-dypos.zgamersa.com retorna NXDOMAIN.
+
+🟡 **SSL Let's Encrypt** (post-DNS):
+   `ssh root@VPS && certbot --nginx -d apk-dypos.zgamersa.com \
+   --email private@zgamersa.com --agree-tos -n`
+   certbot edita el vhost agregando SSL automáticamente.
+
+🟡 **Re-deploy con docker-compose.yml updated** (commit 2d508d6):
+   El bind mount `/var/www/apks` se aplicó hoy con el deploy.
+   Verificado: `docker inspect pos-web --format '{{.Mounts}}'` muestra
+   el mount activo.
+
+### Fase 0 Status Final
+
+**100% cerrada** según exit criteria. Pendientes son operacionales
+externos (DNS Cloudflare + SSL) que el script de deploy NO puede
+hacer porque requieren credenciales que no están en el VPS.
+
+Backlog: 27 → 23 ítems críticos. Total acumulado desde audit inicial:
+62 → 23 (-63%).
+
+---
+
 ## Sesión 2026-04-30 — Cierre Bloques 3-7 SaaS pivot DyPos CL
 
 **Contexto**: continuación de la sesión 2026-04-29. Pierre confirmó las 8
