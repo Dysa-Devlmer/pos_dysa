@@ -1277,6 +1277,37 @@ docs+template-only para cerrar deuda operacional externa.
 ### Commits
 
 - `b60f0f3` — `docs(ops): Fase 2A — checklist externo Pierre + DR-11/DR-12 + backup-offsite template`
+- `8611c5e` — `fix(ops): Fase 2A patch — keyword UptimeRobot real + path VPS consistente`
+
+### Patch Fase 2A (post-review Codex)
+
+Codex detectó dos inconsistencias operativas que se corrigieron antes
+de aceptar Fase 2A:
+
+1. **Keyword UptimeRobot incorrecta**: el checklist proponía `"ok":true`
+   pero `/api/health` real (`apps/web/app/api/health/route.ts`) responde
+   `{"status":"ok","database":"connected","version":"2.0.0"}`. Corregido
+   a `"status":"ok"` con fallback documentado a "solo HTTP 200" si
+   UptimeRobot no matchea JSON compacto.
+
+2. **Path VPS inconsistente**: `deploy.sh:24` usa
+   `VPS_DIR="/opt/pos-chile"` (path real vigente) pero el checklist,
+   `backup-offsite.sh`, `tenant-provisioning.md` y `deploy-ops.md`
+   usaban `/opt/dypos-cl`. Riesgo: Pierre copia un cron y falla en
+   prod. Fix:
+   - `scripts/backup-offsite.sh`: `APP_DIR="${APP_DIR:-/opt/pos-chile}"`
+     configurable; `ENV_FILE` deriva de `APP_DIR`. Tenants futuros
+     pueden override sin tocar el script.
+   - Todas las refs `/opt/dypos-cl` en docs y scripts → `/opt/pos-chile`
+     (verificado: 0 ocurrencias residuales).
+
+3. **Bonus**: comentarios de restore-test en `backup-offsite.sh` ahora
+   consultan tablas Postgres reales (snake_case por `@@map` en
+   schema.prisma) — `ventas`, `productos`, `clientes`, `audit_logs`
+   en una query con `UNION ALL` — no nombres de modelos Prisma como
+   `"Venta"` que no existen en Postgres.
+
+Gate post-patch: `bash -n` OK, `type-check` web + mobile OK.
 
 ### Estado al cierre
 
