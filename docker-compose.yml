@@ -52,6 +52,13 @@ services:
       TZ: America/Santiago
     ports:
       - "3000:3000"
+    volumes:
+      # Fase 0.5 (sesión 2026-04-30) — bind mount para distribuir APKs
+      # via /dashboard/mobile-releases. El UI admin guarda APKs aquí
+      # cuando se publica una nueva release. nginx (en host) sirve estos
+      # archivos en apk-dypos.zgamersa.com. UID 1001 = nextjs container
+      # user; el chown se aplica en el host antes del primer up.
+      - /var/www/apks:/var/www/apks
     networks:
       - pos-network
     healthcheck:
