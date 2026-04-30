@@ -128,33 +128,32 @@ Hoy `deploy.sh` rota a 14 dumps pre-deploy. ¿Qué pasa con backups diarios
 **Bloquea:** compliance + disaster recovery serio.
 **Quién:** Pierre.
 
-### DR-11 — Archivos de agentes locales (`.agents/`, `.codex/`, `AGENTS.md`)
+### DR-11 — Archivos de agentes locales (`.agents/`, `.codex/`, `AGENTS.md`) — DECIDIDO 2026-04-30
 
 Hoy aparecen untracked en root. No agruparlos igual — cada uno tiene
 naturaleza distinta:
 
 - **`.agents/skills/`** — 65 skills del Devlmer Ecosystem Engine (scaffold
   genérico: `algorithmic-art`, `brand-identity`, `code-reviewer`, ...). No
-  son específicos al proyecto. **Recomendación:** `gitignore`. Excepción:
+  son específicos al proyecto. **Decisión:** `gitignore`. Excepción:
   si Pierre crea skills propias del POS Chile, mover esas a una subcarpeta
   versionada (ej. `.agents/skills/pos-*`) y excluir solo el resto.
 
 - **`.codex/`** — runtime local de Codex (15 agentes `.toml` + hooks
   genéricos + `hooks.json`). Sin contenido específico al proyecto.
-  **Recomendación:** `gitignore`. Sin excepciones; lo manejan los
+  **Decisión:** `gitignore`. Sin excepciones; lo manejan los
   agentes Codex.
 
 - **`AGENTS.md`** (213 líneas) — copia de `CLAUDE.md` con 9 líneas distintas
   (renombra "Claude" → "Codex" y path `.claude/` → `.Codex/`). **Riesgo
   alto de drift** si se mantienen ambos como fuente paralela.
-  **Recomendación:** versionarlo, pero como **stub** que referencie
+  **Decisión:** versionarlo, pero como **stub** que referencie
   `CLAUDE.md` como fuente canónica. Esto preserva descubribilidad para
   agentes Codex que esperan `AGENTS.md` por convención, sin duplicar
   reglas. Diff actual sin secretos — confirmado por inspección.
 
-**Bloquea:** higiene del repo + onboarding consistente entre agentes.
-**Quién:** Pierre confirma; agente aplica `gitignore` + reescribe
-`AGENTS.md` como stub.
+**Estado:** cerrado por Pierre/Codex. `.agents/` y `.codex/` ignorados;
+`AGENTS.md` versionado como stub.
 
 ### DR-12 — Sentry mobile (F-13 diferida)
 

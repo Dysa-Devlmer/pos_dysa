@@ -1321,3 +1321,24 @@ Gate post-patch: `bash -n` OK, `type-check` web + mobile OK.
 
 🟢 Próxima fase libre: 2B (backend hardening) / 2C (UX polish) /
    2D (mobile + Sentry) — depende de qué priorice Pierre.
+
+---
+
+## Sesión 2026-04-30 — DR-11 cerrado por Pierre/Codex
+
+**Contexto:** tras Fase 2A, Pierre pidió que Codex actuara sobre las tareas
+de dueño que sí estaban disponibles en el repo local.
+
+### Decisión DR-11
+
+- `.agents/` queda en `.gitignore` porque contiene 65 skills genéricos del
+  Devlmer Ecosystem Engine, no artefactos específicos del producto DyPos CL.
+- `.codex/` queda en `.gitignore` porque es runtime local de Codex (agentes
+  `.toml` + hooks), no fuente del producto.
+- `AGENTS.md` se versiona como stub breve que apunta a `CLAUDE.md` como
+  fuente canónica. La copia completa anterior duplicaba reglas y podía
+  divergir de `CLAUDE.md`.
+
+**Estado:** DR-11 cerrado. No se tocaron Cloudflare, GitHub Settings,
+UptimeRobot ni off-site backups porque requieren credenciales externas de
+Pierre.
