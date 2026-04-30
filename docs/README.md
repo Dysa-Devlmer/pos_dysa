@@ -25,6 +25,9 @@ docs/
 ├── audits/                   # Audits profesionales históricos (SUPERSEDED)
 │   └── audit-2026-04-28.md   # Audit Codex/CLI 2026-04-27 (disparó Fase 0)
 │
+├── operations/               # Runbooks operacionales y checklists externos
+│   └── external-setup-checklist.md  # Pasos que solo Pierre ejecuta (Fase 2A)
+│
 ├── design/                   # Capturas UX y prototipos
 │   ├── preview.html
 │   └── screenshots/

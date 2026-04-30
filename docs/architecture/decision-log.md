@@ -128,6 +128,63 @@ Hoy `deploy.sh` rota a 14 dumps pre-deploy. ¿Qué pasa con backups diarios
 **Bloquea:** compliance + disaster recovery serio.
 **Quién:** Pierre.
 
+### DR-11 — Archivos de agentes locales (`.agents/`, `.codex/`, `AGENTS.md`)
+
+Hoy aparecen untracked en root. No agruparlos igual — cada uno tiene
+naturaleza distinta:
+
+- **`.agents/skills/`** — 65 skills del Devlmer Ecosystem Engine (scaffold
+  genérico: `algorithmic-art`, `brand-identity`, `code-reviewer`, ...). No
+  son específicos al proyecto. **Recomendación:** `gitignore`. Excepción:
+  si Pierre crea skills propias del POS Chile, mover esas a una subcarpeta
+  versionada (ej. `.agents/skills/pos-*`) y excluir solo el resto.
+
+- **`.codex/`** — runtime local de Codex (15 agentes `.toml` + hooks
+  genéricos + `hooks.json`). Sin contenido específico al proyecto.
+  **Recomendación:** `gitignore`. Sin excepciones; lo manejan los
+  agentes Codex.
+
+- **`AGENTS.md`** (213 líneas) — copia de `CLAUDE.md` con 9 líneas distintas
+  (renombra "Claude" → "Codex" y path `.claude/` → `.Codex/`). **Riesgo
+  alto de drift** si se mantienen ambos como fuente paralela.
+  **Recomendación:** versionarlo, pero como **stub** que referencie
+  `CLAUDE.md` como fuente canónica. Esto preserva descubribilidad para
+  agentes Codex que esperan `AGENTS.md` por convención, sin duplicar
+  reglas. Diff actual sin secretos — confirmado por inspección.
+
+**Bloquea:** higiene del repo + onboarding consistente entre agentes.
+**Quién:** Pierre confirma; agente aplica `gitignore` + reescribe
+`AGENTS.md` como stub.
+
+### DR-12 — Sentry mobile (F-13 diferida)
+
+Hoy mobile NO tiene Sentry. F-13 quedó diferida al cierre de Fase 11
+porque requiere rebuild APK + reinstalar en device físico de Pierre.
+Plan completo:
+
+1. Crear proyecto Sentry tipo "React Native / Expo" en la org del tenant.
+2. Generar DSN; **Pierre custodia** (`.env.docker` mobile O config Expo).
+3. Configurar `@sentry/react-native` o `sentry-expo` en `apps/mobile/`.
+4. Inyectar DSN en `app.json` extras o `.env` con prefijo `EXPO_PUBLIC_*`.
+5. Sourcemaps: configurar upload via `expo build` o EAS Build hook.
+6. Rebuild APK con `scripts/mobile-build-apk.sh`.
+7. Pierre reinstala en device (manual via Mi File Manager — gotcha G-M47).
+8. Crash test controlado (botón temporal `throw new Error("sentry test")`)
+   para validar que el evento llega a Sentry dashboard.
+9. Documentar release flow actualizado en `docs/mobile-release-runbook.md`.
+
+**Bloquea:** observabilidad mobile en prod. Hoy una crash silenciosa en
+`syncStore` no genera alerta — el cajero lo reporta o no.
+
+**Quién decide cuándo:** Pierre — gatillado por disponibilidad de device
++ ventana para reinstalar APK (15-30 min).
+
+**Quién implementa:** agente, una vez Pierre custodie DSN. Trabajo
+estimado: 2h código + 30min Pierre (Sentry account + DSN).
+
+**Recomendación:** ejecutar cuando Pierre tenga 1h libre con device a
+mano; ideal en una ventana "calma" sin clientes activos.
+
 ## Process — proponer una decisión nueva
 
 1. Crear PR con un nuevo ADR en `docs/adr/NNN-titulo.md` (numeración continua).
