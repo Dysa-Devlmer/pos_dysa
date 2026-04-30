@@ -1140,3 +1140,67 @@ Setup F-6 ya está commiteado, escribir esos 2 tests es trabajo de
 
 🟡 **`reporte.md` untracked** — sigue siendo gestionado por CCC, no
 commitear desde Cowork.
+
+---
+
+## Sesión 2026-04-29 · Fase 1 — Arquitectura Oficial cerrada
+
+**Contexto:** Codex aprobó cierre de Fase 0 y autorizó Fase 1 con alcance
+docs-only: crear el manual maestro técnico de DyPos CL como fuente de
+verdad estructural del sistema.
+
+### Decisiones técnicas
+
+1. `reporte.md` se reubica como `docs/audits/audit-2026-04-28.md` con
+   header `SUPERSEDED` apuntando a `memory/projects/pos-chile-monorepo.md`
+   y `docs/architecture/README.md` como fuentes vigentes. Se preserva
+   contenido íntegro para trazabilidad histórica.
+
+2. `docs/architecture/` queda como **fuente de verdad arquitectónica**
+   del sistema. 9 documentos:
+   - `README.md` — visión general + diagrama Mermaid stack completo.
+   - `frontend.md` — Next.js 15 RSC, Tailwind v4, shadcn/ui.
+   - `backend.md` — Server Actions, API v1 REST, NextAuth, contratos Zod.
+   - `database.md` — Prisma 6, soft-delete, AuditLog, 6 migrations.
+   - `mobile.md` — Expo SDK 54, stores zustand, sync offline-first.
+   - `deploy-ops.md` — `scripts/deploy.sh` con backup auto + rollback.
+   - `tenant-provisioning.md` — Camino C SaaS dedicado.
+   - `testing-ci.md` — Vitest + Jest + GitHub Actions.
+   - `decision-log.md` — ADRs vivos + 10 items `DECISION_REQUIRED`.
+
+3. `docs/README.md` actualizado como índice navegable apuntando a
+   `architecture/`, `adr/`, `audits/`, runbooks, etc.
+
+4. Cada doc separa explícitamente **tareas Pierre vs agentes** y lista
+   gotchas activos por área. Items que requieren input humano marcan
+   `DECISION_REQUIRED` en `decision-log.md` (10 abiertos: branch
+   protection, cobertura, e2e mobile, push, OTA, monitoreo externo,
+   smoke automatizado, CSV import, pgbouncer, retención backups).
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter web test` → **125 / 125** ✅ (con Node 22)
+- `pnpm --filter @repo/mobile test` → **46 / 46** ✅
+- `pnpm --filter web build` ✅
+
+### Gotcha nuevo registrado
+
+🟡 **G-NODE22** — Tests web (vitest 4 + rolldown) requieren Node 22+
+local. Node 18 falla con `SyntaxError: 'styleText' not exported from
+node:util`. CI ya usa Node 22; localmente: `nvm use 22` antes de
+correr suite. No es bug del repo.
+
+### Commits
+
+- `aa3e2f5` — `docs(architecture): Fase 1 — manual maestro técnico DyPos CL`
+
+### Estado al cierre
+
+✅ Fase 0 cerrada (sesión anterior, 2026-04-30).
+✅ Fase 1 cerrada — manual maestro técnico vivo en `docs/architecture/`.
+🟢 Próxima fase queda libre para Pierre/Codex (features comerciales,
+   resolver `DECISION_REQUIRED` items, o iterar audits).
