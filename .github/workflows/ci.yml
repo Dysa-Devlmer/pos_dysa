@@ -17,10 +17,14 @@ on:
     branches: [main]
   push:
     branches:
+      - main
       - "feature/**"
       - "fix/**"
   # Reutilizable desde deploy-prod.yml — mismo gate antes de cada deploy.
   workflow_call:
+  # Permite trigger manual desde GitHub UI (útil para re-correr el gate
+  # tras cambios en CI config sin necesidad de un nuevo commit).
+  workflow_dispatch:
 
 # Si llega un nuevo push a la misma branch, cancelar el run anterior.
 # Ahorra minutos de Actions y evita queue.

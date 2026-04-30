@@ -244,6 +244,50 @@ ssh_run "
 
 success "Docker compose ejecutado en VPS"
 
+# ─── 5a-bis. Backup BD de prod ANTES de migrations ───────────────────────────
+# Fase 0.3 (sesión 2026-04-30) — cierra gotcha G-M53:
+#   "deploy.sh NO backupea BD prod, solo el directorio". Si una migration
+#   destructiva corrompe datos, el rollback automático del script restaura
+#   /opt/pos-chile (código + configs) pero NO la BD. Pérdida total potencial.
+#
+# Política: pg_dump | gzip a /var/backups/dypos-cl-db/, mantener últimos
+# 14 dumps con rotación FIFO. Si el dump falla, el deploy se aborta con
+# exit code (es deuda más grave perder datos que retrasar el deploy).
+#
+# Path del backup se imprime en logs explícitamente para trazabilidad
+# (Codex requirement).
+header "5a-bis/6 · Backup BD prod (pre-migrations)"
+
+DB_BACKUP_TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
+DB_BACKUP_PATH="/var/backups/dypos-cl-db/pre-deploy-${DB_BACKUP_TIMESTAMP}.sql.gz"
+
+log "Generando dump comprimido en VPS: $DB_BACKUP_PATH"
+ssh_run "
+  set -e
+  mkdir -p /var/backups/dypos-cl-db
+  POSTGRES_USER=\$(grep '^POSTGRES_USER=' ${VPS_DIR}/.env.docker | cut -d= -f2-)
+  POSTGRES_DB=\$(grep '^POSTGRES_DB=' ${VPS_DIR}/.env.docker | cut -d= -f2-)
+  docker exec pos-postgres pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \\
+    | gzip > '${DB_BACKUP_PATH}'
+  chmod 600 '${DB_BACKUP_PATH}'
+  ls -lh '${DB_BACKUP_PATH}'
+" || die "Backup BD falló — abortando deploy. Investiga antes de re-intentar."
+
+log "Rotación: manteniendo últimos 14 dumps..."
+ssh_run "
+  set -e
+  cd /var/backups/dypos-cl-db
+  TOTAL=\$(ls -1 pre-deploy-*.sql.gz 2>/dev/null | wc -l | tr -d ' ')
+  if [ \"\$TOTAL\" -gt 14 ]; then
+    ls -1t pre-deploy-*.sql.gz | tail -n +15 | xargs -r rm -v
+  fi
+"
+
+success "Backup BD: $DB_BACKUP_PATH"
+log "Para restaurar manualmente:"
+log "  docker exec -i pos-postgres psql -U \$POSTGRES_USER -d \$POSTGRES_DB \\"
+log "    < <(zcat $DB_BACKUP_PATH)"
+
 # ─── 5b. Prisma migrate deploy ───────────────────────────────────────────────
 # Por qué este paso existe (gotcha 96 — incidente 2026-04-27):
 #   El Dockerfile multi-stage NO incluye `packages/db/prisma/` en la imagen
