@@ -1100,10 +1100,11 @@ password, pero NO permitía editar campos básicos:
   `printf 'n\ndeploy\n' | ./scripts/deploy.sh`. La 'n' al primer
   prompt skipea el build local; "deploy" al segundo confirma.
 
-- **G-M53 (deploy.sh NO backupea BD prod)**: el rollback automático del
-  script restaura el directorio `/opt/pos-chile` (código + configs) pero
-  NO la BD. Antes de aplicar migrations destructivas, hacer manual:
-  `ssh ... "cd /opt/pos-chile && docker exec pos-postgres pg_dump ... | gzip > /tmp/pre-deploy-...sql.gz"`.
+- **G-M53 (deploy.sh NO backupea BD prod)** — **SUPERSEDED / CERRADO en
+  Fase 0.3 (commit `ae99b53`)**. `scripts/deploy.sh` ahora hace `pg_dump`
+  automático en fase 5a-bis antes de `prisma migrate deploy`, con
+  rotación a 14 dumps en `/var/backups/dypos-cl-db/`. Ya NO es un gotcha
+  activo. Ver `docs/architecture/deploy-ops.md §4` y `database.md §3`.
 
 ### Estado final sesión
 
@@ -1143,7 +1144,7 @@ commitear desde Cowork.
 
 ---
 
-## Sesión 2026-04-29 · Fase 1 — Arquitectura Oficial cerrada
+## Sesión 2026-04-30 · Fase 1 — Arquitectura Oficial cerrada
 
 **Contexto:** Codex aprobó cierre de Fase 0 y autorizó Fase 1 con alcance
 docs-only: crear el manual maestro técnico de DyPos CL como fuente de
@@ -1202,5 +1203,90 @@ correr suite. No es bug del repo.
 
 ✅ Fase 0 cerrada (sesión anterior, 2026-04-30).
 ✅ Fase 1 cerrada — manual maestro técnico vivo en `docs/architecture/`.
-🟢 Próxima fase queda libre para Pierre/Codex (features comerciales,
-   resolver `DECISION_REQUIRED` items, o iterar audits).
+
+---
+
+## Sesión 2026-04-30 · Fase 2A — Ops/Infra externa cerrada
+
+**Contexto:** Codex aprobó cierre Fase 1 con dos ajustes menores
+(corregir fecha "2026-04-29" → "2026-04-30" en sesión anterior; marcar
+G-M53 explícitamente como SUPERSEDED) y autorizó Fase 2A como bloque
+docs+template-only para cerrar deuda operacional externa.
+
+### Ajustes menores aplicados
+
+- Fecha corregida: "Sesión 2026-04-29" → "Sesión 2026-04-30" para Fase 1.
+- G-M53 reescrito en memory como SUPERSEDED/CERRADO (Fase 0.3, commit
+  `ae99b53`), no como gotcha activo. En docs ya estaba marcado closed
+  en `database.md`, `deploy-ops.md` y `decision-log.md`.
+
+### Decisiones técnicas Fase 2A
+
+1. **DR-11 fundamentado** — inspección directa del contenido:
+   - `AGENTS.md` (213 líneas) = clon de `CLAUDE.md` con sólo 9 líneas
+     distintas (rename "Claude" → "Codex", path `.claude/` → `.Codex/`).
+     Sin secretos. **Recomendación:** versionar como stub que referencie
+     `CLAUDE.md` para evitar drift; preserva descubribilidad para Codex
+     sin duplicar reglas.
+   - `.agents/skills/` = 65 skills genéricos del Devlmer Ecosystem
+     Engine (`algorithmic-art`, `brand-identity`, `code-reviewer`...).
+     No específicos al proyecto. **Recomendación:** gitignore.
+   - `.codex/` = runtime local Codex (15 agentes `.toml` + 3 hooks
+     genéricos + `hooks.json` con linters PHP/Python/TS). **Recomendación:**
+     gitignore.
+   - Pierre confirma; agente NO aplica gitignore aún sin veredicto.
+
+2. **DR-12 formalizado** — Sentry mobile con plan completo de 9 pasos
+   (proyecto Sentry, DSN custodia, config Expo, sourcemaps, rebuild APK,
+   reinstall device, crash test, doc release flow). Trabajo: 2h agente
+   + 30min Pierre. Gatillo: ventana libre con device a mano.
+
+3. **Checklist externo creado** — `docs/operations/external-setup-checklist.md`
+   con 8 secciones (DNS, SSL, validación APK, branch protection,
+   UptimeRobot, off-site backup, custodia credenciales, estado al cierre).
+   Cada paso incluye comandos exactos, validación, y formato de reporte.
+
+4. **Script backup off-site preparado** — `scripts/backup-offsite.sh`
+   como template S3-compatible (B2/S3/Wasabi/R2). Falla rápido si faltan
+   `OFFSITE_BACKUP_*` en `.env.docker`. Incluye procedimiento restore-test
+   mensual. **No ejecutable** hasta que DR-10 cierre con provider elegido.
+
+5. **`docs/README.md`** actualizado con `operations/` en el índice.
+
+### Lo que NO se hizo (intencional)
+
+- ❌ No se tocaron Cloudflare DNS, GitHub Settings, ni provider externo
+  alguno — son tareas exclusivas de Pierre por custodia de credenciales.
+- ❌ No se aplicó `.gitignore` de `.agents/`/`.codex/`/`AGENTS.md` —
+  Pierre debe confirmar veredicto DR-11 primero.
+- ❌ No se ejecutó `backup-offsite.sh` — DR-10 requiere decisión Pierre.
+- ❌ No se rebuild APK ni se tocó Sentry — DR-12 requiere ventana
+  device + DSN Pierre.
+- ❌ No features nuevas. No SII. No CSV import. No UX polish.
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `bash -n scripts/backup-offsite.sh` ✅
+- Tests + build no afectados (último gate completo verde en commit
+  `aa3e2f5` de Fase 1 — cambios Fase 2A son docs + shell exclusivos).
+
+### Commits
+
+- `b60f0f3` — `docs(ops): Fase 2A — checklist externo Pierre + DR-11/DR-12 + backup-offsite template`
+
+### Estado al cierre
+
+✅ Fase 2A cerrada — toda la deuda operacional documentada en formato
+   accionable para Pierre. 6 items operacionales pendientes son
+   estrictamente "credentials-required", no técnicos.
+
+🟡 **Bloqueo crítico**: Pierre debe ejecutar items 1-6 del checklist
+   externo (DNS, SSL, branch protection, UptimeRobot, decisión backup
+   provider) para que DyPos CL sea operable como SaaS serio multi-tenant.
+
+🟢 Próxima fase libre: 2B (backend hardening) / 2C (UX polish) /
+   2D (mobile + Sentry) — depende de qué priorice Pierre.
