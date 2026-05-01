@@ -333,6 +333,14 @@ export function parseRowsToProductos(
       });
       rowHasError = true;
     }
+    if (descripcion.length > 500) {
+      errors.push({
+        row: rowNum,
+        field: "descripcion",
+        message: `descripcion debe tener máximo 500 caracteres (recibido: ${descripcion.length}).`,
+      });
+      rowHasError = true;
+    }
     const precio = parsePrecioChileno(precioRaw);
     if (precio === null) {
       errors.push({
@@ -408,4 +416,94 @@ export function parseRowsToProductos(
   }
 
   return { parsed, errors };
+}
+
+// ─── Revalidación server-side del payload de commit ────────────────────────
+
+/**
+ * Revalida un payload `ParsedRow[]` recibido desde el cliente antes del
+ * commit. Defensa contra payload manipulado: aunque el flujo normal manda
+ * `preview.validRows` intacto, una Server Action no debe confiar en el
+ * cliente.
+ *
+ * Reglas (mismas que `parseRowsToProductos`):
+ *   - rows.length <= MAX_ROWS
+ *   - nombre 2-120
+ *   - codigoBarras 3-60
+ *   - precio entero 0..99_999_999
+ *   - stock entero 0..1_000_000
+ *   - alertaStock entero >= 0
+ *   - descripcion null o <= 500
+ *   - activo boolean
+ *   - categoriaNombre no vacío
+ *   - sin duplicados de codigoBarras intra-payload
+ *
+ * No toca DB. La resolución de categoriaId vs DB sigue siendo responsabilidad
+ * de la action — este helper solo verifica forma + rangos.
+ *
+ * Devuelve `null` si el payload es válido; un mensaje de error genérico
+ * (sin filtrar detalles) si algo está mal. La action transforma ese mensaje
+ * en el error visible: "Preview inválido o desactualizado. Vuelve a subir
+ * el CSV.".
+ */
+export function validateCommitPayload(rows: ParsedRow[]): string | null {
+  if (!Array.isArray(rows)) return "payload_no_array";
+  if (rows.length === 0) return "payload_vacio";
+  if (rows.length > MAX_ROWS) return "payload_max_rows";
+
+  const seenCodigos = new Set<string>();
+
+  for (const p of rows) {
+    if (!p || typeof p !== "object") return "row_no_object";
+
+    if (typeof p.nombre !== "string") return "nombre_no_string";
+    if (p.nombre.length < 2 || p.nombre.length > 120) return "nombre_rango";
+
+    if (typeof p.codigoBarras !== "string") return "codigo_no_string";
+    if (p.codigoBarras.length < 3 || p.codigoBarras.length > 60) {
+      return "codigo_rango";
+    }
+
+    if (
+      typeof p.precio !== "number" ||
+      !Number.isInteger(p.precio) ||
+      p.precio < 0 ||
+      p.precio > 99_999_999
+    ) {
+      return "precio_rango";
+    }
+
+    if (
+      typeof p.stock !== "number" ||
+      !Number.isInteger(p.stock) ||
+      p.stock < 0 ||
+      p.stock > 1_000_000
+    ) {
+      return "stock_rango";
+    }
+
+    if (
+      typeof p.alertaStock !== "number" ||
+      !Number.isInteger(p.alertaStock) ||
+      p.alertaStock < 0
+    ) {
+      return "alerta_rango";
+    }
+
+    if (p.descripcion !== null) {
+      if (typeof p.descripcion !== "string") return "descripcion_no_string";
+      if (p.descripcion.length > 500) return "descripcion_max";
+    }
+
+    if (typeof p.activo !== "boolean") return "activo_no_bool";
+
+    if (typeof p.categoriaNombre !== "string" || p.categoriaNombre.trim() === "") {
+      return "categoria_vacia";
+    }
+
+    if (seenCodigos.has(p.codigoBarras)) return "duplicado_intra_payload";
+    seenCodigos.add(p.codigoBarras);
+  }
+
+  return null;
 }

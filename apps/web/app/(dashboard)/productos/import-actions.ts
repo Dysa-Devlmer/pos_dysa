@@ -40,11 +40,15 @@ import {
   MAX_ROWS,
   parseCsvText,
   parseRowsToProductos,
+  validateCommitPayload,
   type ActionResult,
   type ImportPreview,
   type ImportSummary,
   type ParsedRow,
 } from "./import-helpers";
+
+const PAYLOAD_INVALIDO_MSG =
+  "Preview inválido o desactualizado. Vuelve a subir el CSV.";
 
 async function requireAdmin() {
   const session = await auth();
@@ -189,6 +193,13 @@ export async function commitImportProductos(args: {
 
     if (rows.length === 0) {
       return { ok: false, error: "No hay filas válidas para importar." };
+    }
+
+    // Defensa: revalidar payload server-side. Aunque la UI manda
+    // `preview.validRows` intacto, no podemos confiar en el cliente.
+    const payloadError = validateCommitPayload(rows);
+    if (payloadError !== null) {
+      return { ok: false, error: PAYLOAD_INVALIDO_MSG };
     }
 
     // Re-resolver categoriaId server-side (defensa: no confiar en el client).

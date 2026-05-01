@@ -531,8 +531,8 @@ describe("commitImportProductos — bulk insert + AuditLog", () => {
       rows: [
         {
           row: 1,
-          nombre: "X",
-          codigoBarras: "C1",
+          nombre: "Coca",
+          codigoBarras: "C123",
           precio: 1990,
           stock: 0,
           alertaStock: 5,
@@ -548,6 +548,104 @@ describe("commitImportProductos — bulk insert + AuditLog", () => {
     expect(res.ok).toBe(false);
     if (res.ok) throw new Error("expected fail");
     expect(res.error).toMatch(/no existe/i);
+  });
+
+  // ─── Defensa: revalidación server-side del payload ──────────────────────
+
+  const payloadInvalidoMsg =
+    "Preview inválido o desactualizado. Vuelve a subir el CSV.";
+
+  function makeValidRow(overrides: Partial<{
+    row: number;
+    nombre: string;
+    codigoBarras: string;
+    precio: number;
+    stock: number;
+    alertaStock: number;
+    categoriaNombre: string;
+    categoriaId: number | null;
+    descripcion: string | null;
+    activo: boolean;
+  }> = {}) {
+    return {
+      row: 1,
+      nombre: "Coca",
+      codigoBarras: "7800001",
+      precio: 1990,
+      stock: 10,
+      alertaStock: 5,
+      categoriaNombre: "Bebidas",
+      categoriaId: 7,
+      descripcion: null,
+      activo: true,
+      ...overrides,
+    };
+  }
+
+  test("rechaza payload con precio fuera de rango (>99M)", async () => {
+    const res = await commitImportProductos({
+      rows: [makeValidRow({ precio: 100_000_000 })],
+      actualizarExistentes: false,
+      filename: "test.csv",
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected fail");
+    expect(res.error).toBe(payloadInvalidoMsg);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  test("rechaza payload con stock fuera de rango (>1.000.000)", async () => {
+    const res = await commitImportProductos({
+      rows: [makeValidRow({ stock: 1_000_001 })],
+      actualizarExistentes: false,
+      filename: "test.csv",
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected fail");
+    expect(res.error).toBe(payloadInvalidoMsg);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  test("rechaza payload con descripcion > 500 chars", async () => {
+    const res = await commitImportProductos({
+      rows: [makeValidRow({ descripcion: "x".repeat(501) })],
+      actualizarExistentes: false,
+      filename: "test.csv",
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected fail");
+    expect(res.error).toBe(payloadInvalidoMsg);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  test("rechaza payload con duplicados intra-payload", async () => {
+    const res = await commitImportProductos({
+      rows: [
+        makeValidRow({ row: 1, codigoBarras: "DUP-1" }),
+        makeValidRow({ row: 2, codigoBarras: "DUP-1", nombre: "Pan" }),
+      ],
+      actualizarExistentes: false,
+      filename: "test.csv",
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected fail");
+    expect(res.error).toBe(payloadInvalidoMsg);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  test("rechaza payload con > MAX_ROWS filas", async () => {
+    const rows = Array.from({ length: MAX_ROWS + 1 }, (_, i) =>
+      makeValidRow({ row: i + 1, codigoBarras: `BAR-${i + 1}` }),
+    );
+    const res = await commitImportProductos({
+      rows,
+      actualizarExistentes: false,
+      filename: "test.csv",
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected fail");
+    expect(res.error).toBe(payloadInvalidoMsg);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
   test("CAJERO no puede commitear", async () => {
