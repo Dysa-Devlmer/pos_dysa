@@ -27,6 +27,62 @@
 import { PrismaClient, Rol } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+// ─── Guardrail anti-prod (Fase 2E patch · 2026-05-01) ──────────────────────
+//
+// Este seed:
+//   - sobreescribe passwords públicas conocidas ("admin123", "cajero123"),
+//   - upserta emails/rut/códigos de barras determinísticos,
+//   - inserta datos demo ficticios.
+//
+// Ejecutarlo contra una BD remota / de cliente real corrompe el sistema:
+// rotaría credenciales conocidas e inyectaría productos demo en el catálogo
+// activo. Para tenants reales, usar `scripts/provision-tenant.sh` que sigue
+// otro flujo (password temporal por cliente + sin productos demo).
+//
+// Esta función bloquea el seed si la URL de conexión no apunta a un host
+// dev/local conocido. NO hay override — es deliberado: si alguna vez el
+// seed necesita correr en otro host, hay que editar la lista explícita
+// abajo en un PR revisado.
+
+const SAFE_DEV_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "::1",
+  "postgres",      // hostname dentro de la red docker-compose
+  "pos-postgres",  // container name del compose
+]);
+
+function assertSafeSeedTarget(): void {
+  const url = process.env.POS_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "Seed demo bloqueado: POS_DATABASE_URL / DATABASE_URL no está definida.",
+    );
+  }
+
+  let host: string;
+  try {
+    // Postgres URLs (`postgresql://...`) son URL-parseables por WHATWG URL,
+    // pero el campo `hostname` viene sin brackets para IPv6 y limpio para
+    // hostnames normales — usamos eso directo.
+    host = new URL(url).hostname;
+  } catch {
+    throw new Error(
+      `Seed demo bloqueado: connection string inválida (no se pudo parsear host).`,
+    );
+  }
+
+  if (!SAFE_DEV_HOSTS.has(host)) {
+    throw new Error(
+      `Seed demo bloqueado: la BD no parece local. Host detectado: "${host}". ` +
+        `No usar en prod. Hosts permitidos: ${[...SAFE_DEV_HOSTS].join(", ")}. ` +
+        `Para provisioning de tenants reales usar scripts/provision-tenant.sh.`,
+    );
+  }
+}
+
+assertSafeSeedTarget();
+
 const prisma = new PrismaClient();
 
 // ─── Usuarios ───────────────────────────────────────────────────────────────

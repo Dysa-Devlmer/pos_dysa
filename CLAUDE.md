@@ -208,9 +208,17 @@ Crea / mantiene en sync:
 - 5 productos con códigos `DEMO-7800001..5`.
 - 1 cliente "Cliente Demo" con RUT `11.111.111-1`.
 
-Re-ejecutarlo no duplica datos (upsert + findFirst). **No usar en prod**
-— provisioning de tenants reales tiene su propio flujo en
-`docs/architecture/tenant-provisioning.md`.
+Re-ejecutarlo no duplica datos (upsert + findFirst).
+
+**Guardrail anti-prod**: el seed se aborta con error claro si
+`POS_DATABASE_URL` / `DATABASE_URL` apunta a un host distinto de
+`localhost`, `127.0.0.1`, `::1`, `postgres` o `pos-postgres`. NO hay
+override — si se necesita correr en otro host hay que editar la
+allowlist en `packages/db/prisma/seed.ts` en un PR revisado.
+
+**No usar en prod ni en tenants reales** — el provisioning real está
+en `scripts/provision-tenant.sh` (password temporal por cliente, sin
+productos demo, ver `docs/architecture/tenant-provisioning.md`).
 
 Cuándo correrlo:
 - Tras `pnpm --filter @repo/db db:migrate` (primer setup).
