@@ -1922,6 +1922,124 @@ archivo.
 - `94bd5c6` — `chore(memory): session notes Fase 2D cierre`
 - `3bd1f47` — `feat(mobile): Fase 2D follow-up — Sentry validado prod (POS-CHILE-MOBILE-1)`
 
+---
+
+## Sesión 2026-05-01 · Fase 3A — CSV import productos cerrada
+
+**Contexto:** primera fase comercial — onboarding rápido para clientes
+con catálogos grandes (DR-08). Codex aprobó alcance acotado con
+decisiones específicas por chat (Q1.1 a Q10).
+
+### Cambios técnicos
+
+1. **`apps/web/app/(dashboard)/productos/import-helpers.ts`** (puro,
+   sin "use server"): constantes (5 MB / 5k filas), tipos exportados
+   (`RowError`, `ParsedRow`, `ImportPreview`, `ImportSummary`), parser
+   CSV inline (sin papaparse para evitar bundle bloat), normalizadores
+   chilenos (`parsePrecioChileno`, `parseBoolEs`, `parseCsvText`),
+   `parseRowsToProductos` con validación por fila, `buildCsvTemplate`
+   para descarga.
+
+2. **`apps/web/app/(dashboard)/productos/import-actions.ts`** ("use
+   server"): solo Server Actions async (`previewImportProductos`,
+   `commitImportProductos`). Resuelve categorías por nombre, detecta
+   duplicados intra-CSV (error) y en DB (warning), bulk insert via
+   `createMany` + bulk update opcional dentro de
+   `prisma.$transaction`, AuditLog accion CREATE + diff
+   `PRODUCTOS_IMPORT_CSV`.
+
+3. **`apps/web/app/(dashboard)/productos/import-csv-dialog.tsx`**
+   (Client): state machine idle→parsing→preview→committing→done,
+   dropzone nativo con drag/drop, botón "Descargar plantilla" via
+   Blob client-side, tabla preview (max 100 filas visibles),
+   checkbox "Actualizar productos existentes" si hay duplicates en
+   DB, confirm disabled cuando hay errores.
+
+4. **`productos-table.tsx`**: botón "Importar CSV" (variant outline)
+   en toolbar al lado de "Nuevo producto". Mismo gate (disabled si
+   no hay categorías activas).
+
+5. **`docs/architecture/decision-log.md`**: DR-08 marcado IMPLEMENTADO
+   con resumen de decisiones aprobadas.
+
+### Decisiones aprobadas (Pierre 2026-05-01)
+
+| Q | Decisión |
+|---|----------|
+| Q1.1 | categoría por nombre (no id) |
+| Q1.2 | precio acepta `1990`, `1.990`, `$1.990`; rechaza `1990,50` |
+| Q2 | duplicados → skip default + checkbox "actualizar" |
+| Q3 | categoría inexistente → error por fila (NO auto-crear) |
+| Q4 | pre-validación all-or-nothing |
+| Q5 | 5 MB / 5.000 filas máximo |
+| Q6 | solo web (no mobile) |
+| Q7 | Server Action (no API REST en este sprint) |
+| Q8 | sin Idempotency-Key |
+| Q9 | AuditLog accion CREATE + diff `PRODUCTOS_IMPORT_CSV` |
+| Q10 | tests unit + contract + smoke browser |
+| Extra | "Descargar plantilla CSV" con headers + 2 filas ejemplo |
+
+### Tests añadidos (+43 web, total 238/238)
+
+`apps/web/app/(dashboard)/productos/__tests__/import-csv.test.ts`:
+
+- `parsePrecioChileno`: 6 formatos válidos + 4 inválidos.
+- `parseBoolEs`: variantes es-CL.
+- `parseCsvText`: BOM, quotes, CRLF, delimiter `,`/`;`, vacíos.
+- `parseRowsToProductos`: headers requeridos, rangos, fila vacía,
+  múltiples errores por fila.
+- `buildCsvTemplate`: round-trip → 2 filas parseables sin error.
+- `previewImportProductos` contract: file size, row count, duplicates
+  intra-CSV, duplicates en DB, categoría inexistente, RBAC CAJERO.
+- `commitImportProductos` contract: bulk createMany + AuditLog, skip
+  default, update con flag, error si categoría desaparece, RBAC.
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **238 / 238** ✅
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --watchman=false` → **73 / 73**
+
+### Smoke browser desktop 1280×800
+
+- `/productos` → toolbar muestra "Importar CSV" + "Nuevo producto".
+- Click "Importar CSV" → dialog abre con dropzone + "Descargar plantilla"
+  + texto "Máx. 5 MB · 5.000 filas".
+- Wire-in OK.
+
+### Lo que NO se hizo (intencional)
+
+- ❌ Schema DB intacto.
+- ❌ Sin endpoint REST `/api/v1/productos/import` (Q7 — Server Action only).
+- ❌ Sin idempotency (Q8 — admin confirma manualmente).
+- ❌ Sin auto-creación de categorías (Q3).
+- ❌ Sin mobile UI (Q6 — solo web).
+
+### Gotcha nuevo registrado
+
+🟡 **G-WEB-USE-SERVER**: archivos con `"use server"` en Next.js NO
+permiten exports no-async (consts, tipos, helpers sync). Si necesitas
+helpers puros para usar tanto desde Server Actions como Client
+Components, ponlos en archivo aparte sin `"use server"`. Patrón
+adoptado: `import-actions.ts` ("use server") + `import-helpers.ts`
+(sin directiva).
+
+### Commits
+
+- `a6977ab` — `feat(web): Fase 3A — CSV import productos para onboarding rápido`
+
+### Estado al cierre
+
+✅ Fase 3A cerrada — onboarding comercial desbloqueado. Cliente con 500+
+   productos puede subir CSV en lugar de capturar uno por uno.
+
+🟢 Próxima fase aprobada por Pierre: **documentación funcional para
+   dueño/cliente** (manuales de uso, no técnicos). Candidato.
+
 🟢 Próxima fase: **3A** — features comerciales. Candidatos por orden
    de prioridad comercial: CSV import productos (DR-08, desbloquea
    onboarding cliente con catálogo grande), onboarding tenants
