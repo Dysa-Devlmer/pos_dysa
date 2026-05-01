@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { RotateCcw } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { formatCLP } from "@/lib/utils";
 
 import { DevolucionesList, type DevolucionRow } from "./devoluciones-list";
@@ -62,63 +57,36 @@ export default async function DevolucionesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <RotateCcw className="size-6 text-amber-500" />
-          Devoluciones
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Reversiones de ventas: parciales (uno o varios productos) o totales
-          (anulan la venta).
-        </p>
-      </div>
+      <PageHeader
+        title="Devoluciones"
+        subtitle="Reversiones de ventas: parciales (uno o varios productos) o totales (anulan la venta)."
+      />
 
       <RangoFechasFiltro
         desde={sp.desde ?? null}
         hasta={sp.hasta ?? null}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Devoluciones en el período
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{rows.length}</p>
-            <p className="text-xs text-muted-foreground">
-              {totales} total · {parciales} parcial
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Monto devuelto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
-              {formatCLP(totalDevuelto)}
-            </p>
-            <p className="text-xs text-muted-foreground">CLP (IVA incluido)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Promedio por devolución
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums">
-              {rows.length > 0
-                ? formatCLP(Math.round(totalDevuelto / rows.length))
-                : formatCLP(0)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <KpiCard
+          label="Devoluciones en el período"
+          value={rows.length}
+          sublabel={`${totales} total · ${parciales} parcial`}
+        />
+        <KpiCard
+          label="Monto devuelto"
+          value={formatCLP(totalDevuelto)}
+          sublabel="CLP (IVA incluido)"
+          tone="amber"
+        />
+        <KpiCard
+          label="Promedio por devolución"
+          value={
+            rows.length > 0
+              ? formatCLP(Math.round(totalDevuelto / rows.length))
+              : formatCLP(0)
+          }
+        />
       </div>
 
       <DevolucionesList data={rows} />

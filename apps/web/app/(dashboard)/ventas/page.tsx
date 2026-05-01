@@ -4,6 +4,8 @@ import { Plus } from "lucide-react";
 import { prisma, type Prisma } from "@repo/db";
 
 import { Button } from "@/components/ui/button";
+import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { calcularDesglose, formatCLP } from "@/lib/utils";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 import { RangoFechasFiltro } from "./rango-fechas";
@@ -77,20 +79,18 @@ export default async function VentasPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ventas</h1>
-          <p className="text-sm text-muted-foreground">
-            Historial de ventas con filtro por rango de fechas.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/ventas/nueva">
-            <Plus className="size-4" />
-            Nueva venta
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Ventas"
+        subtitle="Historial de ventas con filtro por rango de fechas."
+        action={
+          <Button asChild>
+            <Link href="/ventas/nueva">
+              <Plus className="size-4" />
+              Nueva venta
+            </Link>
+          </Button>
+        }
+      />
 
       <RangoFechasFiltro
         desde={sp.desde ?? null}
@@ -98,24 +98,19 @@ export default async function VentasPage({
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-md border bg-background p-3">
-          <p className="text-xs text-muted-foreground">Ventas en el período</p>
-          <p className="text-xl font-bold tabular-nums">{rows.length}</p>
-        </div>
-        <div className="rounded-md border bg-background p-3">
-          <p className="text-xs text-muted-foreground">Total facturado</p>
-          <p className="text-xl font-bold tabular-nums">
-            {formatCLP(totalPeriodo)}
-          </p>
-        </div>
-        <div className="rounded-md border bg-background p-3 sm:block">
-          <p className="text-xs text-muted-foreground">Ticket promedio</p>
-          <p className="text-xl font-bold tabular-nums">
-            {rows.length
+        <KpiCard label="Ventas en el período" value={rows.length} />
+        <KpiCard
+          label="Total facturado"
+          value={formatCLP(totalPeriodo)}
+        />
+        <KpiCard
+          label="Ticket promedio"
+          value={
+            rows.length
               ? formatCLP(Math.round(totalPeriodo / rows.length))
-              : formatCLP(0)}
-          </p>
-        </div>
+              : formatCLP(0)
+          }
+        />
       </div>
 
       <VentasTable data={rows} hasDateFilter={Boolean(desde || hasta)} />

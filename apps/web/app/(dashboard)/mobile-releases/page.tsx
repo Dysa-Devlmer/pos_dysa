@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+
+import { PageHeader } from "@/components/page-header";
+
 import { MobileReleasesClient } from "./mobile-releases-client";
 
 export const dynamic = "force-dynamic";
@@ -38,19 +41,21 @@ export default async function MobileReleasesPage() {
   }));
 
   return (
-    <div className="container mx-auto max-w-6xl py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Mobile Releases</h1>
-        <p className="text-muted-foreground mt-2">
-          Publicación de APKs para la app móvil DyPos CL. Solo el release
-          marcado como <strong>latest</strong> se distribuye a los usuarios.
-          Los APKs se sirven desde{" "}
-          <code className="bg-muted rounded px-1 text-sm">
-            apk-dypos.zgamersa.com
-          </code>
-          .
-        </p>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        title="Mobile Releases"
+        subtitle={
+          <>
+            Publicación de APKs para la app móvil DyPos CL. Solo el release
+            marcado como <strong>latest</strong> se distribuye a los usuarios.
+            Los APKs se sirven desde{" "}
+            <code className="rounded bg-muted px-1 text-xs">
+              apk-dypos.zgamersa.com
+            </code>
+            .
+          </>
+        }
+      />
 
       <MobileReleasesClient releases={serializableReleases} />
     </div>

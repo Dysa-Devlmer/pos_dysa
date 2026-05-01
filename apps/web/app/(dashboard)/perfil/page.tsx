@@ -8,6 +8,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/page-header";
 
 import { ActividadReciente } from "./actividad-reciente";
 import { AvatarCard } from "./avatar-card";
@@ -30,12 +31,10 @@ export default async function PerfilPage() {
   return (
     <PerfilContainer>
       <PerfilItem>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mi Perfil</h1>
-          <p className="text-sm text-muted-foreground">
-            Administra tu información personal, seguridad y revisa tu actividad.
-          </p>
-        </div>
+        <PageHeader
+          title="Mi Perfil"
+          subtitle="Administra tu información personal, seguridad y revisa tu actividad."
+        />
       </PerfilItem>
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -60,7 +59,7 @@ export default async function PerfilPage() {
               <TabsTrigger value="seguridad">
                 <KeyRound className="size-4" />
                 <span className="hidden sm:inline">Seguridad</span>
-                <span className="sm:hidden">Seguridad</span>
+                <span className="sm:hidden">Clave</span>
               </TabsTrigger>
               <TabsTrigger value="actividad">
                 <Receipt className="size-4" />

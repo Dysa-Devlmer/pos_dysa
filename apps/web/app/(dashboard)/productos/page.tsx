@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@repo/db";
 import { Button } from "@/components/ui/button";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { PageHeader } from "@/components/page-header";
 import { ProductosTable, type ProductoRow } from "./productos-table";
 
 export const dynamic = "force-dynamic";
@@ -36,25 +42,21 @@ export default async function ProductosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Productos</h1>
-        <p className="text-sm text-muted-foreground">
-          Catálogo de productos, precios en CLP y control de stock.
-        </p>
-      </div>
+      <PageHeader
+        title="Productos"
+        subtitle="Catálogo de productos, precios en CLP y control de stock."
+      />
 
       {categorias.length === 0 ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">
-          <p className="font-medium text-amber-900 dark:text-amber-200">
-            No hay categorías activas.
-          </p>
-          <p className="mt-1 text-amber-800 dark:text-amber-300">
+        <Alert variant="warning">
+          <AlertTitle>No hay categorías activas</AlertTitle>
+          <AlertDescription>
             Debes crear al menos una categoría antes de registrar productos.
-          </p>
+          </AlertDescription>
           <Button asChild variant="outline" size="sm" className="mt-3">
             <Link href="/categorias">Ir a categorías</Link>
           </Button>
-        </div>
+        </Alert>
       ) : null}
 
       <ProductosTable data={rows} categorias={categorias} />
