@@ -1496,6 +1496,97 @@ del body raw) y lo pasa al wrapper.
 - `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
   → **48 / 48** ✅
 
+---
+
+## Sesión 2026-04-30 · Fase 2B-P1 — API contract completion cerrada
+
+**Contexto:** Codex aceptó Fase 2B-P0 con patch y aprobó pasar a 2B-P1
+para completar el contrato API antes de UX. Alcance acotado: agregar
+schemas faltantes en `@repo/api-client`, adoptarlos en handlers REST
+sin romper wire format, tests de contrato mínimos, docs.
+
+### Schemas nuevos en `packages/api-client/src/types.ts`
+
+- `CrearProductoRequestSchema` / `ActualizarProductoRequestSchema`
+- `CategoriasListResponseSchema` (array directo, sin paginación)
+- `UsuariosListResponseSchema` (paginado, sin password)
+- `AperturaCajaSchema` + `EstadoAperturaSchema` enum
+- `MovimientoCajaSchema` + `TipoMovimientoCajaSchema` enum
+- `AbrirCajaRequestSchema`, `CerrarCajaRequestSchema`,
+  `RegistrarMovimientoRequestSchema`
+- `DevolucionListResponseSchema`
+
+### Handlers actualizados (sin breaking)
+
+- `POST/PUT /api/v1/productos[id]`: usan los schemas compartidos +
+  `jsonZodError`. Codes asignados: `VALIDATION_FAILED` (body invalid /
+  Zod), `DUPLICATE` (código barras), `NOT_FOUND` (id inexistente),
+  `INTERNAL_ERROR` (fallback).
+- `POST /api/v1/caja/aperturas`: idem + `BUSINESS_RULE` cuando
+  `abrirCaja` action retorna `ok:false`.
+- `PATCH /api/v1/caja/aperturas/[id]`: idem + `BUSINESS_RULE` en
+  cierre fallido + `VALIDATION_FAILED` para id no numérico.
+- `POST /api/v1/caja/aperturas/[id]/movimientos`: idem.
+
+Los wire formats no cambiaron — clientes existentes (mobile actual)
+siguen funcionando. Mobile podrá adoptar los schemas en una fase
+futura para validar responses runtime.
+
+### Tests añadidos (+30, total web 195/195)
+
+- `productos/__tests__/contract.test.ts` (10): body invalid → 400,
+  Zod fail → 422 + path issues, duplicate → 409 DUPLICATE, happy
+  path 200, RBAC CAJERO 403, PUT id inexistente → 404 NOT_FOUND,
+  PUT parcial.
+- `caja/__tests__/contract.test.ts` (9): aperturas POST/PATCH +
+  movimientos POST. Cubren Zod fail + happy + business error 422.
+- `__tests__/list-schemas.test.ts` (11): valida shapes de las
+  respuestas de lista contra los nuevos schemas (Categorias,
+  Usuarios, Devoluciones, AperturaCaja individual, MovimientoCaja
+  individual). Defensa en profundidad: si el handler emite shape
+  distinto, el schema lo detecta.
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **195 / 195** ✅ (15 suites)
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
+  → **48 / 48** ✅
+
+### Lo que NO se hizo (intencional)
+
+- ❌ Sin migración DB.
+- ❌ Sin idempotency masiva (solo `/ventas` conserva).
+- ❌ `/auth/login` intacto.
+- ❌ Sin breaking mobile — APK desplegada sigue operando con el wire
+  format anterior. Mobile podrá adoptar los nuevos schemas en una
+  fase futura sin romper el contrato.
+- ❌ No se añadieron schemas para responses no listadas (productos
+  individual ya tenía `ProductoSchema`; aperturas individual ahora
+  tiene `AperturaCajaSchema`; usuario individual tiene `UsuarioSchema`).
+
+### Commits
+
+- `741ff4b` — `feat(api): Fase 2B-P1 — API contract completion (schemas compartidos)`
+
+### Estado al cierre
+
+✅ Fase 2B-P1 cerrada — contrato API completo en `@repo/api-client`,
+   handlers usando schemas compartidos y envelope `{error, code, details}`
+   estándar en endpoints críticos (productos, caja). 195 tests web
+   pasando.
+
+🟢 Próxima fase: **2C — Frontend UX polish** (desarrollo visible,
+   ya no docs/contratos).
+
+🟡 Bloqueos operacionales pendientes Pierre (acumulados): DR-01
+   branch protection, DR-06 UptimeRobot, DR-10 off-site backups,
+   items checklist externo (DNS/SSL apk-dypos).
+
 ### Estado al cierre
 
 ✅ Fase 2B-P0 cerrada — backend con error envelope estándar, idempotency
