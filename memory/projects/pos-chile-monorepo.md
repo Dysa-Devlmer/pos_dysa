@@ -1830,3 +1830,91 @@ icono renderizan correctamente.
 🟢 Próxima fase: **2D Mobile + Sentry** (cuando Pierre tenga ventana
    con device físico) o **2E Dev fixtures/seed** (desbloquea smoke
    RBAC local del cajero — G-DEV-CAJERO).
+
+---
+
+## Sesión 2026-05-01 · Fase 2E — Dev fixtures/seed cajero cerrada
+
+**Contexto:** Codex aprobó Fase 2E como bloque corto para cerrar
+`G-DEV-CAJERO` y dejar smoke local reproducible. Codex también pidió
+patch oportunista del último residuo visible del patrón viejo:
+`apps/web/app/(dashboard)/alertas-banner.tsx` con
+`border-amber-300/bg-amber-50` hardcoded.
+
+### Audit previo
+
+- `packages/db/prisma/seed.ts` ya existía y era idempotente con
+  `upsert` para admin + cajero — pero G-DEV-CAJERO se gatilló
+  porque la BD local NO tenía el seed ejecutado (falta documentación
+  visible para nuevos devs/agentes).
+- Comando oficial: `pnpm --filter @repo/db db:seed`.
+- Mismo .env (POS_DATABASE_URL=DATABASE_URL apuntan a
+  `pos_chile_db@localhost:5432`).
+
+### Cambios técnicos
+
+1. **Seed extendido** con dataset mínimo:
+   - 2 usuarios (admin + cajero, passwords conocidas dev only).
+   - 1 caja "Caja Principal" en "Mostrador" — `findFirst+create`
+     porque `Caja` no tiene unique key; flag `activa` preservada/
+     restaurada en re-runs.
+   - 1 categoría "Almacén" — upsert por `nombre @unique`.
+   - 5 productos con códigos `DEMO-7800001..5` (Coca-Cola 1.5L,
+     Pan de molde, Leche entera, Arroz 1kg, Aceite vegetal) —
+     upsert por `codigoBarras @unique`.
+   - 1 cliente "Cliente Demo" con RUT `11.111.111-1` (formato
+     válido pero ficticio) — upsert por `rut @unique`.
+
+2. **Patch oportunista `alertas-banner.tsx`** — migrado a
+   `Alert variant="warning"` + `AlertTitle` + `AlertDescription` +
+   `Button`. Animación `AnimatePresence+motion` (height 0 → auto +
+   opacity) preservada — la sensación "vivo" del banner se mantiene.
+   Cierra el último residuo del patrón viejo en el dashboard.
+
+3. **Documentación en `CLAUDE.md`** — nueva subsección "🌱 Seed
+   local (Fase 2E)" en Infraestructura Docker. Documenta comando,
+   contenido, idempotencia, cuándo correrlo, advertencia "no usar
+   en prod".
+
+### Verificación
+
+- Seed run #1: crea todo, IDs admin=1, cajero=2, caja=3, cat=5,
+  productos=17-21, cliente=4.
+- Seed run #2 (idempotencia): mismos IDs, sin duplicados.
+- Login `admin@pos-chile.cl/admin123` → Dashboard "Hola,
+  Administrador".
+- Login `cajero@pos-chile.cl/cajero123` → Dashboard "Hola, Cajero".
+- RBAC cajero: sidebar oculta sección "Administración" (Usuarios,
+  Cajas, Mobile APK, API Docs). Navegar a `/usuarios` redirige
+  server-side al Dashboard.
+
+### Gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **195 / 195** ✅
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
+  → **48 / 48** ✅
+
+### Commits
+
+- `121bd37` — `feat(dev): Fase 2E — seed local extendido + alertas-banner migrado a Alert`
+
+### Gotcha cerrado
+
+✅ **G-DEV-CAJERO** — cerrado. Cualquier nuevo agente/dev ahora puede
+   correr `pnpm --filter @repo/db db:seed` y tener admin + cajero +
+   dataset mínimo en su BD local sin fricción.
+
+### Estado al cierre
+
+✅ Fase 2E cerrada. Tres deudas chicas cerradas en un commit
+   oportunista: G-DEV-CAJERO, último residuo amber hardcoded,
+   documentación seed faltante.
+
+🟢 Próxima fase: **2D Mobile + Sentry** (cuando Pierre tenga ventana
+   con device) o **3A** features comerciales (CSV import productos
+   primero — desbloquea onboarding de cliente con catálogo grande).
