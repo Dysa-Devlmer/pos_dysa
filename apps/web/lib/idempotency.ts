@@ -27,6 +27,8 @@
  * etc.) — el helper `withIdempotency` toma un `scope` que aísla buckets.
  */
 
+import { createHash } from "node:crypto";
+
 import { Redis } from "@upstash/redis";
 
 const TTL_SECONDS = 24 * 60 * 60; // 24h — alcanza para retries mobile post-reconnect
@@ -44,6 +46,17 @@ export type IdempotencyEntry = {
   body: unknown;
   /** Timestamp UTC ISO de la primera ejecución (telemetría). */
   storedAt: string;
+  /**
+   * Hash determinístico del payload de la primera ejecución. Se compara
+   * contra el fingerprint del retry para detectar reuse de la misma key
+   * con payload distinto (clase de bug clásica: cliente cambia el body
+   * "mejorando" la operación pero olvida regenerar la key).
+   *
+   * Opcional para preservar compat hacia atrás (entries previas en el
+   * store sin fingerprint son tratadas como "no comparable" y replay
+   * pasa). Las entries nuevas siempre lo incluyen.
+   */
+  fingerprint?: string;
 };
 
 export type IdempotencyHit = {
@@ -123,6 +136,40 @@ function buildInflightKey(
   clientKey: string,
 ): string {
   return `${INFLIGHT_PREFIX}:${scope}:${userId}:${clientKey}`;
+}
+
+// ─── Fingerprint ────────────────────────────────────────────────────────────
+
+/**
+ * Serialización canónica recursiva: ordena keys de objetos alfabéticamente
+ * para que la salida de JSON.stringify sea determinística aunque el
+ * cliente envíe los mismos campos en distinto orden.
+ *
+ * Arrays mantienen orden (semánticamente significativo en POS — el orden
+ * de items en una venta importa).
+ */
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object" && value.constructor === Object) {
+    const sorted: Record<string, unknown> = {};
+    for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+      sorted[k] = canonicalize((value as Record<string, unknown>)[k]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/**
+ * Hash SHA-256 del payload normalizado. Caller lo pasa a
+ * `withIdempotency`/`withIdempotencyResponse` para que el store
+ * detecte reuse de la misma key con body distinto y devuelva 409
+ * CONFLICT en lugar de replay incorrecto.
+ */
+export function computeFingerprint(body: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalize(body)))
+    .digest("hex");
 }
 
 // ─── API pública ────────────────────────────────────────────────────────────
@@ -270,6 +317,22 @@ export async function waitForEntry(
 }
 
 /**
+ * Resultado de `withIdempotency`. Discriminado por `conflict`:
+ *
+ * - `conflict: true` — la key ya tiene una entry pero el `fingerprint`
+ *   actual difiere del cacheado → cliente reusó la key con un body
+ *   distinto. El caller debe responder 409 sin ejecutar el handler.
+ *   `result` no aplica.
+ * - sin `conflict` (default `false`) — `result` siempre presente.
+ *   `cacheHit: false` indica primera ejecución (miss); `cacheHit: true`
+ *   indica replay normal (hit con fingerprint compatible o sin
+ *   fingerprint para entries pre-Fase-2B-P0).
+ */
+export type WithIdempotencyResult<T> =
+  | { conflict: true; cacheHit: true } // conflict siempre implica hit
+  | { conflict?: false; cacheHit: boolean; result: T };
+
+/**
  * Helper de alto nivel: ejecuta `handler` solo si esta key todavía no
  * se ejecutó. Cachea el resultado. Maneja el lock in-flight para concurrencia.
  *
@@ -282,16 +345,27 @@ export async function waitForEntry(
  * @param userId — id del usuario autenticado (aísla buckets entre cajeros)
  * @param clientKey — header Idempotency-Key del request
  * @param handler — función que produce { status, body } a cachear
+ * @param fingerprint — hash determinístico del payload (Fase 2B-P0
+ *   patch). Si la entry cacheada tiene un fingerprint distinto, el
+ *   resultado es `{ conflict: true }` — caller debe responder 409.
  */
 export async function withIdempotency<T extends { status: number; body: unknown }>(
   scope: string,
   userId: string | number,
   clientKey: string,
   handler: () => Promise<T>,
-): Promise<{ result: T; cacheHit: boolean }> {
+  fingerprint?: string,
+): Promise<WithIdempotencyResult<T>> {
   // Hit directo (caso normal de retry mobile tras flush exitoso previo).
   const cached = await readIdempotency(scope, userId, clientKey);
   if (cached.ok) {
+    if (
+      fingerprint &&
+      cached.entry.fingerprint &&
+      cached.entry.fingerprint !== fingerprint
+    ) {
+      return { conflict: true, cacheHit: true };
+    }
     return {
       result: cached.entry as unknown as T,
       cacheHit: true,
@@ -304,6 +378,13 @@ export async function withIdempotency<T extends { status: number; body: unknown 
     // Otro request está procesando la misma key → esperar resultado.
     const wait = await waitForEntry(scope, userId, clientKey);
     if (wait.ok) {
+      if (
+        fingerprint &&
+        wait.entry.fingerprint &&
+        wait.entry.fingerprint !== fingerprint
+      ) {
+        return { conflict: true, cacheHit: true };
+      }
       return {
         result: wait.entry as unknown as T,
         cacheHit: true,
@@ -325,6 +406,7 @@ export async function withIdempotency<T extends { status: number; body: unknown 
         status: result.status,
         body: result.body,
         storedAt: new Date().toISOString(),
+        ...(fingerprint ? { fingerprint } : {}),
       });
     }
 

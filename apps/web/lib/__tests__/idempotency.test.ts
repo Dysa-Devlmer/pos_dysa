@@ -19,6 +19,7 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
 
 import {
+  computeFingerprint,
   withIdempotency,
   __resetIdempotencyMemoryForTests,
 } from "@/lib/idempotency";
@@ -38,6 +39,7 @@ describe("withIdempotency — fallback memoria", () => {
     });
 
     const r1 = await withIdempotency("venta:create", 42, "key-A", handler);
+    if (r1.conflict) throw new Error("expected miss, got conflict");
     expect(r1.cacheHit).toBe(false);
     expect(handler).toHaveBeenCalledTimes(1);
     expect(r1.result.status).toBe(200);
@@ -53,6 +55,7 @@ describe("withIdempotency — fallback memoria", () => {
     handler.mockClear();
 
     const r2 = await withIdempotency("venta:create", 7, "key-B", handler);
+    if (r2.conflict) throw new Error("expected hit, got conflict");
     expect(r2.cacheHit).toBe(true);
     expect(handler).not.toHaveBeenCalled();
     expect(r2.result.body).toEqual({
@@ -74,6 +77,7 @@ describe("withIdempotency — fallback memoria", () => {
 
     expect(r2.cacheHit).toBe(false);
     expect(h2).toHaveBeenCalledTimes(1);
+    if (r2.conflict) throw new Error("expected non-conflict");
     expect(r2.result.body).toEqual({ x: 2 });
   });
 
@@ -85,6 +89,7 @@ describe("withIdempotency — fallback memoria", () => {
     const r2 = await withIdempotency("venta:create", 2, "same-key", h2);
 
     expect(r2.cacheHit).toBe(false);
+    if (r2.conflict) throw new Error("expected non-conflict");
     expect(r2.result.body).toEqual({ user: 2 });
   });
 
@@ -114,7 +119,72 @@ describe("withIdempotency — fallback memoria", () => {
     const r2 = await withIdempotency("venta:create", 1, "key-422", handler);
     expect(r2.cacheHit).toBe(true);
     expect(handler).not.toHaveBeenCalled();
+    if (r2.conflict) throw new Error("expected non-conflict replay");
     expect(r2.result.status).toBe(422);
+  });
+
+  test("fingerprint mismatch con misma key → conflict (NO replay, NO ejecuta)", async () => {
+    const handler = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 1 } },
+    });
+
+    // Primera ejecución con fingerprint A.
+    const r1 = await withIdempotency(
+      "venta:create",
+      1,
+      "shared-key",
+      handler,
+      "fp-A",
+    );
+    expect(r1.cacheHit).toBe(false);
+
+    // Misma key, fingerprint B → conflict.
+    handler.mockClear();
+    const r2 = await withIdempotency(
+      "venta:create",
+      1,
+      "shared-key",
+      handler,
+      "fp-B",
+    );
+    expect(r2.conflict).toBe(true);
+    expect("result" in r2).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("misma key + mismo fingerprint → replay (no conflict)", async () => {
+    const handler = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 7 } },
+    });
+
+    await withIdempotency("venta:create", 1, "k", handler, "fp-X");
+    handler.mockClear();
+    const r2 = await withIdempotency("venta:create", 1, "k", handler, "fp-X");
+    expect(r2.cacheHit).toBe(true);
+    expect(r2.conflict).toBeFalsy();
+    if (r2.conflict) throw new Error("expected replay");
+    expect(r2.result.body).toEqual({ data: { id: 7 } });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("computeFingerprint es determinístico y order-independent", () => {
+    const a = computeFingerprint({
+      items: [{ productoId: 1, cantidad: 2 }],
+      metodoPago: "EFECTIVO",
+    });
+    const b = computeFingerprint({
+      metodoPago: "EFECTIVO",
+      items: [{ productoId: 1, cantidad: 2 }],
+    });
+    expect(a).toBe(b);
+
+    const c = computeFingerprint({
+      items: [{ productoId: 1, cantidad: 3 }], // distinto
+      metodoPago: "EFECTIVO",
+    });
+    expect(c).not.toBe(a);
   });
 
   test("dos calls concurrentes con misma key serializan via in-flight lock", async () => {
@@ -149,6 +219,7 @@ describe("withIdempotency — fallback memoria", () => {
     expect(r1.cacheHit).toBe(false);
     // El segundo debería leer la cache después de que el lock se libera.
     expect(r2.cacheHit).toBe(true);
+    if (r2.conflict) throw new Error("expected non-conflict replay");
     expect(r2.result.body).toEqual({ id: "first" });
     expect(handler).toHaveBeenCalledTimes(1);
   });

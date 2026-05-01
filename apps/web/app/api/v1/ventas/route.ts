@@ -9,6 +9,7 @@ import {
   parsePagination,
   withIdempotencyResponse,
 } from "../_helpers";
+import { computeFingerprint } from "@/lib/idempotency";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 export async function GET(request: Request) {
@@ -131,11 +132,26 @@ export async function POST(request: Request) {
   // no duplica la venta: la primera ejecución se cachea y los retries
   // devuelven la misma response. Sin header → ejecución directa
   // (graceful degradation para clientes pre-2B).
+  //
+  // Patch Fase 2B-P0 — fingerprint del payload normalizado: si el cliente
+  // reutiliza la misma key con body distinto (bug clásico), el wrapper
+  // devuelve 409 CONFLICT en lugar de servir la venta anterior.
+  // El fingerprint se calcula sobre los datos parseados (Zod ya
+  // garantiza shape válido), NO sobre el body raw.
+  const fingerprint = computeFingerprint({
+    items,
+    clienteId: clienteId ?? null,
+    metodoPago: metodoPago ?? null,
+    pagos: pagos ?? null,
+    montoRecibido: montoRecibido ?? null,
+  });
+
   return withIdempotencyResponse(
     request,
     "venta:create",
     usuarioId,
     () => createVenta({ items, clienteId, metodoPago, pagos, montoRecibido, usuarioId }),
+    { fingerprint },
   );
 }
 

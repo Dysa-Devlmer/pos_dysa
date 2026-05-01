@@ -223,6 +223,101 @@ describe("POST /api/v1/ventas — idempotency", () => {
     expect(prismaMock.aperturaCaja.findFirst).not.toHaveBeenCalled();
   });
 
+  test("misma Idempotency-Key + body DISTINTO → 409 CONFLICT (no duplica)", async () => {
+    const ventaCreada = {
+      id: 300,
+      numeroBoleta: "BOL-300",
+      total: 5950,
+      detalles: [],
+      pagos: [],
+    };
+    prismaMock.venta.create.mockResolvedValue(ventaCreada as never);
+    prismaMock.producto.update.mockResolvedValue({} as never);
+
+    const KEY = "reused-key-V1";
+
+    // Primer call: cantidad=1, se crea la venta.
+    const r1 = await POST(
+      jsonRequest(
+        { items: [{ productoId: 1, cantidad: 1 }] },
+        { "Idempotency-Key": KEY },
+      ),
+    );
+    expect(r1.status).toBe(200);
+    expect(prismaMock.venta.create).toHaveBeenCalledTimes(1);
+
+    // Segundo call: misma key, pero cantidad=5 (payload distinto).
+    // Debería rechazarse 409 sin ejecutar la mutación.
+    prismaMock.venta.create.mockClear();
+    const r2 = await POST(
+      jsonRequest(
+        { items: [{ productoId: 1, cantidad: 5 }] },
+        { "Idempotency-Key": KEY },
+      ),
+    );
+    expect(r2.status).toBe(409);
+    expect(prismaMock.venta.create).not.toHaveBeenCalled();
+    const body = await r2.json();
+    expect(body.code).toBe("CONFLICT");
+    expect(body.error).toMatch(/Idempotency-Key.*payload distinto/i);
+  });
+
+  test("misma Idempotency-Key + body IDÉNTICO (incluso campos en otro orden) → replay", async () => {
+    const ventaCreada = {
+      id: 400,
+      numeroBoleta: "BOL-400",
+      total: 5950,
+      detalles: [],
+      pagos: [],
+    };
+    prismaMock.venta.create.mockResolvedValue(ventaCreada as never);
+    prismaMock.producto.update.mockResolvedValue({} as never);
+
+    const KEY = "ordered-key-V2";
+
+    const r1 = await POST(
+      jsonRequest(
+        {
+          items: [{ productoId: 1, cantidad: 2 }],
+          metodoPago: "EFECTIVO",
+          montoRecibido: 11900,
+        },
+        { "Idempotency-Key": KEY },
+      ),
+    );
+    expect(r1.status).toBe(200);
+    prismaMock.venta.create.mockClear();
+
+    // Mismo body, distinto orden de keys → fingerprint canonical match.
+    const r2 = await POST(
+      jsonRequest(
+        {
+          montoRecibido: 11900,
+          metodoPago: "EFECTIVO",
+          items: [{ productoId: 1, cantidad: 2 }],
+        },
+        { "Idempotency-Key": KEY },
+      ),
+    );
+    expect(r2.status).toBe(200);
+    expect(r2.headers.get("Idempotent-Replay")).toBe("true");
+    expect(prismaMock.venta.create).not.toHaveBeenCalled();
+  });
+
+  test("Idempotency-Key inválido → 400 VALIDATION_FAILED + details.header", async () => {
+    const r = await POST(
+      jsonRequest(
+        { items: [{ productoId: 1, cantidad: 1 }] },
+        { "Idempotency-Key": "key with spaces" },
+      ),
+    );
+    expect(r.status).toBe(400);
+    const body = await r.json();
+    expect(body.code).toBe("VALIDATION_FAILED");
+    expect(body.details).toEqual({ header: "Idempotency-Key" });
+    expect(prismaMock.venta.create).not.toHaveBeenCalled();
+  });
+
   test("idempotency keys distintas NO comparten cache", async () => {
     const ventaCreada = {
       id: 1,

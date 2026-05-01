@@ -241,20 +241,45 @@ sequenceDiagram
   Server-->>Mobile: 200 + cached body<br/>+ Idempotent-Replay: true
 ```
 
-**Reglas:**
+**Reglas (header tri-estado):**
 
-- Header `Idempotency-Key` opcional. Sin header → ejecución directa
-  (graceful degradation para clientes pre-2B).
-- Key válida: `^[A-Za-z0-9_\-]{1,200}$` (alfanum + guión + underscore).
-  Otros chars → ignorada (header tratado como ausente).
-- Scope aísla buckets por endpoint (hoy `"venta:create"`; futuro:
-  `"devolucion:create"`, `"movimiento:create"`, ...).
-- userId en la key previene que un cajero "robe" la cache de otro.
+- **Ausente** → ejecución directa, sin dedupe (graceful degradation
+  pre-2B mobile).
+- **Válido** (`^[A-Za-z0-9_\-]{1,200}$`) → dedupe activo. Scope aísla
+  buckets por endpoint (hoy `"venta:create"`; futuro: `"devolucion:create"`,
+  `"movimiento:create"`, ...). userId en la key previene que un cajero
+  "robe" la cache de otro.
+- **Inválido** (whitespace, símbolos prohibidos, vacío tras trim,
+  >200 chars) → **400 + `VALIDATION_FAILED` + `details: { header:
+  "Idempotency-Key" }`**. Crítico: NO degradar silenciosamente a "sin
+  dedupe" porque el cliente cree estar protegido; mejor fallar ruidoso.
+
+**Cacheo y replay:**
+
 - Status < 500 se cachea (incluyendo 4xx negocio — errores
   determinísticos por la misma key).
-- Status 5xx NO se cachea (errors transientes server deben permitir retry).
+- Status 5xx NO se cachea (errores transientes server deben permitir retry).
 - Cache TTL: 24h (alcanza para reconnect mobile post-suspensión).
 - Header de respuesta `Idempotent-Replay: true` cuando sirve desde cache.
+
+**Fingerprint del payload (patch Fase 2B-P0):**
+
+Para detectar reuse de la misma key con body distinto (bug clásico:
+cliente cambia el body "mejorando" la operación pero olvida regenerar
+la key):
+
+- El handler calcula `computeFingerprint(body)` (SHA-256 del JSON
+  canónico — keys ordenadas alfabéticamente; arrays mantienen orden).
+- Se guarda `fingerprint` junto a la entry cacheada.
+- En cache hit:
+  - **Mismo fingerprint** → replay normal (200 cacheado).
+  - **Fingerprint distinto** → **409 + `CONFLICT` + error
+    "Idempotency-Key reutilizado con un payload distinto"** sin
+    re-ejecutar el handler.
+- Entries pre-Fase-2B-P0 (sin fingerprint) → replay sin comparación
+  (compat hacia atrás).
+- Order-independent: `{ items, metodoPago }` y `{ metodoPago, items }`
+  con mismos valores → mismo fingerprint.
 
 **Mobile (sync.ts):** usa `row.id` (nanoid 21 chars persistido en
 `sync_queue`) como `Idempotency-Key`. Mismo id en todos los retries de

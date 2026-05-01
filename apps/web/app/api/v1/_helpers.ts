@@ -257,30 +257,57 @@ export async function requireRateLimit(
  */
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9_\-]{1,200}$/;
 
-export function readIdempotencyKey(request: Request): string | null {
+/**
+ * Estado del header `Idempotency-Key` en un request, tri-estado para
+ * distinguir "ausente" (cliente legacy/pre-2B) de "presente pero
+ * malformado" (cliente roto que cree estar protegido).
+ *
+ * - `absent`  → header no enviado. Caller debe ejecutar sin dedupe
+ *   (graceful degradation pre-2B).
+ * - `valid`   → header presente y bien formado. Caller debe usar `key`.
+ * - `invalid` → header presente pero malformado (whitespace, símbolos
+ *   prohibidos, length>200, vacío tras trim). Caller DEBE rechazar
+ *   con 400 — degradar silenciosamente sería peligroso porque el
+ *   cliente cree que está deduplicando cuando NO lo está.
+ */
+export type IdempotencyKeyHeader =
+  | { kind: "absent" }
+  | { kind: "valid"; key: string }
+  | { kind: "invalid" };
+
+export function readIdempotencyKey(request: Request): IdempotencyKeyHeader {
   const raw = request.headers.get("idempotency-key");
-  if (!raw) return null;
+  if (raw === null) return { kind: "absent" };
   const trimmed = raw.trim();
-  if (!trimmed) return null;
-  if (!IDEMPOTENCY_KEY_REGEX.test(trimmed)) return null;
-  return trimmed;
+  if (!trimmed) return { kind: "invalid" };
+  if (!IDEMPOTENCY_KEY_REGEX.test(trimmed)) return { kind: "invalid" };
+  return { kind: "valid", key: trimmed };
 }
 
 /**
- * Wrapper que, si el header `Idempotency-Key` está presente, intercepta
- * la ejecución del `handler` para devolver una response cacheada cuando
- * la misma key ya fue procesada. Si el header está ausente, ejecuta el
- * handler directo (sin dedupe) — graceful degradation para clientes
- * legacy.
+ * Wrapper que, si el header `Idempotency-Key` está presente y válido,
+ * intercepta la ejecución del `handler` para devolver una response
+ * cacheada cuando la misma key ya fue procesada.
  *
- * Convención de la response: el handler retorna `{ status, body }`. Esta
- * función envuelve eso en `NextResponse.json(body, { status, headers })`.
- * En cache-hit, agrega header `Idempotent-Replay: true` para telemetría.
+ * Comportamiento por estado del header (tri-estado, Fase 2B-P0 patch):
  *
- * Sólo cachea respuestas con status < 500 (errors transientes server
- * deben poder reintentarse).
+ *   - **ausente** → handler corre directo, sin dedupe. Graceful
+ *     degradation para clientes legacy / pre-Fase-2B mobile.
+ *   - **válido**  → dedupe activado. Si el caller proveyó `fingerprint`,
+ *     se compara con el de la entry cacheada y un mismatch devuelve
+ *     `409 CONFLICT` sin re-ejecutar el handler.
+ *   - **inválido** → `400 VALIDATION_FAILED`. NO degradar silenciosamente
+ *     a "sin dedupe" — un cliente con header malformado cree estar
+ *     protegido cuando no lo está; mejor fallar ruidoso.
  *
- * Diseñado para extender a otros endpoints; el `scope` aísla los buckets
+ * El handler retorna `{ status, body }`. Esta función la envuelve en
+ * `NextResponse.json(body, { status, headers })`. En cache-hit agrega
+ * header `Idempotent-Replay: true` para telemetría.
+ *
+ * Sólo cachea respuestas con status < 500 (errores transientes deben
+ * permitir retry).
+ *
+ * Diseñado para extender a otros endpoints; `scope` aísla buckets
  * (ventas, devoluciones, etc.).
  */
 export async function withIdempotencyResponse(
@@ -288,27 +315,53 @@ export async function withIdempotencyResponse(
   scope: string,
   userId: string | number,
   handler: () => Promise<{ status: number; body: unknown }>,
+  opts?: { fingerprint?: string },
 ): Promise<NextResponse> {
-  const key = readIdempotencyKey(request);
-  if (!key) {
+  const headerResult = readIdempotencyKey(request);
+
+  // Header presente pero malformado → 400 explícito. Crítico: NO degradar
+  // a "sin dedupe" silenciosamente porque el cliente cree estar protegido.
+  if (headerResult.kind === "invalid") {
+    return jsonError("Idempotency-Key inválido", 400, {
+      code: "VALIDATION_FAILED",
+      details: { header: "Idempotency-Key" },
+    });
+  }
+
+  // Header ausente → ejecución directa sin dedupe.
+  if (headerResult.kind === "absent") {
     const r = await handler();
     return NextResponse.json(r.body, { status: r.status });
   }
 
+  const { key } = headerResult;
   const { withIdempotency } = await import("@/lib/idempotency");
-  const { result, cacheHit } = await withIdempotency(
+  const outcome = await withIdempotency(
     scope,
     userId,
     key,
     handler,
+    opts?.fingerprint,
   );
+
+  // Cliente reusó la misma key con un payload distinto.
+  if (outcome.conflict) {
+    return jsonError(
+      "Idempotency-Key reutilizado con un payload distinto",
+      409,
+      {
+        code: "CONFLICT",
+        headers: { "Idempotency-Key": key },
+      },
+    );
+  }
 
   const headers = new Headers();
   headers.set("Idempotency-Key", key);
-  if (cacheHit) headers.set("Idempotent-Replay", "true");
+  if (outcome.cacheHit) headers.set("Idempotent-Replay", "true");
 
-  return NextResponse.json(result.body, {
-    status: result.status,
+  return NextResponse.json(outcome.result.body, {
+    status: outcome.result.status,
     headers,
   });
 }

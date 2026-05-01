@@ -105,35 +105,45 @@ describe("jsonZodError — preserva estructura issues", () => {
   });
 });
 
-describe("readIdempotencyKey — validación header", () => {
+describe("readIdempotencyKey — validación header (tri-estado)", () => {
   function reqWith(key: string | null): Request {
     const headers = new Headers();
     if (key !== null) headers.set("Idempotency-Key", key);
     return new Request("http://localhost/x", { method: "POST", headers });
   }
 
-  test("retorna null cuando el header está ausente", () => {
-    expect(readIdempotencyKey(reqWith(null))).toBeNull();
+  test("retorna { kind: absent } cuando el header NO se envió", () => {
+    expect(readIdempotencyKey(reqWith(null))).toEqual({ kind: "absent" });
   });
 
-  test("retorna null para header vacío o whitespace", () => {
-    expect(readIdempotencyKey(reqWith(""))).toBeNull();
-    expect(readIdempotencyKey(reqWith("   "))).toBeNull();
+  test("retorna { kind: invalid } para header vacío o whitespace", () => {
+    expect(readIdempotencyKey(reqWith(""))).toEqual({ kind: "invalid" });
+    expect(readIdempotencyKey(reqWith("   "))).toEqual({ kind: "invalid" });
   });
 
-  test("retorna null para chars peligrosos (whitespace interno, símbolos)", () => {
-    expect(readIdempotencyKey(reqWith("abc def"))).toBeNull();
-    expect(readIdempotencyKey(reqWith("a;drop table"))).toBeNull();
-    expect(readIdempotencyKey(reqWith("a/b"))).toBeNull();
+  test("retorna { kind: invalid } para chars peligrosos", () => {
+    expect(readIdempotencyKey(reqWith("abc def"))).toEqual({ kind: "invalid" });
+    expect(readIdempotencyKey(reqWith("a;drop table"))).toEqual({
+      kind: "invalid",
+    });
+    expect(readIdempotencyKey(reqWith("a/b"))).toEqual({ kind: "invalid" });
   });
 
-  test("acepta nanoid típico (alfanum + guión + underscore)", () => {
-    expect(readIdempotencyKey(reqWith("V3xK_-aB7yz9"))).toBe("V3xK_-aB7yz9");
+  test("retorna { kind: valid, key } para nanoid típico", () => {
+    expect(readIdempotencyKey(reqWith("V3xK_-aB7yz9"))).toEqual({
+      kind: "valid",
+      key: "V3xK_-aB7yz9",
+    });
   });
 
-  test("rechaza key > 200 chars", () => {
-    expect(readIdempotencyKey(reqWith("a".repeat(201)))).toBeNull();
-    expect(readIdempotencyKey(reqWith("a".repeat(200)))).toBe("a".repeat(200));
+  test("retorna { kind: invalid } para key > 200 chars", () => {
+    expect(readIdempotencyKey(reqWith("a".repeat(201)))).toEqual({
+      kind: "invalid",
+    });
+    expect(readIdempotencyKey(reqWith("a".repeat(200)))).toEqual({
+      kind: "valid",
+      key: "a".repeat(200),
+    });
   });
 });
 
@@ -146,6 +156,128 @@ describe("withIdempotencyResponse — wiring helper ↔ store", () => {
       headers,
     });
   }
+
+  test("header inválido → 400 + VALIDATION_FAILED + details.header (NO ejecuta handler)", async () => {
+    const handler = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 1 } },
+    });
+    // Header presente pero malformado (whitespace interno).
+    const headers = new Headers();
+    headers.set("Idempotency-Key", "abc def");
+    const req = new Request("http://localhost/api/v1/ventas", {
+      method: "POST",
+      headers,
+    });
+
+    const res = await withIdempotencyResponse(
+      req,
+      "venta:create",
+      1,
+      handler,
+    );
+    expect(res.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.code).toBe("VALIDATION_FAILED");
+    expect(body.error).toMatch(/Idempotency-Key/i);
+    expect(body.details).toEqual({ header: "Idempotency-Key" });
+  });
+
+  test("header vacío → 400 (no degrada a 'sin dedupe')", async () => {
+    const handler = vi.fn().mockResolvedValue({ status: 200, body: {} });
+    const headers = new Headers();
+    headers.set("Idempotency-Key", "   ");
+    const req = new Request("http://localhost/api/v1/ventas", {
+      method: "POST",
+      headers,
+    });
+    const res = await withIdempotencyResponse(
+      req,
+      "venta:create",
+      1,
+      handler,
+    );
+    expect(res.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("fingerprint distinto con misma key → 409 CONFLICT (NO ejecuta handler)", async () => {
+    function reqWithKey(key: string): Request {
+      const h = new Headers();
+      h.set("Idempotency-Key", key);
+      return new Request("http://localhost/api/v1/ventas", {
+        method: "POST",
+        headers: h,
+      });
+    }
+
+    const handler1 = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 1, n: "BOL-1" } },
+    });
+    await withIdempotencyResponse(
+      reqWithKey("dup-key"),
+      "venta:create",
+      1,
+      handler1,
+      { fingerprint: "fp-A" },
+    );
+
+    const handler2 = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 999 } },
+    });
+    const res2 = await withIdempotencyResponse(
+      reqWithKey("dup-key"),
+      "venta:create",
+      1,
+      handler2,
+      { fingerprint: "fp-B" }, // payload distinto
+    );
+    expect(res2.status).toBe(409);
+    expect(handler2).not.toHaveBeenCalled();
+    const body = await res2.json();
+    expect(body.code).toBe("CONFLICT");
+    expect(body.error).toMatch(/Idempotency-Key.*payload distinto/i);
+  });
+
+  test("misma key + mismo fingerprint → replay normal", async () => {
+    function reqWithKey(key: string): Request {
+      const h = new Headers();
+      h.set("Idempotency-Key", key);
+      return new Request("http://localhost/api/v1/ventas", {
+        method: "POST",
+        headers: h,
+      });
+    }
+
+    const handler = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { data: { id: 5 } },
+    });
+    await withIdempotencyResponse(
+      reqWithKey("ok-key"),
+      "venta:create",
+      1,
+      handler,
+      { fingerprint: "fp-X" },
+    );
+
+    handler.mockClear();
+    const res2 = await withIdempotencyResponse(
+      reqWithKey("ok-key"),
+      "venta:create",
+      1,
+      handler,
+      { fingerprint: "fp-X" }, // mismo fingerprint
+    );
+    expect(res2.status).toBe(200);
+    expect(res2.headers.get("Idempotent-Replay")).toBe("true");
+    expect(handler).not.toHaveBeenCalled();
+    const body = await res2.json();
+    expect(body).toEqual({ data: { id: 5 } });
+  });
 
   test("sin header: handler corre directo y NO setea Idempotent-Replay", async () => {
     const handler = vi.fn().mockResolvedValue({
