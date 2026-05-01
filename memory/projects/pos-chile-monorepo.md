@@ -1600,3 +1600,121 @@ futura para validar responses runtime.
 🟡 **Bloqueos operacionales pendientes Pierre** (ya documentados Fase
    2A): DR-01 branch protection, DR-06 UptimeRobot, DR-10 off-site
    backups, items checklist externo (DNS/SSL apk-dypos).
+
+---
+
+## Sesión 2026-05-01 · Fase 2C — Frontend UX polish cerrada
+
+**Contexto:** primera fase de desarrollo visible tras el cimiento
+profesional de Fases 0/1/2A/2B. Codex aprobó alcance acotado:
+unificar patrones visuales de las rutas operativas del dashboard sin
+rediseño desde cero, manteniendo cero cambios de contrato backend.
+
+### Mini-audit previo
+
+Audit por inspección de código de 8 rutas (`/`, `/caja`, `/ventas`,
+`/productos`, `/clientes`, `/devoluciones`, `/perfil`, `/mobile-releases`).
+
+Hallazgos clave: 5 estilos distintos de page header coexistían;
+2 patrones de stats KPI (Card-en-Card vs divs hand-rolled); banner de
+productos con `amber-50/950` hardcoded; botones `/caja` como
+`<Link>` con clases custom; tab "Seguridad" en perfil con label
+duplicado mobile; `/mobile-releases` rompía layout con `container
+mx-auto`; sin `error.tsx` por sección.
+
+### Decisiones técnicas
+
+1. **3 componentes Server-puros nuevos** en `apps/web/components/`:
+   - `page-header.tsx` (`<PageHeader title subtitle? action? meta? />`).
+     Política: NO iconos en h1 por defecto. `/` mantiene header
+     premium con `font-display` como excepción documentada.
+   - `kpi-card.tsx` (`<KpiCard label value sublabel? tone? />`).
+     Tones: default | amber | destructive | success.
+   - `ui/alert.tsx` con cva (`<Alert variant>` + Title/Description).
+     Variants: default | warning | destructive | success.
+
+2. **Adopción en 7 rutas** sin breaking funcional. Botones `<Link>`
+   en `/caja` ahora usan `Button` con variants outline/destructive.
+   Badge custom de apertura → `Badge` componente. Banner de productos
+   → `Alert variant="warning"`. KPIs unificados con `KpiCard`.
+   `/clientes` ganó 3 KPIs derivados de datos en memoria (sin queries
+   extra). Devoluciones perdió el icono `RotateCcw` del h1.
+   `/perfil` mobile muestra "Datos | Clave | Actividad" (fix label).
+   `/mobile-releases` alineado al layout estándar.
+
+3. **`app/(dashboard)/error.tsx`** — error boundary anidado al
+   segmento. Conserva sidebar + header. `<Alert variant="destructive">`
+   + Reintentar + Volver al dashboard. Reporta a Sentry.
+
+4. **`docs/architecture/frontend.md`** ampliado con sección 4.1
+   (componentes UX unificados con ejemplos) y 4.2 (política error
+   boundaries).
+
+### Smoke browser (Claude_in_Chrome MCP) verificado
+
+- **Desktop 1280×800**: `/`, `/ventas`, `/productos`, `/clientes`,
+  `/devoluciones`, `/perfil`, `/mobile-releases` — todas las rutas
+  con PageHeader/KpiCard/Alert correctamente renderizados. KPIs
+  reales en `/ventas` ($225.145 total facturado, $9.381 ticket
+  promedio). `/devoluciones` $29.194 monto devuelto.
+- **Tablet 768×1024**: hamburger button visible (sidebar oculto).
+- **Mobile 375×812**: hamburger + brand "DyPos CL"; `/perfil` tabs
+  muestran "Datos | Clave | Actividad" (fix del label confirmado).
+- `/caja` redirige correctamente a `/caja/abrir` cuando no hay
+  apertura activa.
+- RBAC del cajero NO se pudo smoke-testear localmente (BD dev no
+  tiene seed `cajero@pos-chile.cl`); cubierto por tests + smoke prod
+  previo (Fase 0.6).
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **195 / 195** ✅ (sin regresiones)
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
+  → **48 / 48** ✅
+
+### Commits
+
+- `2fc90bd` — `feat(ui): Fase 2C bloque A — PageHeader, KpiCard, Alert components`
+- `bf66dc9` — `feat(ui): Fase 2C bloque B — adopcion PageHeader/KpiCard/Alert en rutas P0`
+- `406533d` — `feat(ui): Fase 2C bloque C — error boundary del dashboard`
+- `8ccc77f` — `docs(architecture): Fase 2C — frontend.md con componentes UX unificados`
+
+### Gotcha nuevo registrado
+
+🟡 **G-DEV-CAJERO**: la BD local de desarrollo no tiene seed del
+usuario `cajero@pos-chile.cl/cajero123`. Solo admin. Para testear RBAC
+del cajero localmente: agregar seed o crear desde `/usuarios` UI.
+Backlog P2 (Fase 2E candidato — fixtures dev).
+
+### Lo que NO se hizo (intencional)
+
+- ❌ Sin cambios backend / API / DB.
+- ❌ Sin rediseño visual mayor — preservó identidad existente.
+- ❌ No duplicé CTAs "Nuevo X" en header cuando ya viven en toolbar
+  de la tabla con dialog (productos, clientes).
+- ❌ Sin tests Vitest de componentes visuales — vitest config "node"
+  sin React plugin; smoke browser cubre validación visual.
+- ❌ Sin deploy prod (Codex no autorizó).
+
+### Backlog P2 acumulado
+
+- `POST /api/v1/devoluciones` aún con schema local (Fase 2B-P1
+  observación 1).
+- Migrar `msg.includes("Unique")` a Prisma error code `P2002` en
+  productos (Fase 2B-P1 observación 2).
+- Seed `cajero@pos-chile.cl` en BD dev local (G-DEV-CAJERO).
+- DR-01 branch protection (Pierre, GitHub UI).
+
+### Estado al cierre
+
+✅ Fase 2C cerrada — UI consistente, profesional, responsive verificado
+   en 3 viewports, dark mode preservado vía tokens, error boundary
+   anidado mantiene navegación cuando algo falla.
+
+🟢 Próxima fase candidatos: 2D mobile+Sentry, 2E fixtures dev, 3A
+   features comerciales (CSV import, etc.).
