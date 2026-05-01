@@ -19,13 +19,16 @@ import { cn } from "@/lib/utils";
  * especiales (amber en devoluciones).
  */
 
-type Tone = "default" | "amber" | "destructive" | "success";
+type Tone = "default" | "amber" | "destructive" | "success" | "warning";
 
 const TONE_VALUE_CLASSES: Record<Tone, string> = {
   default: "text-foreground",
   amber: "text-amber-700 dark:text-amber-400",
   destructive: "text-destructive",
   success: "text-emerald-700 dark:text-emerald-400",
+  // warning ≠ amber: warning indica acción reversible (retiros, neutral con
+  // signo); amber indica atención persistente (devoluciones, banners).
+  warning: "text-orange-700 dark:text-orange-400",
 };
 
 export interface KpiCardProps {

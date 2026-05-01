@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
+
 import { auth } from "@/auth";
+import { PageHeader } from "@/components/page-header";
+
 import { obtenerAperturaActiva } from "../actions";
 import { AbrirCajaForm } from "./abrir-form";
 
@@ -24,13 +27,11 @@ export default async function AbrirCajaPage() {
   });
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Abrir caja</h1>
-        <p className="text-sm text-muted-foreground">
-          Selecciona la caja y declara el monto inicial en efectivo del turno.
-        </p>
-      </div>
+    <div className="mx-auto max-w-lg space-y-6">
+      <PageHeader
+        title="Abrir caja"
+        subtitle="Selecciona la caja y declara el monto inicial en efectivo del turno."
+      />
       <AbrirCajaForm cajas={cajas} />
     </div>
   );

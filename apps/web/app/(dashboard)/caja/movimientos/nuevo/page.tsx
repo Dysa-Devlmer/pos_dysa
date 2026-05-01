@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
 import { auth } from "@/auth";
+import { PageHeader } from "@/components/page-header";
+
 import { obtenerAperturaActiva } from "../../actions";
 import { MovimientoForm } from "./movimiento-form";
 
@@ -17,15 +20,11 @@ export default async function NuevoMovimientoPage() {
   if (!apertura) redirect("/caja/abrir");
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Movimiento de caja
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Registra retiros, ingresos o ajustes vinculados al turno activo.
-        </p>
-      </div>
+    <div className="mx-auto max-w-lg space-y-6">
+      <PageHeader
+        title="Movimiento de caja"
+        subtitle="Registra retiros, ingresos o ajustes vinculados al turno activo."
+      />
       <MovimientoForm
         aperturaId={apertura.id}
         cajaNombre={apertura.caja.nombre}

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
 import { auth } from "@/auth";
+import { PageHeader } from "@/components/page-header";
+
 import { obtenerAperturaActiva, obtenerResumenCierre } from "../actions";
 import { CerrarCajaForm } from "./cerrar-form";
 
@@ -20,14 +23,11 @@ export default async function CerrarCajaPage() {
   if (!resumen) redirect("/caja/abrir");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cerrar caja</h1>
-        <p className="text-sm text-muted-foreground">
-          Declara el efectivo final contado y cierra el turno. La diferencia
-          (declarado − sistema) queda registrada para auditoría.
-        </p>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader
+        title="Cerrar caja"
+        subtitle="Declara el efectivo final contado y cierra el turno. La diferencia (declarado − sistema) queda registrada para auditoría."
+      />
       <CerrarCajaForm
         aperturaId={apertura.id}
         cajaNombre={apertura.caja.nombre}

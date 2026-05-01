@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { prisma, type Prisma } from "@repo/db";
 
 import { auth } from "@/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { formatCLP } from "@/lib/utils";
 
 import { FiltrosMovimientos, type TipoMovOpt } from "./filtros";
@@ -182,24 +185,22 @@ export default async function MovimientosCajaPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Movimientos de caja
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isAdmin
-              ? "Auditoría completa de ingresos, egresos, retiros y ajustes en todas las cajas."
-              : "Tus movimientos de caja: ingresos, egresos, retiros y ajustes registrados durante tus turnos."}
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/caja/movimientos/nuevo">
-            <Plus className="size-4" />
-            Nuevo movimiento
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Movimientos de caja"
+        subtitle={
+          isAdmin
+            ? "Auditoría completa de ingresos, egresos, retiros y ajustes en todas las cajas."
+            : "Tus movimientos de caja: ingresos, egresos, retiros y ajustes registrados durante tus turnos."
+        }
+        action={
+          <Button asChild>
+            <Link href="/caja/movimientos/nuevo">
+              <Plus className="size-4" />
+              Nuevo movimiento
+            </Link>
+          </Button>
+        }
+      />
 
       <FiltrosMovimientos
         desde={sp.desde ?? null}
@@ -214,33 +215,28 @@ export default async function MovimientosCajaPage({
         isAdmin={isAdmin}
       />
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard
-          label="Movimientos"
-          value={String(totalCount)}
-          tone="muted"
-        />
-        <StatCard
+        <KpiCard label="Movimientos" value={totalCount} />
+        <KpiCard
           label="Ingresos"
           value={`+${formatCLP(totalIngresos)}`}
           tone="success"
         />
-        <StatCard
+        <KpiCard
           label="Egresos"
           value={`−${formatCLP(totalEgresos)}`}
           tone="destructive"
         />
-        <StatCard
+        <KpiCard
           label="Retiros"
           value={`−${formatCLP(totalRetiros)}`}
           tone="warning"
         />
-        <StatCard
+        <KpiCard
           label="Neto sobre caja"
           value={`${neto >= 0 ? "+" : "−"}${formatCLP(Math.abs(neto))}`}
           tone={neto >= 0 ? "success" : "destructive"}
-          hint={
+          sublabel={
             totalAjuste !== 0
               ? `incluye ajuste ${
                   totalAjuste >= 0 ? "+" : "−"
@@ -251,54 +247,17 @@ export default async function MovimientosCajaPage({
       </div>
 
       {truncado ? (
-        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" />
-          <div>
-            Se muestran los <strong>últimos {MAX_ROWS}</strong> movimientos del
-            filtro actual ({totalCount} en total). Refina el rango de fechas
-            para ver lotes anteriores. Las tarjetas de totales sí reflejan el{" "}
-            <strong>total real</strong>.
-          </div>
-        </div>
+        <Alert variant="warning">
+          <AlertDescription>
+            Se muestran los <strong>últimos {MAX_ROWS}</strong> movimientos
+            del filtro actual ({totalCount} en total). Refina el rango de
+            fechas para ver lotes anteriores. Las tarjetas de totales sí
+            reflejan el <strong>total real</strong>.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <MovimientosTable data={rows} hasFiltro={hasFiltro} />
-    </div>
-  );
-}
-
-// ─── StatCard ────────────────────────────────────────────────────────────
-
-type Tone = "muted" | "success" | "destructive" | "warning" | "info";
-
-const TONE_CLS: Record<Tone, string> = {
-  muted: "text-foreground",
-  success: "text-emerald-700 dark:text-emerald-400",
-  destructive: "text-red-700 dark:text-red-400",
-  warning: "text-orange-700 dark:text-orange-400",
-  info: "text-blue-700 dark:text-blue-400",
-};
-
-function StatCard({
-  label,
-  value,
-  tone,
-  hint,
-}: {
-  label: string;
-  value: string;
-  tone: Tone;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-md border bg-background p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-xl font-bold tabular-nums ${TONE_CLS[tone]}`}>
-        {value}
-      </p>
-      {hint ? (
-        <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>
-      ) : null}
     </div>
   );
 }
