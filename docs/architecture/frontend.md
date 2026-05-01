@@ -98,6 +98,102 @@ export async function crearVenta(input: unknown) {
 - Theme: `next-themes` (light/dark) con toggle en topbar.
 - Animaciones: `framer-motion` (sin `tailwindcss-animate`, incompatible con v4).
 
+## 4.1. Componentes UX unificados (Fase 2C)
+
+Tres componentes Server-puros estandarizan patrones repetidos en las
+rutas operativas del dashboard. Si vas a tocar UI de una ruta, **prefiérelos**
+antes de hand-rollear divs+clases.
+
+### `<PageHeader title subtitle? action? meta? />`
+
+Header estándar para rutas operativas (`/caja`, `/ventas`, `/productos`,
+`/clientes`, `/devoluciones`, `/perfil`, `/mobile-releases`, ...).
+
+```tsx
+import { PageHeader } from "@/components/page-header";
+
+<PageHeader
+  title="Ventas"
+  subtitle="Historial de ventas con filtro por rango de fechas."
+  action={
+    <Button asChild>
+      <Link href="/ventas/nueva">
+        <Plus className="size-4" />
+        Nueva venta
+      </Link>
+    </Button>
+  }
+/>
+```
+
+Reglas:
+
+- `title` siempre `text-2xl font-bold tracking-tight` — sobrio.
+- **No iconos en h1** por defecto. Iconos viven en botones, KpiCards,
+  Alerts o tabs.
+- Layout responsive: `flex-col` mobile, `sm:flex-row` desktop. El slot
+  `action` queda alineado a la derecha en desktop y debajo en mobile.
+- Excepción documentada: `/` (dashboard root) mantiene su header
+  "premium" con `font-display` + sections tagged. NO replicar ese estilo
+  en otras rutas.
+
+### `<KpiCard label value sublabel? tone? />`
+
+Card de KPI operacional con densidad alta. Server Component. Reemplaza
+dos patrones que coexistían pre-2C:
+- `<Card>`-en-`<Card>` con `<CardHeader>`/`<CardContent>` (visualmente pesado).
+- divs hand-rolled `rounded-md border bg-background p-3` (sin tone, sin
+  tabular-nums, sin consistencia).
+
+```tsx
+<KpiCard label="Total facturado" value={formatCLP(total)} />
+<KpiCard
+  label="Monto devuelto"
+  value={formatCLP(devuelto)}
+  sublabel="CLP (IVA incluido)"
+  tone="amber"
+/>
+```
+
+Tones: `default` | `amber` | `destructive` | `success`. Cada tono respeta
+dark mode con `dark:text-...-400`. **No** anidar Cards dentro de Cards.
+
+### `<Alert variant title description action? />`
+
+Banner/alerta con variants tipadas (cva). Reemplaza banners hand-rolled
+con colores hardcoded `amber-50/950`.
+
+```tsx
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+
+<Alert variant="warning">
+  <AlertTitle>No hay categorías activas</AlertTitle>
+  <AlertDescription>
+    Debes crear al menos una categoría antes de registrar productos.
+  </AlertDescription>
+  <Button asChild variant="outline" size="sm" className="mt-3">
+    <Link href="/categorias">Ir a categorías</Link>
+  </Button>
+</Alert>
+```
+
+Variants: `default` | `warning` | `destructive` | `success`. Tokens del
+design system; dark mode automático.
+
+## 4.2. Error boundaries
+
+- **Global** (`app/error.tsx`) — fullscreen con animación, fallback
+  cuando todo falla. Mantener para errores fuera de un layout.
+- **Dashboard** (`app/(dashboard)/error.tsx`, Fase 2C) — boundary
+  anidado al segmento. **El sidebar y header siguen visibles**; el
+  cajero no pierde contexto. Usa `<Alert variant="destructive">` +
+  botones Reintentar (`reset()`) y Volver al dashboard.
+
+Política: cada segmento de alta superficie debería tener su propio
+`error.tsx` para que un fallo en `/devoluciones` no tumbe la
+navegación. Hoy solo `(dashboard)` lo tiene; expandir si en el futuro
+hay segmentos que ameriten boundary propio.
+
 ```tsx
 // Ejemplo cn() pattern
 import { cn } from "@/lib/utils";
