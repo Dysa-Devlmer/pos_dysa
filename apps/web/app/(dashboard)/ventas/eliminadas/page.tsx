@@ -4,6 +4,7 @@ import { prisma } from "@repo/db";
 
 import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
@@ -54,14 +55,10 @@ export default async function VentasEliminadasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ventas eliminadas</h1>
-        <p className="text-sm text-muted-foreground">
-          Bitácora de ventas con soft-delete. Solo administradores pueden
-          restaurar. Al restaurar se re-aplica el stock — si no hay stock
-          suficiente, la operación falla con 409.
-        </p>
-      </div>
+      <PageHeader
+        title="Ventas eliminadas"
+        subtitle="Bitácora de ventas con soft-delete. Solo administradores pueden restaurar. Al restaurar se re-aplica el stock — si no hay stock suficiente, la operación falla con 409."
+      />
 
       <Card>
         <CardHeader>

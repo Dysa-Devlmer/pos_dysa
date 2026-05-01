@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@repo/db";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import {
   VentaCarrito,
   type CarritoItem,
@@ -71,26 +72,25 @@ export default async function EditarVentaPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+      <PageHeader
+        title={
+          <>
             Editar venta{" "}
             <span className="font-mono text-lg text-muted-foreground">
               {venta.numeroBoleta}
             </span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Modificar items revierte el stock anterior y aplica el nuevo en una
-            sola transacción.
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/ventas/${venta.id}`}>
-            <ArrowLeft className="size-4" />
-            Volver al detalle
-          </Link>
-        </Button>
-      </div>
+          </>
+        }
+        subtitle="Modificar items revierte el stock anterior y aplica el nuevo en una sola transacción."
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/ventas/${venta.id}`}>
+              <ArrowLeft className="size-4" />
+              Volver al detalle
+            </Link>
+          </Button>
+        }
+      />
 
       <VentaCarrito
         mode="editar"

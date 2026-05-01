@@ -1,16 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { prisma } from "@repo/db";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 
 import {
   DevolucionForm,
@@ -93,42 +88,35 @@ export default async function NuevaDevolucionPage({
   if (tieneDevolucionTotal) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Nueva devolución
-            </h1>
-            <p className="text-sm text-muted-foreground">
+        <PageHeader
+          title="Nueva devolución"
+          subtitle={
+            <>
               Boleta:{" "}
               <span className="font-mono">{venta.numeroBoleta}</span>
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/ventas/${venta.id}`}>
-              <ArrowLeft className="size-4" />
-              Volver al detalle
-            </Link>
-          </Button>
-        </div>
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="size-5" />
-              Venta con devolución total
-            </CardTitle>
-            <CardDescription>
-              Esta venta ya tiene una devolución total registrada; no se
-              admiten nuevas devoluciones.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
+            </>
+          }
+          action={
+            <Button asChild variant="outline" size="sm">
               <Link href={`/ventas/${venta.id}`}>
-                Ver detalle de la venta
+                <ArrowLeft className="size-4" />
+                Volver al detalle
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
+        <Alert variant="destructive">
+          <AlertTitle>Venta con devolución total</AlertTitle>
+          <AlertDescription>
+            Esta venta ya tiene una devolución total registrada; no se
+            admiten nuevas devoluciones.
+          </AlertDescription>
+          <Button asChild variant="outline" size="sm" className="mt-3">
+            <Link href={`/ventas/${venta.id}`}>
+              Ver detalle de la venta
+            </Link>
+          </Button>
+        </Alert>
       </div>
     );
   }
@@ -137,36 +125,31 @@ export default async function NuevaDevolucionPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Nueva devolución
-          </h1>
-          <p className="text-sm text-muted-foreground">
+      <PageHeader
+        title="Nueva devolución"
+        subtitle={
+          <>
             Boleta:{" "}
             <span className="font-mono">{venta.numeroBoleta}</span>
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/ventas/${venta.id}`}>
-            <ArrowLeft className="size-4" />
-            Volver al detalle
-          </Link>
-        </Button>
-      </div>
+          </>
+        }
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/ventas/${venta.id}`}>
+              <ArrowLeft className="size-4" />
+              Volver al detalle
+            </Link>
+          </Button>
+        }
+      />
 
       {!hayDisponible ? (
-        <Card className="border-amber-300 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
-              <AlertTriangle className="size-5" />
-              Todos los productos ya fueron devueltos
-            </CardTitle>
-            <CardDescription className="text-amber-800 dark:text-amber-200">
-              No queda cantidad disponible para devolver en esta venta.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <Alert variant="warning">
+          <AlertTitle>Todos los productos ya fueron devueltos</AlertTitle>
+          <AlertDescription>
+            No queda cantidad disponible para devolver en esta venta.
+          </AlertDescription>
+        </Alert>
       ) : (
         <DevolucionForm venta={ventaResumen} />
       )}

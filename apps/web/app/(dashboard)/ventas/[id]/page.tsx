@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
@@ -72,49 +73,47 @@ export default async function VentaDetallePage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Detalle de venta
-          </h1>
-          <p className="mt-1 font-mono text-sm text-muted-foreground">
-            {venta.numeroBoleta}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/ventas">
-              <ArrowLeft className="size-4" />
-              Volver
-            </Link>
-          </Button>
-          {!tieneDevolucionTotal ? (
+      <PageHeader
+        title="Detalle de venta"
+        subtitle={
+          <span className="font-mono">{venta.numeroBoleta}</span>
+        }
+        action={
+          <>
             <Button asChild variant="outline" size="sm">
-              <Link href={`/devoluciones/nueva?ventaId=${venta.id}`}>
-                <RotateCcw className="size-4" />
-                Nueva devolución
+              <Link href="/ventas">
+                <ArrowLeft className="size-4" />
+                Volver
               </Link>
             </Button>
-          ) : null}
-          {venta.devoluciones.length === 0 ? (
-            <Button asChild size="sm">
-              <Link href={`/ventas/${venta.id}/editar`}>
+            {!tieneDevolucionTotal ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/devoluciones/nueva?ventaId=${venta.id}`}>
+                  <RotateCcw className="size-4" />
+                  Nueva devolución
+                </Link>
+              </Button>
+            ) : null}
+            {venta.devoluciones.length === 0 ? (
+              <Button asChild size="sm">
+                <Link href={`/ventas/${venta.id}/editar`}>
+                  <Pencil className="size-4" />
+                  Editar
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                disabled
+                title="No se puede editar: la venta tiene devoluciones asociadas. Elimina las devoluciones primero."
+              >
                 <Pencil className="size-4" />
                 Editar
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              disabled
-              title="No se puede editar: la venta tiene devoluciones asociadas. Elimina las devoluciones primero."
-            >
-              <Pencil className="size-4" />
-              Editar
-            </Button>
-          )}
-        </div>
-      </div>
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
