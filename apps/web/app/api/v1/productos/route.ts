@@ -1,6 +1,14 @@
 import { prisma } from "@repo/db";
-import { z } from "zod";
-import { requireAuth, requireAdmin, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
+import { CrearProductoRequestSchema } from "@repo/api-client";
+import {
+  requireAuth,
+  requireAdmin,
+  requireRateLimit,
+  jsonOk,
+  jsonError,
+  jsonZodError,
+  parsePagination,
+} from "../_helpers";
 
 export async function GET(request: Request) {
   const limited = await requireRateLimit(request);
@@ -40,18 +48,9 @@ export async function GET(request: Request) {
   return jsonOk(data, { page, limit, total, totalPages: Math.ceil(total / limit) });
 }
 
-// DV2 (audit 2026-04-25) — caps explicitos para evitar overflow INT4 en
-// Postgres (max 2_147_483_647). precio CLP: 99.999.999 cubre cualquier SKU
-// real de POS chico (lavadora premium ~$1.5M). stock: 1_000_000 unidades
-// supera por mucho el inventario fisico de un abarrotero.
-const CreateSchema = z.object({
-  nombre: z.string().min(1).max(200).trim(),
-  descripcion: z.string().optional(),
-  codigoBarras: z.string().min(1).trim(),
-  precio: z.number().int().positive().max(99_999_999),
-  stock: z.number().int().min(0).max(1_000_000).default(0),
-  categoriaId: z.number().int().positive(),
-});
+// Fase 2B-P1 — schema compartido movido a @repo/api-client. Mismas reglas
+// (caps INT4 DV2 audit 2026-04-25) pero ahora mobile/integraciones lo
+// consumen directo sin re-declarar.
 
 export async function POST(request: Request) {
   const limited = await requireRateLimit(request);
@@ -65,12 +64,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return jsonError("Body JSON inválido");
+    return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" });
   }
 
-  const parsed = CreateSchema.safeParse(body);
+  const parsed = CrearProductoRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues.map((e: { message: string }) => e.message).join(", "));
+    return jsonZodError(parsed.error);
   }
 
   try {
@@ -82,8 +81,8 @@ export async function POST(request: Request) {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error al crear producto";
     if (msg.includes("Unique")) {
-      return jsonError("Código de barras ya existe", 409);
+      return jsonError("Código de barras ya existe", 409, { code: "DUPLICATE" });
     }
-    return jsonError(msg, 500);
+    return jsonError(msg, 500, { code: "INTERNAL_ERROR" });
   }
 }

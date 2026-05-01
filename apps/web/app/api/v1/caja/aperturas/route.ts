@@ -1,12 +1,15 @@
-import { z } from "zod";
-import { requireAuth, requireRateLimit, jsonOk, jsonError } from "../../_helpers";
+import { AbrirCajaRequestSchema } from "@repo/api-client";
+import {
+  requireAuth,
+  requireRateLimit,
+  jsonOk,
+  jsonError,
+  jsonZodError,
+} from "../../_helpers";
 import { abrirCaja } from "@/app/(dashboard)/caja/actions";
 
-// POST /api/v1/caja/aperturas — abre caja del usuario autenticado
-const Body = z.object({
-  cajaId: z.number().int().positive(),
-  montoInicial: z.number().int().min(0),
-});
+// POST /api/v1/caja/aperturas — abre caja del usuario autenticado.
+// Body schema (`AbrirCajaRequestSchema`) vive en @repo/api-client (Fase 2B-P1).
 
 export async function POST(request: Request) {
   const limited = await requireRateLimit(request);
@@ -18,16 +21,16 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return jsonError("Body JSON inválido");
+    return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" });
   }
-  const parsed = Body.safeParse(body);
+  const parsed = AbrirCajaRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(
-      parsed.error.issues.map((e) => e.message).join(", "),
-    );
+    return jsonZodError(parsed.error);
   }
 
   const res = await abrirCaja(parsed.data);
-  if (!res.ok) return jsonError(res.error, 422);
+  if (!res.ok) {
+    return jsonError(res.error, 422, { code: "BUSINESS_RULE" });
+  }
   return jsonOk(res.data);
 }

@@ -1,6 +1,13 @@
 import { prisma } from "@repo/db";
-import { z } from "zod";
-import { requireAuth, requireAdmin, requireRateLimit, jsonOk, jsonError } from "../../_helpers";
+import { ActualizarProductoRequestSchema } from "@repo/api-client";
+import {
+  requireAuth,
+  requireAdmin,
+  requireRateLimit,
+  jsonOk,
+  jsonError,
+  jsonZodError,
+} from "../../_helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,15 +27,7 @@ export async function GET(request: Request, { params }: Params) {
   return jsonOk(producto);
 }
 
-const UpdateSchema = z.object({
-  nombre: z.string().min(1).max(200).optional(),
-  descripcion: z.string().optional(),
-  codigoBarras: z.string().min(1).optional(),
-  precio: z.number().int().positive().optional(),
-  stock: z.number().int().min(0).optional(),
-  categoriaId: z.number().int().positive().optional(),
-  activo: z.boolean().optional(),
-});
+// Fase 2B-P1 — schema compartido en @repo/api-client (mismas reglas).
 
 export async function PUT(request: Request, { params }: Params) {
   const limited = await requireRateLimit(request);
@@ -44,12 +43,12 @@ export async function PUT(request: Request, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return jsonError("Body JSON inválido");
+    return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" });
   }
 
-  const parsed = UpdateSchema.safeParse(body);
+  const parsed = ActualizarProductoRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues.map((e: { message: string }) => e.message).join(", "));
+    return jsonZodError(parsed.error);
   }
 
   try {
@@ -60,7 +59,7 @@ export async function PUT(request: Request, { params }: Params) {
     });
     return jsonOk(producto);
   } catch {
-    return jsonError("Producto no encontrado", 404);
+    return jsonError("Producto no encontrado", 404, { code: "NOT_FOUND" });
   }
 }
 
@@ -81,6 +80,6 @@ export async function DELETE(request: Request, { params }: Params) {
     });
     return jsonOk({ deleted: true });
   } catch {
-    return jsonError("Producto no encontrado", 404);
+    return jsonError("Producto no encontrado", 404, { code: "NOT_FOUND" });
   }
 }

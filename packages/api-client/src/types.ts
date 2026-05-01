@@ -461,3 +461,187 @@ export const ActualizarPerfilRequestSchema = z.object({
 export type ActualizarPerfilRequest = z.infer<
   typeof ActualizarPerfilRequestSchema
 >;
+
+// ─── Fase 2B-P1 — Schemas faltantes (API contract completion) ───────────────
+
+/**
+ * Body para `POST /api/v1/productos`. Espejo del CreateSchema del handler
+ * (`apps/web/app/api/v1/productos/route.ts:47`). Caps explícitos a INT4
+ * Postgres documentados en DV2 (audit 2026-04-25).
+ */
+export const CrearProductoRequestSchema = z.object({
+  nombre: z.string().min(1).max(200).trim(),
+  descripcion: z.string().optional(),
+  codigoBarras: z.string().min(1).trim(),
+  precio: z.number().int().positive().max(99_999_999),
+  stock: z.number().int().min(0).max(1_000_000).default(0),
+  categoriaId: z.number().int().positive(),
+});
+export type CrearProductoRequest = z.infer<typeof CrearProductoRequestSchema>;
+
+/**
+ * Body para `PUT /api/v1/productos/[id]`. Todos los campos opcionales —
+ * el handler corre prisma.update con los que vengan. `activo: false` es
+ * el equivalente de "desactivar" (el DELETE hace lo mismo internamente
+ * para preservar histórico).
+ */
+export const ActualizarProductoRequestSchema = z.object({
+  nombre: z.string().min(1).max(200).optional(),
+  descripcion: z.string().optional(),
+  codigoBarras: z.string().min(1).optional(),
+  precio: z.number().int().positive().optional(),
+  stock: z.number().int().min(0).optional(),
+  categoriaId: z.number().int().positive().optional(),
+  activo: z.boolean().optional(),
+});
+export type ActualizarProductoRequest = z.infer<
+  typeof ActualizarProductoRequestSchema
+>;
+
+/**
+ * Response de `GET /api/v1/categorias`. El handler retorna el array
+ * directo sin paginación (universo SMB <50 filas). `_count.productos`
+ * presente cuando el handler hace `include: { _count: ... }`.
+ */
+export const CategoriasListResponseSchema = z.object({
+  data: z.array(CategoriaSchema),
+});
+export type CategoriasListResponse = z.infer<
+  typeof CategoriasListResponseSchema
+>;
+
+/**
+ * Response de `GET /api/v1/usuarios` (ADMIN-only listado read-only).
+ * El handler hace `select` explícito que omite `password` — el schema
+ * NO debe incluir password ni siquiera como opcional (defensa en
+ * profundidad: Zod fail si un cambio futuro lo expone accidentalmente).
+ */
+export const UsuariosListResponseSchema = z.object({
+  data: z.array(UsuarioSchema),
+  meta: z
+    .object({
+      page: z.number().int(),
+      limit: z.number().int(),
+      total: z.number().int().optional(),
+      totalPages: z.number().int().optional(),
+    })
+    .optional(),
+});
+export type UsuariosListResponse = z.infer<typeof UsuariosListResponseSchema>;
+
+/**
+ * Estado de una apertura de caja en runtime. Espejo del modelo Prisma
+ * `AperturaCaja` con joins típicos del API: `caja: { id, nombre, ubicacion }`.
+ *
+ * Nota: el server emite `fechaApertura/fechaCierre` como string ISO
+ * (Prisma → JSON.stringify → string). Si en el futuro mobile necesita
+ * trabajar con fechas tipadas, hacer la conversión en el caller — no
+ * hardcodear `z.coerce.date()` aquí porque rompe `JSON.stringify`
+ * round-trip en sync queue.
+ */
+export const EstadoAperturaSchema = z.enum(["ABIERTA", "CERRADA"]);
+export type EstadoApertura = z.infer<typeof EstadoAperturaSchema>;
+
+export const AperturaCajaSchema = z.object({
+  id: z.number().int(),
+  cajaId: z.number().int(),
+  usuarioId: z.number().int(),
+  montoInicial: z.number().int(),
+  fechaApertura: z.string(),
+  fechaCierre: z.string().nullable(),
+  montoFinalDeclarado: z.number().int().nullable(),
+  montoFinalSistema: z.number().int().nullable(),
+  diferencia: z.number().int().nullable(),
+  observaciones: z.string().nullable(),
+  estado: EstadoAperturaSchema,
+  caja: z
+    .object({
+      id: z.number().int(),
+      nombre: z.string(),
+      ubicacion: z.string().nullable().optional(),
+    })
+    .optional(),
+});
+export type AperturaCaja = z.infer<typeof AperturaCajaSchema>;
+
+/**
+ * Tipos de movimientos de caja. Reflejan el enum `TipoMovimientoCaja`
+ * de Prisma. Si el enum cambia en DB, este schema DEBE actualizarse.
+ */
+export const TipoMovimientoCajaSchema = z.enum([
+  "INGRESO",
+  "EGRESO",
+  "RETIRO",
+  "AJUSTE",
+]);
+export type TipoMovimientoCaja = z.infer<typeof TipoMovimientoCajaSchema>;
+
+/**
+ * Movimiento de caja persistido. `monto` es CLP entero (positivo o
+ * negativo según semántica del cierre Z). Soft-delete via deletedAt;
+ * el response default filtra `deletedAt = null` pero exponemos el
+ * campo por completitud (auditoría).
+ */
+export const MovimientoCajaSchema = z.object({
+  id: z.number().int(),
+  aperturaId: z.number().int(),
+  tipo: TipoMovimientoCajaSchema,
+  monto: z.number().int(),
+  motivo: z.string(),
+  usuarioId: z.number().int(),
+  fecha: z.string(),
+  deletedAt: z.string().nullable().optional(),
+});
+export type MovimientoCaja = z.infer<typeof MovimientoCajaSchema>;
+
+/**
+ * Body para `POST /api/v1/caja/aperturas`. Espejo del schema interno
+ * del handler. La response devuelve `{ data: { id } }` (id de la
+ * apertura recién creada).
+ */
+export const AbrirCajaRequestSchema = z.object({
+  cajaId: z.number().int().positive(),
+  montoInicial: z.number().int().min(0),
+});
+export type AbrirCajaRequest = z.infer<typeof AbrirCajaRequestSchema>;
+
+/**
+ * Body para `PATCH /api/v1/caja/aperturas/[id]` (cierre Z).
+ */
+export const CerrarCajaRequestSchema = z.object({
+  montoFinalDeclarado: z.number().int().min(0),
+  observaciones: z.string().max(500).optional(),
+});
+export type CerrarCajaRequest = z.infer<typeof CerrarCajaRequestSchema>;
+
+/**
+ * Body para `POST /api/v1/caja/aperturas/[id]/movimientos`.
+ */
+export const RegistrarMovimientoRequestSchema = z.object({
+  tipo: TipoMovimientoCajaSchema,
+  monto: z.number().int(),
+  motivo: z.string().min(1).max(255),
+});
+export type RegistrarMovimientoRequest = z.infer<
+  typeof RegistrarMovimientoRequestSchema
+>;
+
+/**
+ * Response de `GET /api/v1/devoluciones` (listado paginado). Antes
+ * existía `DevolucionSchema` individual pero no el envelope de lista.
+ * Cierra el contrato para que mobile/integraciones consuman tipados.
+ */
+export const DevolucionListResponseSchema = z.object({
+  data: z.array(DevolucionSchema),
+  meta: z
+    .object({
+      page: z.number().int(),
+      limit: z.number().int(),
+      total: z.number().int().optional(),
+      totalPages: z.number().int().optional(),
+    })
+    .optional(),
+});
+export type DevolucionListResponse = z.infer<
+  typeof DevolucionListResponseSchema
+>;

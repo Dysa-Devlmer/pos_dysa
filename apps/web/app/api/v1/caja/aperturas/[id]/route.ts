@@ -1,12 +1,15 @@
-import { z } from "zod";
-import { requireAuth, requireRateLimit, jsonOk, jsonError } from "../../../_helpers";
+import { CerrarCajaRequestSchema } from "@repo/api-client";
+import {
+  requireAuth,
+  requireRateLimit,
+  jsonOk,
+  jsonError,
+  jsonZodError,
+} from "../../../_helpers";
 import { cerrarCaja } from "@/app/(dashboard)/caja/actions";
 
-// PATCH /api/v1/caja/aperturas/[id] — cierra la apertura
-const Body = z.object({
-  montoFinalDeclarado: z.number().int().min(0),
-  observaciones: z.string().max(500).optional(),
-});
+// PATCH /api/v1/caja/aperturas/[id] — cierra la apertura.
+// Body schema (`CerrarCajaRequestSchema`) vive en @repo/api-client (Fase 2B-P1).
 
 export async function PATCH(
   request: Request,
@@ -20,24 +23,26 @@ export async function PATCH(
   const { id } = await params;
   const aperturaId = Number(id);
   if (!Number.isInteger(aperturaId) || aperturaId <= 0) {
-    return jsonError("ID inválido");
+    return jsonError("ID inválido", 400, { code: "VALIDATION_FAILED" });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return jsonError("Body JSON inválido");
+    return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" });
   }
-  const parsed = Body.safeParse(body);
+  const parsed = CerrarCajaRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues.map((e) => e.message).join(", "));
+    return jsonZodError(parsed.error);
   }
 
   const res = await cerrarCaja({
     aperturaId,
     ...parsed.data,
   });
-  if (!res.ok) return jsonError(res.error, 422);
+  if (!res.ok) {
+    return jsonError(res.error, 422, { code: "BUSINESS_RULE" });
+  }
   return jsonOk(res.data);
 }

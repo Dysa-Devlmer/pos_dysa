@@ -353,13 +353,66 @@ no está seteada en CI/dev, el limiter degrada a no-op (no rompe builds).
 
 ## 5. Validación y contratos compartidos
 
-Todos los schemas Zod viven en `packages/domain/src/`:
+Schemas Zod compartidos viven en `packages/api-client/src/types.ts` (los
+helpers de dominio puros — RUT, IVA, formatCLP, etc. — siguen en
+`packages/domain/`).
 
-- `venta.ts`, `producto.ts`, `cliente.ts`, `categoria.ts`, `usuario.ts`,
-  `caja.ts`, `devolucion.ts`, `pago.ts`, ...
+Web (`apps/web/app/api/v1/*`) y mobile (`apps/mobile/`) consumen el
+mismo paquete `@repo/api-client`, garantizando contrato bidireccional
+sin OpenAPI codegen.
 
-Mobile usa los mismos schemas vía `@repo/api-client` para validar respuestas
-y request bodies. Esto garantiza contrato bidireccional sin OpenAPI codegen.
+### Schemas vigentes (Fase 2B-P1)
+
+**Auth y usuario:**
+- `LoginRequestSchema` / `LoginResponseSchema`
+- `UsuarioSchema` / `UsuariosListResponseSchema`
+- `ActualizarUsuarioMeRequestSchema`
+- `CambiarPasswordRequestSchema`
+- `ActualizarPerfilRequestSchema`
+
+**Productos:**
+- `ProductoSchema` / `ProductosListSchema`
+- `CrearProductoRequestSchema` (caps INT4 explícitos — DV2 audit)
+- `ActualizarProductoRequestSchema` (parcial PUT-as-PATCH)
+
+**Categorías:**
+- `CategoriaSchema` (con `_count.productos` opcional)
+- `CategoriasListResponseSchema` (sin paginación — universo SMB <50)
+
+**Clientes:**
+- `ClienteSchema` / `ClienteDetalleSchema` / `ClientesListResponseSchema`
+- `CrearClienteRequestSchema` / `ActualizarClienteRequestSchema`
+
+**Ventas:**
+- `VentaSchema` / `VentasListResponseSchema`
+- `CrearVentaRequestSchema` (con split tender + clienteId nullable)
+- `VentaCreadaSchema` / `VentaCreadaResponseSchema`
+- `MetodoPagoSchema` (incluye `MIXTO` rollup)
+- `PagoSchema` (sin `MIXTO` — solo válido en rollup)
+
+**Caja:**
+- `AperturaCajaSchema` (con join `caja: { id, nombre, ubicacion }`)
+- `EstadoAperturaSchema` enum
+- `MovimientoCajaSchema` + `TipoMovimientoCajaSchema` enum
+- `AbrirCajaRequestSchema`, `CerrarCajaRequestSchema`,
+  `RegistrarMovimientoRequestSchema`
+
+**Devoluciones:**
+- `DevolucionSchema` / `DevolucionItemSchema`
+- `DevolucionListResponseSchema`
+- `CrearDevolucionRequestSchema`
+
+**Dashboard:**
+- `DashboardSchema` / `DashboardResponseSchema`
+- `DashboardVentaDiaSchema`, `DashboardStockCriticoItemSchema`
+
+**Errores:**
+- `ApiErrorSchema` (legacy `{ error }` para api-client error parsing).
+- Type `ApiErrorCode` con 10 códigos canónicos (server-side only,
+  `apps/web/app/api/v1/_helpers.ts`).
+
+**Health:**
+- `HealthResponseSchema`
 
 ## 6. Observabilidad
 
