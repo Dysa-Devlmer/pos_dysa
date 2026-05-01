@@ -155,7 +155,13 @@ naturaleza distinta:
 **Estado:** cerrado por Pierre/Codex. `.agents/` y `.codex/` ignorados;
 `AGENTS.md` versionado como stub.
 
-### DR-12 — Sentry mobile (F-13 diferida)
+### DR-12 — Sentry mobile (F-13 diferida) — IMPLEMENTADO 2026-05-01
+
+**Estado**: código aplicado en Fase 2D. Falta rebuild + install en device
+físico de Pierre + crash test controlado para verificar que el primer
+evento llega al dashboard de Sentry.
+
+
 
 Hoy mobile NO tiene Sentry. F-13 quedó diferida al cierre de Fase 11
 porque requiere rebuild APK + reinstalar en device físico de Pierre.

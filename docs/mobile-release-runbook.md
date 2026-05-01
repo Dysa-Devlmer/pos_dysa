@@ -318,6 +318,90 @@ cd ../../.. && ./scripts/mobile-publish.sh v1.0.X
 
 ---
 
+## Sentry mobile — Fase 2D (DR-12 cerrado 2026-05-01)
+
+### Setup inicial (UNA SOLA VEZ — ya hecho)
+
+1. Proyecto Sentry creado en `dy-company` org → `pos-chile-mobile`
+   (platform: React Native).
+2. DSN guardado en `apps/mobile/.env` (gitignored vía root `.gitignore`):
+   ```
+   EXPO_PUBLIC_SENTRY_DSN=https://...@o....ingest.us.sentry.io/...
+   ```
+3. Plugin `@sentry/react-native/expo` agregado a `app.json/plugins`.
+4. `apps/mobile/lib/sentry.ts` provee `initSentry()` + `sentryWrap()` +
+   `captureExceptionSafe()` + `captureMessageSafe()`.
+5. `apps/mobile/app/_layout.tsx` invoca `initSentry()` después de
+   imports y exporta `sentryWrap(RootLayout)`.
+
+### Cómo funciona
+
+- **DSN ausente** (CI, contributor, dev sin acceso a Sentry): degradación
+  silenciosa, las funciones son no-ops, app sigue funcionando.
+- **DSN presente**: SDK init + global error handler. `Sentry.wrap` agrega
+  un error boundary global al render tree.
+- **PII pseudonymization en `beforeSend`**: emails, RUTs, teléfonos se
+  hashean con FNV-1a + djb2 (16 chars hex). Passwords/tokens/cookies se
+  eliminan completos.
+- Sólo error tracking en este sprint (`tracesSampleRate: 0`). Tracing
+  para futuro cuando haya volumen real.
+
+### Rebuild + reinstall en device físico (Pierre)
+
+Cuando agregamos `@sentry/react-native` requiere prebuild + native build
+(no es JS-only). Pasos:
+
+```bash
+# 1. Verificar device conectado
+~/Library/Android/sdk/platform-tools/adb devices
+
+# 2. Verificar keystore activo (NO el .broken)
+keytool -list -keystore ~/.android-keystores/pos-chile-release.keystore
+
+# 3. Prebuild limpio (porque agregamos un plugin nuevo en app.json)
+cd apps/mobile
+npx expo prebuild --platform android --clean
+
+# 4. Build release APK (lee version 1.0.5 / versionCode 6 de app.json)
+cd $REPO_ROOT
+./scripts/mobile-build-apk.sh
+
+# 5. Instalar preservando data (-r → reinstall, -d → downgrade ok)
+~/Library/Android/sdk/platform-tools/adb install -r releases/pos-chile-v1.0.5-vc6.apk
+
+# Si MIUI Security bloquea (gotcha G-M47):
+adb push releases/pos-chile-v1.0.5-vc6.apk /sdcard/Download/
+# Abrir Mi File Manager en el device → tap el APK → permitir instalación.
+```
+
+### Crash test controlado
+
+Para verificar que Sentry captura crashes:
+
+1. Abrir app mobile, login admin.
+2. Tab "Más" → "Mi Perfil".
+3. Scroll hasta el final.
+4. **En dev builds (`__DEV__ === true`)**: aparece botón
+   `[DEV] Disparar crash test Sentry`. Tocarlo lanza un error
+   intencional `sentry-mobile-test (intentional)`.
+5. **En release builds (`__DEV__ === false`)**: el botón NO se renderiza
+   (Hermes inlinea `__DEV__` y tree-shakea el bloque). Para probar Sentry
+   en release: agregar temporalmente un `throw` en algún handler real
+   y rebuild.
+6. Esperar ~30s y refrescar el dashboard de Sentry
+   (https://dy-company.sentry.io/projects/pos-chile-mobile/).
+7. El issue aparece con stacktrace, device info (Xiaomi 2406APNFAG,
+   Android 15), y campo `extra` sanitizado.
+
+### Verificación PII pseudonymization
+
+Si quieres verificar que el sanitizer funciona, lanza un crash con
+`extra: { email: "test@x.cl", rut: "12.345.678-9" }`. En el dashboard
+de Sentry deberías ver `emailHash: <16chars>` y `rutHash: <16chars>` —
+**nunca** los valores crudos.
+
+---
+
 ## Referencias
 
 - Expo prebuild: https://docs.expo.dev/workflow/prebuild/
@@ -325,3 +409,5 @@ cd ../../.. && ./scripts/mobile-publish.sh v1.0.X
 - Cloudflare R2: https://developers.cloudflare.com/r2/
 - EAS Update: https://docs.expo.dev/eas-update/introduction/
 - Expo updates policy: https://docs.expo.dev/eas-update/runtime-versions/
+- Sentry React Native: https://docs.sentry.io/platforms/react-native/
+- Sentry Expo plugin: https://docs.sentry.io/platforms/react-native/manual-setup/expo/

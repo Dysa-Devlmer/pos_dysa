@@ -271,6 +271,25 @@ export default function PerfilScreen() {
           <MaterialIcons name="logout" size={20} color="#dc2626" />
           <Text className="text-destructive font-semibold">Cerrar sesión</Text>
         </TouchableOpacity>
+
+        {/* Sentry crash-test (Fase 2D) — gated por __DEV__: NO se renderiza
+            en release builds (Hermes inlinea __DEV__ a false en release y
+            tree-shakea el bloque). Permite verificar que Sentry captura un
+            crash controlado durante smoke local. */}
+        {__DEV__ ? (
+          <TouchableOpacity
+            onPress={() => {
+              throw new Error("sentry-mobile-test (intentional)");
+            }}
+            activeOpacity={0.8}
+            className="border-border bg-muted/30 mt-2 flex-row items-center justify-center gap-2 rounded-xl border px-4 py-3"
+          >
+            <MaterialIcons name="bug-report" size={20} color="#737373" />
+            <Text className="text-muted-foreground font-semibold">
+              [DEV] Disparar crash test Sentry
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

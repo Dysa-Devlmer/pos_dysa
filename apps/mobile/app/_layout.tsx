@@ -37,6 +37,15 @@ import { initDb } from "@/db/client";
 import { SyncBanner } from "@/components/sync-banner";
 import { UpdateBanner } from "@/components/update-banner";
 
+import { initSentry, sentryWrap } from "@/lib/sentry";
+
+// Sentry init lo más temprano posible — corre DESPUÉS de los imports para
+// respetar `import/first` lint, pero ANTES de que React monte el árbol,
+// así un crash durante bootstrap queda capturado por el global handler
+// que `Sentry.init` instala. La función es idempotente y degrada a no-op
+// si EXPO_PUBLIC_SENTRY_DSN está vacío (ver lib/sentry.ts).
+initSentry();
+
 // Mantener el splash hasta que el bootstrap termine — sin esto, en release
 // el splash con dark backgroundColor #000000 queda visible para siempre
 // (sin llamada a hideAsync en algun lado). En dev no se nota porque Metro
@@ -262,10 +271,17 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <RootLayoutNav />
     </QueryClientProvider>
   );
 }
+
+// sentryWrap (alias de Sentry.wrap) agrega un error boundary global que
+// captura cualquier excepción no manejada en el render tree. Si
+// initSentry() no inicializó (DSN vacío), Sentry.wrap es un no-op
+// transparente. Wrapper local en lib/sentry.ts evita el bug de
+// `import * as Sentry` con jest mock.
+export default sentryWrap(RootLayout);
