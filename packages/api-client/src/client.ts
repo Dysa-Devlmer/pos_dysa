@@ -57,6 +57,12 @@ export function createApiClient(config: ApiClientConfig) {
       body?: unknown;
       schema: z.ZodType<T>;
       query?: Record<string, string | number | undefined>;
+      /**
+       * Headers extra por request — útil para `Idempotency-Key` en POSTs
+       * de mutación crítica (Fase 2B-P0). NO sobreescriben Content-Type
+       * ni Authorization.
+       */
+      headers?: Record<string, string>;
     },
   ): Promise<T> {
     const url = new URL(path, config.baseUrl);
@@ -70,6 +76,7 @@ export function createApiClient(config: ApiClientConfig) {
       "Content-Type": "application/json",
       Accept: "application/json",
       ...config.defaultHeaders,
+      ...(options.headers ?? {}),
     };
     if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
 
@@ -139,20 +146,39 @@ export function createApiClient(config: ApiClientConfig) {
       return request("GET", path, { schema, query });
     },
 
-    post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
-      return request("POST", path, { body, schema });
+    post<T>(
+      path: string,
+      body: unknown,
+      schema: z.ZodType<T>,
+      opts?: { headers?: Record<string, string> },
+    ): Promise<T> {
+      return request("POST", path, { body, schema, headers: opts?.headers });
     },
 
-    put<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
-      return request("PUT", path, { body, schema });
+    put<T>(
+      path: string,
+      body: unknown,
+      schema: z.ZodType<T>,
+      opts?: { headers?: Record<string, string> },
+    ): Promise<T> {
+      return request("PUT", path, { body, schema, headers: opts?.headers });
     },
 
-    patch<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
-      return request("PATCH", path, { body, schema });
+    patch<T>(
+      path: string,
+      body: unknown,
+      schema: z.ZodType<T>,
+      opts?: { headers?: Record<string, string> },
+    ): Promise<T> {
+      return request("PATCH", path, { body, schema, headers: opts?.headers });
     },
 
-    delete<T>(path: string, schema: z.ZodType<T>): Promise<T> {
-      return request("DELETE", path, { schema });
+    delete<T>(
+      path: string,
+      schema: z.ZodType<T>,
+      opts?: { headers?: Record<string, string> },
+    ): Promise<T> {
+      return request("DELETE", path, { schema, headers: opts?.headers });
     },
   };
 }

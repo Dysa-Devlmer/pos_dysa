@@ -1,6 +1,14 @@
 import { prisma, MetodoPago, EstadoApertura } from "@repo/db";
 import { z } from "zod";
-import { requireAuth, requireRateLimit, jsonOk, jsonError, parsePagination } from "../_helpers";
+import {
+  requireAuth,
+  requireRateLimit,
+  jsonOk,
+  jsonError,
+  jsonZodError,
+  parsePagination,
+  withIdempotencyResponse,
+} from "../_helpers";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 export async function GET(request: Request) {
@@ -105,16 +113,47 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return jsonError("Body JSON inválido");
+    // Body NO es JSON parseable → 400 (no 422). El cliente está roto.
+    return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" });
   }
 
   const parsed = CreateVentaSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues.map((e: { message: string }) => e.message).join(", "));
+    // JSON válido + reglas semánticas falladas → 422 con details estructurado.
+    return jsonZodError(parsed.error);
   }
 
   const { items, clienteId, metodoPago, pagos, montoRecibido } = parsed.data;
   const usuarioId = Number(session.user.id);
+
+  // ── Idempotency wrapper (Fase 2B-P0 · scope "venta:create") ───────────
+  // Si el cliente envía Idempotency-Key, mobile retry tras desconexión
+  // no duplica la venta: la primera ejecución se cachea y los retries
+  // devuelven la misma response. Sin header → ejecución directa
+  // (graceful degradation para clientes pre-2B).
+  return withIdempotencyResponse(
+    request,
+    "venta:create",
+    usuarioId,
+    () => createVenta({ items, clienteId, metodoPago, pagos, montoRecibido, usuarioId }),
+  );
+}
+
+/**
+ * Lógica core de creación de venta — extraída para que `withIdempotencyResponse`
+ * pueda envolverla y cachear su respuesta. Retorna `{ status, body }` (NO
+ * NextResponse) para permitir que el wrapper construya la response final con
+ * los headers de idempotency apropiados.
+ */
+async function createVenta(args: {
+  items: { productoId: number; cantidad: number }[];
+  clienteId?: number | null;
+  metodoPago?: MetodoPago;
+  pagos?: { metodo: MetodoPago; monto: number; referencia?: string }[];
+  montoRecibido?: number;
+  usuarioId: number;
+}): Promise<{ status: number; body: unknown }> {
+  const { items, clienteId, metodoPago, pagos, montoRecibido, usuarioId } = args;
 
   // F-9: resolver apertura activa del cajero (requerida)
   const apertura = await prisma.aperturaCaja.findFirst({
@@ -122,7 +161,10 @@ export async function POST(request: Request) {
     select: { id: true },
   });
   if (!apertura) {
-    return jsonError("Debe abrir caja primero", 422);
+    return {
+      status: 422,
+      body: { error: "Debe abrir caja primero", code: "BUSINESS_RULE" },
+    };
   }
 
   try {
@@ -244,15 +286,21 @@ export async function POST(request: Request) {
       return venta;
     });
 
-    return jsonOk(result);
+    return { status: 200, body: { data: result } };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error al crear venta";
     // 409 Conflict para stock insuficiente y producto inactivo/missing —
     // cliente mobile (M4) lo distingue de 422 validación para mostrar UI
     // específica ("Stock insuficiente en X") vs mensaje genérico.
     if (/Stock insuficiente|no encontrado|inactivo/i.test(msg)) {
-      return jsonError(msg, 409);
+      return {
+        status: 409,
+        body: { error: msg, code: "BUSINESS_RULE" },
+      };
     }
-    return jsonError(msg, 422);
+    return {
+      status: 422,
+      body: { error: msg, code: "BUSINESS_RULE" },
+    };
   }
 }

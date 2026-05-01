@@ -152,10 +152,16 @@ export async function flushSyncQueue(): Promise<FlushResult | "skipped"> {
           JSON.parse(row.payload),
         );
 
+        // Fase 2B-P0 — Idempotency-Key reutiliza el nanoid persistente
+        // de la fila. En cada retry se reenvía la misma key, así el
+        // server (withIdempotencyResponse en /api/v1/ventas) deduplica:
+        // si la primera ejecución ya creó la venta y el ACK se perdió,
+        // este reintento devuelve la response cacheada sin duplicar.
         const { data: venta } = await apiClient.post(
           "/api/v1/ventas",
           payload,
           VentaCreadaResponseSchema,
+          { headers: { "Idempotency-Key": row.id } },
         );
 
         // 200 → borrar de la queue. No guardamos historial de synced.

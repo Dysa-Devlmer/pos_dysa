@@ -95,30 +95,50 @@ Otras rutas no-versionadas:
 - `GET /api/reportes/excel` — exporta XLSX con filtros de fecha.
 - `/api/auth/[...nextauth]` — handlers NextAuth (cookies web).
 
-### Pattern API route
+### Pattern API route (Fase 2B-P0)
 
 ```ts
 // apps/web/app/api/v1/ventas/route.ts
-import { NextResponse } from "next/server";
-import { requireBearer } from "@/lib/api/bearer";
-import { rateLimit } from "@/lib/api/rate-limit";
-import { ventaCreateSchema } from "@repo/domain";
+import {
+  requireAuth,
+  requireRateLimit,
+  jsonError,
+  jsonZodError,
+  withIdempotencyResponse,
+} from "../_helpers";
 
-export async function POST(req: Request) {
-  const rl = await rateLimit(req);
-  if (!rl.ok) return NextResponse.json({ error: "rate_limit" }, { status: 429 });
+export async function POST(request: Request) {
+  const limited = await requireRateLimit(request);
+  if (limited) return limited;
 
-  const session = await requireBearer(req);
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const { session, error } = await requireAuth(request);
+  if (error) return error;
 
-  const body = await req.json();
-  const parsed = ventaCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-  }
+  // Body NO JSON parseable → 400 (cliente roto).
+  let body: unknown;
+  try { body = await request.json(); }
+  catch { return jsonError("Body JSON inválido", 400, { code: "VALIDATION_FAILED" }); }
 
-  const result = await crearVentaCore(parsed.data, session);
-  return NextResponse.json(result, { status: result.ok ? 200 : 422 });
+  // JSON válido + reglas Zod → 422 con details estructurado preservando issues.
+  const parsed = CreateVentaSchema.safeParse(body);
+  if (!parsed.success) return jsonZodError(parsed.error);
+
+  const usuarioId = Number(session.user.id);
+
+  // Idempotency wrapper — dedupe automático por Idempotency-Key.
+  return withIdempotencyResponse(
+    request,
+    "venta:create",
+    usuarioId,
+    () => createVenta({ ...parsed.data, usuarioId }),
+  );
+}
+
+// Lógica core retorna { status, body } para que el wrapper la envuelva
+// en NextResponse con headers de idempotency apropiados.
+async function createVenta(args: { ... }): Promise<{ status: number; body: unknown }> {
+  // ...negocio...
+  return { status: 200, body: { data: result } };
 }
 ```
 
@@ -126,8 +146,159 @@ Reglas:
 
 - Bearer obligatorio (excepto `/auth/login` y `/health`).
 - Validación Zod con schemas compartidos con web.
-- Códigos HTTP semánticos: 200/201/400/401/404/422/429/500.
-- Lógica de negocio extraída a `*Core` reutilizable entre Server Action y route.
+- Códigos HTTP semánticos: 200/201/400/401/403/404/409/422/429/500/503.
+- Lógica de negocio extraída a función inner (`createVenta`) que retorna
+  `{ status, body }` — habilita idempotency wrapping.
+
+### Envelope estándar (Fase 2B-P0)
+
+**Éxito:**
+```json
+{ "data": <T>, "meta?": { "page": 1, "total": 42 } }
+```
+
+**Error:**
+```json
+{
+  "error": "Mensaje legible en español",
+  "code?": "VALIDATION_FAILED" | "BUSINESS_RULE" | "DUPLICATE" | ...,
+  "details?": { "issues": [{ "path": [...], "message": "...", "code": "..." }] }
+}
+```
+
+Reglas:
+
+- `error` siempre presente (backwards compat).
+- `code` opcional pero recomendado para que clientes discriminen sin parsear strings.
+- `details` para Zod preserva `issues[]` estructurado (NO string aplanado).
+- Helper canónico: `jsonError(message, status?, { code?, details?, headers? })`.
+- Helper Zod: `jsonZodError(zodError, status = 422)` — auto-emite `code:
+  "VALIDATION_FAILED"` + `details.issues[]`.
+
+### Códigos de error (`ApiErrorCode`)
+
+| Code | Status típico | Cuándo |
+|------|---------------|--------|
+| `VALIDATION_FAILED` | 400 (body malformado) o 422 (Zod fail) | Body no JSON, schema fail, tipo inválido. |
+| `BUSINESS_RULE` | 422 | Caja cerrada, suma pagos != total, monto recibido < efectivo. |
+| `DUPLICATE` | 409 | RUT/código de barras ya existe. |
+| `CONFLICT` | 409 | Stock insuficiente, producto inactivo, estado conflictivo. |
+| `NOT_FOUND` | 404 | Recurso ausente o soft-deleted. |
+| `UNAUTHORIZED` | 401 | Sin token o token inválido. |
+| `FORBIDDEN` | 403 | Token válido pero rol no autorizado. |
+| `RATE_LIMITED` | 429 | Cliente excedió bucket. Header `Retry-After`. |
+| `UNAVAILABLE` | 503 | Upstash/downstream caído. Header `Retry-After`. |
+| `INTERNAL_ERROR` | 500 | Bug del server. Reportado a Sentry. |
+
+### Status code matrix
+
+| Situación | Status | Code |
+|-----------|--------|------|
+| Body no es JSON | 400 | `VALIDATION_FAILED` |
+| JSON válido, Zod fail | 422 | `VALIDATION_FAILED` |
+| Sin auth | 401 | `UNAUTHORIZED` |
+| Auth OK pero sin rol | 403 | `FORBIDDEN` |
+| Recurso ausente | 404 | `NOT_FOUND` |
+| RUT/código barras duplicado | 409 | `DUPLICATE` |
+| Stock insuficiente / producto inactivo | 409 | `BUSINESS_RULE` |
+| Caja cerrada / regla negocio | 422 | `BUSINESS_RULE` |
+| Rate limit excedido | 429 | `RATE_LIMITED` (`Retry-After: 60`) |
+| Upstash/downstream caído | 503 | `UNAVAILABLE` (`Retry-After: 5`) |
+| Bug server | 500 | `INTERNAL_ERROR` |
+
+### Idempotency (Fase 2B-P0 · `POST /api/v1/ventas`)
+
+**Problema:** mobile `syncStore` reintenta con backoff exponencial tras
+error de red. Si la primera ejecución creó la venta en el server pero el
+ACK se perdió, el retry duplica la venta — daño contable directo.
+
+**Solución:** header `Idempotency-Key: <string>` (RFC draft-ietf-httpapi-
+idempotency-key). El server cachea la primera response y los retries
+con la misma key reciben la misma response sin re-ejecutar la mutación.
+
+**Flujo:**
+
+```mermaid
+sequenceDiagram
+  participant Mobile
+  participant Server
+  participant Store as Idempotency<br/>store
+
+  Note over Mobile: enqueueVenta()<br/>row.id = nanoid()
+
+  Mobile->>Server: POST /api/v1/ventas<br/>Idempotency-Key: row.id
+  Server->>Store: read(scope, userId, key)
+  Store-->>Server: miss
+  Server->>Server: handler crea venta
+  Server->>Store: write(entry)
+  Server-->>Mobile: 200 + { data: venta }
+
+  Note over Mobile: ACK perdido por red
+
+  Mobile->>Server: RETRY POST /api/v1/ventas<br/>Idempotency-Key: row.id (mismo)
+  Server->>Store: read(scope, userId, key)
+  Store-->>Server: hit (entry cacheada)
+  Server-->>Mobile: 200 + cached body<br/>+ Idempotent-Replay: true
+```
+
+**Reglas:**
+
+- Header `Idempotency-Key` opcional. Sin header → ejecución directa
+  (graceful degradation para clientes pre-2B).
+- Key válida: `^[A-Za-z0-9_\-]{1,200}$` (alfanum + guión + underscore).
+  Otros chars → ignorada (header tratado como ausente).
+- Scope aísla buckets por endpoint (hoy `"venta:create"`; futuro:
+  `"devolucion:create"`, `"movimiento:create"`, ...).
+- userId en la key previene que un cajero "robe" la cache de otro.
+- Status < 500 se cachea (incluyendo 4xx negocio — errores
+  determinísticos por la misma key).
+- Status 5xx NO se cachea (errors transientes server deben permitir retry).
+- Cache TTL: 24h (alcanza para reconnect mobile post-suspensión).
+- Header de respuesta `Idempotent-Replay: true` cuando sirve desde cache.
+
+**Mobile (sync.ts):** usa `row.id` (nanoid 21 chars persistido en
+`sync_queue`) como `Idempotency-Key`. Mismo id en todos los retries de
+una fila.
+
+### Limitaciones de idempotency
+
+**Backend store:**
+
+- **Con Upstash Redis** (`UPSTASH_REDIS_REST_URL` + `_TOKEN`): garantía
+  fuerte. Distribuido entre instancias. SETNX atómico evita race
+  conditions.
+- **Sin Upstash** (dev/CI/prod sin config): fallback a memoria
+  in-process. Garantía DÉBIL — si el proceso reinicia (crash, deploy,
+  scale), las keys se pierden y un retry mobile post-reinicio puede
+  duplicar la venta. Documentado como degradación intencional.
+
+**In-flight lock (concurrencia):**
+
+- Dos requests con misma key llegando en paralelo: el primero adquiere
+  el lock, el segundo espera con polling hasta 5s a que aparezca la
+  cache, luego sirve la response cacheada.
+- Si el lock vence sin que aparezca cache (caso raro: red excepcional-
+  mente lenta + timeout interno), el segundo continúa como si fuera
+  el primero — duplicación posible. Documentado.
+
+**Si en futuro se requiere persistencia fuerte sin Upstash:** abrir un
+ADR en `docs/adr/` con un mini-diseño de tabla `IdempotencyKey` en
+Prisma (modelo, TTL, scope, response cache, race lock, migración,
+tests). NO migrar DB sin ese diseño aprobado por Pierre.
+
+### Excepción documentada — `POST /api/v1/auth/login`
+
+Único endpoint REST sin envelope `{ data }`. Devuelve directamente el
+shape de `LoginResponseSchema`:
+
+```json
+{ "token": "<jwt>", "user": { "id", "email", "nombre", "rol" } }
+```
+
+**Razón:** mobile (`apps/mobile/stores/authStore.ts`) ya consume este
+shape directo. Cambiar a `{ data: { token, user } }` rompería compat
+binaria con la APK desplegada. Mantener el shape como excepción y
+documentarlo aquí.
 
 ## 3. Auth — NextAuth v5
 

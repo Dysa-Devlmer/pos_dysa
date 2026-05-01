@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { decode } from "next-auth/jwt";
+import { z } from "zod";
 import { auth } from "@/auth";
 import type { Session } from "next-auth";
 
@@ -118,8 +119,82 @@ export function jsonOk<T>(data: T, meta?: Record<string, unknown>) {
   return NextResponse.json({ data, ...(meta ? { meta } : {}) });
 }
 
-export function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
+/**
+ * Códigos de error semánticos consumidos por mobile/web/integraciones para
+ * discriminar el tipo de error sin parsear strings. Los valores quedan
+ * estables como contrato API; agregar nuevos sólo es backwards compatible.
+ *
+ * Convención RFC 7807-lite: cada response de error es
+ *   `{ error: string, code?: ApiErrorCode, details?: unknown }`
+ * `error` siempre presente (legacy + UX). `code` y `details` opcionales.
+ */
+export type ApiErrorCode =
+  | "VALIDATION_FAILED" // body Zod parse falló (422)
+  | "BUSINESS_RULE" // regla de negocio (caja cerrada, stock, etc.) (422)
+  | "DUPLICATE" // recurso ya existe (409)
+  | "NOT_FOUND" // recurso ausente (404)
+  | "RATE_LIMITED" // 429
+  | "UNAVAILABLE" // 503 (downstream no disponible)
+  | "UNAUTHORIZED" // 401
+  | "FORBIDDEN" // 403
+  | "CONFLICT" // 409 distinto de DUPLICATE (ej. estado conflictivo)
+  | "INTERNAL_ERROR"; // 500
+
+export type JsonErrorOptions = {
+  code?: ApiErrorCode;
+  details?: unknown;
+  /** Headers adicionales (Retry-After, Idempotency-Replay, etc.). */
+  headers?: HeadersInit;
+};
+
+/**
+ * Emite un error envelope estándar.
+ *
+ * Backwards compatible: la firma vieja `jsonError(message, status)` sigue
+ * funcionando — `code` y `details` son opcionales. Callsites previos
+ * NO necesitan migración inmediata.
+ */
+export function jsonError(
+  message: string,
+  status = 400,
+  opts?: JsonErrorOptions,
+): NextResponse {
+  const body: { error: string; code?: ApiErrorCode; details?: unknown } = {
+    error: message,
+  };
+  if (opts?.code) body.code = opts.code;
+  if (opts?.details !== undefined) body.details = opts.details;
+
+  const init: ResponseInit = { status };
+  if (opts?.headers) init.headers = opts.headers;
+  return NextResponse.json(body, init);
+}
+
+/**
+ * Serializa un `ZodError` a un envelope de error 422 con `code:
+ * "VALIDATION_FAILED"` y `details` estructurado preservando `issues[]`
+ * de Zod (path + message + code) — el cliente puede mapear errores a
+ * campos de form sin parsear strings.
+ *
+ * Por convención REST: 422 = JSON válido pero falla reglas semánticas.
+ * Si el body NO es JSON parseable, usar `jsonError("Body inválido", 400)`
+ * directamente (caller lo decide al hacer `request.json()`).
+ */
+export function jsonZodError(
+  zodError: z.ZodError,
+  status = 422,
+): NextResponse {
+  const issues = zodError.issues.map((i) => ({
+    path: i.path,
+    message: i.message,
+    code: i.code,
+  }));
+  // Mensaje legible por humanos: primer issue como resumen.
+  const summary = issues[0]?.message ?? "Validación fallida";
+  return jsonError(summary, status, {
+    code: "VALIDATION_FAILED",
+    details: { issues },
+  });
 }
 
 export function parsePagination(searchParams: URLSearchParams) {
@@ -169,4 +244,71 @@ export async function requireRateLimit(
     );
   }
   return null;
+}
+
+// ─── Idempotency (Fase 2B-P0) ──────────────────────────────────────────────
+
+/**
+ * Limites del header Idempotency-Key. Convención RFC draft-ietf-httpapi-
+ * idempotency-key: el cliente garantiza que la misma key implica la misma
+ * operación intencional. Aceptamos cualquier string hasta 200 chars con
+ * caracteres "razonables" (alfanum + guiones + underscores) para evitar
+ * keys con whitespace / control chars / inyección.
+ */
+const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9_\-]{1,200}$/;
+
+export function readIdempotencyKey(request: Request): string | null {
+  const raw = request.headers.get("idempotency-key");
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!IDEMPOTENCY_KEY_REGEX.test(trimmed)) return null;
+  return trimmed;
+}
+
+/**
+ * Wrapper que, si el header `Idempotency-Key` está presente, intercepta
+ * la ejecución del `handler` para devolver una response cacheada cuando
+ * la misma key ya fue procesada. Si el header está ausente, ejecuta el
+ * handler directo (sin dedupe) — graceful degradation para clientes
+ * legacy.
+ *
+ * Convención de la response: el handler retorna `{ status, body }`. Esta
+ * función envuelve eso en `NextResponse.json(body, { status, headers })`.
+ * En cache-hit, agrega header `Idempotent-Replay: true` para telemetría.
+ *
+ * Sólo cachea respuestas con status < 500 (errors transientes server
+ * deben poder reintentarse).
+ *
+ * Diseñado para extender a otros endpoints; el `scope` aísla los buckets
+ * (ventas, devoluciones, etc.).
+ */
+export async function withIdempotencyResponse(
+  request: Request,
+  scope: string,
+  userId: string | number,
+  handler: () => Promise<{ status: number; body: unknown }>,
+): Promise<NextResponse> {
+  const key = readIdempotencyKey(request);
+  if (!key) {
+    const r = await handler();
+    return NextResponse.json(r.body, { status: r.status });
+  }
+
+  const { withIdempotency } = await import("@/lib/idempotency");
+  const { result, cacheHit } = await withIdempotency(
+    scope,
+    userId,
+    key,
+    handler,
+  );
+
+  const headers = new Headers();
+  headers.set("Idempotency-Key", key);
+  if (cacheHit) headers.set("Idempotent-Replay", "true");
+
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers,
+  });
 }
