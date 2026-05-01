@@ -1448,6 +1448,53 @@ en `.env.docker` (cubierto por DR-06/DR-10 pendientes).
 ### Commits
 
 - `9a9fda7` — `feat(api): Fase 2B-P0 — error envelope + idempotency POST /api/v1/ventas`
+- `c864565` — `fix(api): Fase 2B-P0 patch — header invalido 400 + fingerprint mismatch 409`
+
+### Patch Fase 2B-P0 (post-review Codex)
+
+Codex pidió dos parches de calidad antes de aceptar Fase 2B-P0:
+
+1. **Header `Idempotency-Key` inválido NO debe degradar silenciosamente.**
+   `readIdempotencyKey` reescrito como tri-estado discriminado
+   (`absent | valid | invalid`). `withIdempotencyResponse` con header
+   inválido (whitespace, símbolos, vacío, >200 chars) → **400 +
+   `VALIDATION_FAILED` + `details: { header: "Idempotency-Key" }`** sin
+   ejecutar el handler. Antes degradaba a "sin dedupe" silencioso —
+   cliente creía estar protegido cuando no lo estaba.
+
+2. **Misma key + body distinto debe rechazar 409.** Nuevo helper
+   `computeFingerprint(body)` con SHA-256 sobre JSON canonical (keys
+   ordenadas alfabéticamente; arrays mantienen orden). `IdempotencyEntry`
+   ahora incluye `fingerprint?: string`. En cache hit con fingerprint
+   distinto → **409 + `CONFLICT` + error "Idempotency-Key reutilizado
+   con un payload distinto"** sin re-ejecutar. Entries pre-patch
+   (sin fingerprint) hacen replay normal (compat).
+
+`POST /api/v1/ventas` calcula fingerprint del payload post-Zod (no
+del body raw) y lo pasa al wrapper.
+
+`WithIdempotencyResult<T>` rediseñado como union discriminada por
+`conflict` para narrowing TS limpio.
+
+### Tests añadidos en el patch (+10)
+
+- `idempotency.test.ts`: fingerprint mismatch → conflict; mismo
+  fingerprint → replay; `computeFingerprint` order-independent.
+- `helpers.test.ts`: header inválido → 400 sin ejecutar; header vacío
+  → 400; fingerprint distinto → 409 CONFLICT; mismo fingerprint →
+  replay; `readIdempotencyKey` tri-estado (absent/valid/invalid).
+- `contract.test.ts`: misma key + body distinto → 409 + CONFLICT sin
+  duplicar; misma key + body idéntico (campos en otro orden) →
+  replay; header inválido → 400 + VALIDATION_FAILED.
+
+### Gate post-patch
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **165 / 165** ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
+  → **48 / 48** ✅
 
 ### Estado al cierre
 
