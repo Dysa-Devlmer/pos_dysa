@@ -1828,9 +1828,99 @@ archivo.
 
 ### Estado al cierre
 
-✅ DR-12 implementado. Código + tests + docs completos. Pendiente solo
-   rebuild + verificación crash test (handoff a Pierre con device
-   físico).
+✅ DR-12 **CERRADO** (2026-05-01) — verificación end-to-end completa
+   en device físico (Xiaomi 2406APNFAG, Android 15). Issue
+   `POS-CHILE-MOBILE-1` capturado en https://dy-company.sentry.io/
+   issues/POS-CHILE-MOBILE-1: "Error: sentry-mobile-test (intentional)"
+   con culprit `onPress(index.android)`, 1 evento, 1 user.
+
+### Smoke device físico (cronología real)
+
+1. Pierre creó proyecto Sentry `pos-chile-mobile` en org `dy-company`
+   y pegó DSN en `apps/mobile/.env` (gitignored).
+2. Pierre corrió `expo prebuild --platform android --clean`
+   regenerando carpeta `android/` (esto eliminó `keystore.properties`
+   con los secretos — re-creado luego con valores de password manager).
+3. **Bug 1**: `expo prebuild --clean` borró el bloque release signing
+   de `app/build.gradle`. Pierre lo reinjectó.
+4. **Bug 2**: Gradle invocaba `node` de PATH (Node 18) en lugar del
+   Node 22 del nvm shell. Metro 0.83 falla con
+   `configs.toReversed is not a function`. Fix: `nodeExecutableAndArgs
+   = [System.getenv("NODE_BINARY") ?: "node"]` en `app/build.gradle`.
+5. **Bug 3**: pnpm strict no auto-hoistea `@babel/plugin-transform-
+   react-jsx` requerido por `babel-preset-expo` transitivamente.
+   Fix: agregar como devDep directa en `apps/mobile/package.json`.
+6. **Bug 4**: Sentry plugin intenta subir sourcemaps sin auth token
+   y falla. Fix: `SENTRY_DISABLE_AUTO_UPLOAD=true` en build env.
+7. **Bug 5**: APK actualmente en device estaba debug-signed (no
+   release). `adb install -r` con APK release-signed falla con
+   `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Fix: `adb uninstall` +
+   `adb install` limpio.
+8. **Bug 6**: MIUI Security bloqueó `adb install`
+   (`INSTALL_FAILED_USER_RESTRICTED`). Fix: `adb push` a
+   `/sdcard/Download/` + instalación manual via Mi File Manager
+   (gotcha G-M47 confirmado nuevamente).
+9. **Bug 7**: APK release apuntaba a `localhost:3000` y Android 15
+   bloquea cleartext HTTP. Fix: cambiar `EXPO_PUBLIC_API_URL` a
+   `https://dy-pos.zgamersa.com` (prod, HTTPS).
+10. **Bug 8**: Metro cache reusó bundle viejo con `localhost:3000`
+    bakeado pese a cambiar el `.env`. Fix: limpiar
+    `/var/folders/<user>/T/metro-cache*` antes de rebuild.
+11. **Bug 9**: Crash test gated por `__DEV__` no se renderiza en
+    release. Fix: relajar el gate temporalmente para validación
+    inicial; commit follow-up vuelve a gatear.
+12. Build #4 OK con URL prod bakeada. APK 1.0.5+vc6 firmada con
+    keystore release nuevo (SHA-1 `B1:B6:73:...`).
+13. Reinstall via `adb install -r` (firmas iguales, preserva data).
+14. Pierre login admin prod + tab Más → Perfil → tap "Crash test
+    Sentry".
+15. Logcat confirma captura: `io.sentry.UncaughtExceptionHandler
+    Integration.uncaughtException(...:152)`.
+16. ~1 min después, issue `POS-CHILE-MOBILE-1` aparece en dashboard
+    Sentry.
+
+### Gotchas nuevos registrados (Fase 2D)
+
+- 🟡 **G-MOB-NODE22**: gradle Metro requiere Node 22+. `app/build.gradle`
+  ya tiene `nodeExecutableAndArgs = [System.getenv("NODE_BINARY") ?:
+  "node"]` — basta exportar `NODE_BINARY` antes del build.
+- 🟡 **G-MOB-PNPM-BABEL**: `@babel/plugin-transform-react-jsx` debe
+  declararse como devDep directa en `apps/mobile/package.json` (pnpm
+  strict no auto-hoistea peer deps de `babel-preset-expo`).
+- 🟡 **G-MOB-METRO-CACHE**: cambios en `.env` NO se reflejan en
+  rebuilds si Metro cache no se limpia. Borrar
+  `/var/folders/$USER/T/metro-cache*` antes de rebuild crítico.
+- 🟡 **G-MOB-CLEARTEXT**: APK release no permite HTTP a `localhost`
+  ni IP LAN sin `network_security_config.xml`. Usar HTTPS prod o
+  agregar config explícito.
+- 🟡 **G-MOB-PREBUILD-KEYSTORE**: `expo prebuild --clean` BORRA
+  `apps/mobile/android/keystore.properties` y el bloque release
+  signing en `app/build.gradle`. Tener listos los passwords antes
+  de prebuild + reinjectar signing block.
+- 🟡 **G-MOB-FIRMA-DEBUG**: APK debug-signed y APK release-signed NO
+  son intercambiables. `adb install -r` falla con UPDATE_INCOMPATIBLE.
+  Primer install tras pasar de debug → release requiere
+  `adb uninstall` + `install` limpio.
+- 🟡 **G-MOB-SENTRY-AUTH-TOKEN**: build local corre con
+  `SENTRY_DISABLE_AUTO_UPLOAD=true` para evitar fallo de sourcemap
+  upload. Para subir sourcemaps en CI, generar token en
+  Sentry → API → Auth tokens → scope `project:write`.
+
+### Pendientes operativos (no bloquean Fase 2D)
+
+- Volver `apps/mobile/.env` `EXPO_PUBLIC_API_URL` a `localhost:3000`
+  para dev local (cuando se necesite). Hoy apunta a prod para que
+  la APK que tiene Pierre en device pueda autenticar.
+- Generar `SENTRY_AUTH_TOKEN` para sourcemap upload (G-MOB-SENTRY-
+  AUTH-TOKEN).
+- Cleanup APK: `releases/pos-chile-v1.0.5-vc6.apk` (115 MB) en repo —
+  `releases/` está gitignored, no se commitea, pero ocupa espacio.
+
+### Commits
+
+- `c26a449` — `feat(mobile): Fase 2D — Sentry RN integrado con PII pseudonymization`
+- `94bd5c6` — `chore(memory): session notes Fase 2D cierre`
+- `3bd1f47` — `feat(mobile): Fase 2D follow-up — Sentry validado prod (POS-CHILE-MOBILE-1)`
 
 🟢 Próxima fase: **3A** — features comerciales. Candidatos por orden
    de prioridad comercial: CSV import productos (DR-08, desbloquea
