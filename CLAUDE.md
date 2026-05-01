@@ -191,6 +191,32 @@ pos-pgadmin:  localhost:5050  # admin@pos-chile.cl / pgadmin_secret_2025
 
 **Usuarios disponibles:** admin@pos-chile.cl / admin123 (ADMIN) · cajero@pos-chile.cl / cajero123 (CAJERO)
 
+### 🌱 Seed local (Fase 2E)
+
+Para que estos usuarios + un dataset mínimo (caja, categoría, productos,
+cliente) existan en la BD local, correr el seed **idempotente** después
+de cada reset/migrate:
+
+```bash
+pnpm --filter @repo/db db:seed
+```
+
+Crea / mantiene en sync:
+- Admin + cajero (passwords arriba, dev only).
+- 1 caja activa "Caja Principal".
+- 1 categoría activa "Almacén".
+- 5 productos con códigos `DEMO-7800001..5`.
+- 1 cliente "Cliente Demo" con RUT `11.111.111-1`.
+
+Re-ejecutarlo no duplica datos (upsert + findFirst). **No usar en prod**
+— provisioning de tenants reales tiene su propio flujo en
+`docs/architecture/tenant-provisioning.md`.
+
+Cuándo correrlo:
+- Tras `pnpm --filter @repo/db db:migrate` (primer setup).
+- Tras `prisma migrate reset` cuando quieres volver al baseline.
+- Tras pull de cambios al schema si el seed quedó desincronizado.
+
 ---
 
 ## 👥 Agentes del proyecto

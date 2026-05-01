@@ -2,8 +2,23 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Banner del dashboard que avisa de productos con stock bajo.
+ *
+ * Fase 2E patch oportunista (Codex obs post-2C.1): migrado de banner
+ * hand-rolled con `border-amber-300 bg-amber-50` hardcoded a
+ * `Alert variant="warning"`. Cierra el último residuo del patrón viejo
+ * en el dashboard.
+ *
+ * La animación de entrada/salida (height 0 → auto + opacity) se
+ * preserva — es lo que hace el banner sentirse "vivo" cuando aparece
+ * tras una venta que dispara una alerta.
+ */
 export interface AlertasBannerProps {
   count: number;
 }
@@ -19,39 +34,27 @@ export function AlertasBanner({ count }: AlertasBannerProps) {
           transition={{ duration: 0.35, ease: "easeOut" }}
           className="overflow-hidden"
         >
-          <div className="flex flex-col items-start justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center dark:border-amber-900 dark:bg-amber-950/40">
-            <div className="flex items-start gap-3">
-              <motion.div
-                initial={{ rotate: -10, scale: 0.9 }}
-                animate={{ rotate: 0, scale: 1 }}
-                transition={{
-                  duration: 0.5,
-                  ease: "easeOut",
-                  delay: 0.05,
-                }}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200"
-              >
-                <AlertTriangle className="size-5" />
-              </motion.div>
-              <div>
-                <p className="font-semibold text-amber-900 dark:text-amber-100">
+          <Alert variant="warning">
+            <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+              <div className="flex-1 space-y-1">
+                <AlertTitle>
                   {count === 1
                     ? "1 producto con stock bajo"
                     : `${count} productos con stock bajo`}
-                </p>
-                <p className="mt-0.5 text-sm text-amber-800/80 dark:text-amber-200/80">
-                  Revisa el inventario y reabastece antes de quedar sin stock.
-                </p>
+                </AlertTitle>
+                <AlertDescription>
+                  Revisa el inventario y reabastece antes de quedar sin
+                  stock.
+                </AlertDescription>
               </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/alertas">
+                  Ver alertas
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
             </div>
-            <Link
-              href="/alertas"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-amber-900 px-3 py-2 text-sm font-medium text-amber-50 transition hover:bg-amber-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:bg-amber-200 dark:text-amber-900 dark:hover:bg-amber-200/90"
-            >
-              Ver alertas
-              <ArrowRight className="size-4" />
-            </Link>
-          </div>
+          </Alert>
         </motion.div>
       ) : null}
     </AnimatePresence>
