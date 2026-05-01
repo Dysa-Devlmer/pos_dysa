@@ -1721,6 +1721,125 @@ Backlog P2 (Fase 2E candidato — fixtures dev).
 
 ---
 
+## Sesión 2026-05-01 · Fase 2D — Sentry mobile (DR-12 implementado)
+
+**Contexto:** Pierre informó que tenía device físico conectado a la
+Mac. Codex aprobó audit previo + autorizó implementación. Yo (agente)
+intenté crear el proyecto Sentry vía MCP (org `dy-company`); el token
+del MCP no tiene scope `project:write` (HTTP 403 "Your organization
+has disabled this feature for members"). Pierre creó manualmente el
+proyecto `pos-chile-mobile` (platform: React Native, team:
+`dy-company`) en https://dy-company.sentry.io y me pasó el DSN.
+
+### Cambios técnicos
+
+1. **Instalación** — `pnpm add @sentry/react-native@~7.2.0` (versión
+   recomendada por `npx expo install` para SDK 54).
+
+2. **Config**:
+   - Plugin `@sentry/react-native/expo` agregado a `app.json/plugins`.
+   - DSN guardado en `apps/mobile/.env` (gitignored confirmado vía
+     `git check-ignore`). Var name `EXPO_PUBLIC_SENTRY_DSN` (Expo
+     inyecta al bundle JS).
+   - Bump `version` 1.0.4 → 1.0.5; `versionCode` 5 → 6; iOS
+     `buildNumber` 5 → 6.
+
+3. **Wrapper `apps/mobile/lib/sentry.ts`**:
+   - `initSentry()` — chequea DSN no vacío antes de inicializar.
+     Idempotente. Degradación silenciosa sin DSN.
+   - `sentryWrap()` — re-export de `Sentry.wrap` para error boundary
+     global del render tree.
+   - `captureExceptionSafe()` / `captureMessageSafe()` — sanitizan
+     `extra` antes de enviar; NO-OP si Sentry no está activo.
+   - `beforeSend` hook — pseudonimiza `email`/`rut`/`telefono`/`phone`
+     con FNV-1a + djb2 (16 chars hex). Elimina completos
+     `password`/`token`/`authorization`/`cookie`. Trunca
+     `user.ip_address` a /24 (IPv4) o /48 (IPv6).
+
+4. **Wire-in en `app/_layout.tsx`**:
+   - `initSentry()` invocado tras todos los imports, antes del primer
+     render.
+   - `export default sentryWrap(RootLayout)` instala error boundary
+     global automático.
+
+5. **Crash test gated por `__DEV__`** en `app/(tabs)/mas/perfil.tsx`:
+   botón `[DEV] Disparar crash test Sentry` que lanza
+   `throw new Error("sentry-mobile-test (intentional)")`. En release
+   builds Hermes inlinea `__DEV__ = false` y tree-shakea el bloque.
+
+### Bug encontrado y workaround
+
+🟠 **Bug `_interopRequireWildcard` jest-expo + babel-preset-expo**:
+con `import * as Sentry` o `import { init }`, los named exports en
+jest tienen las keys enumeradas por `Object.keys` pero acceder a
+`Sentry.init` retorna `undefined`. Confirmado experimentalmente con
+`Object.getOwnPropertyDescriptor` que muestra descriptor sin `value`.
+
+**Workaround aplicado**: en `lib/sentry.ts`, late-binding via
+`function getSentry() { return require("@sentry/react-native") }`
+dentro de cada función que usa Sentry. En runtime RN/Metro no hay
+diferencia funcional. Documentado con comentario explícito en el
+archivo.
+
+### Tests añadidos (+25 mobile, total 73/73)
+
+- `apps/mobile/__tests__/sentry.test.ts`:
+  - `pseudonymize`: 16 chars hex, determinístico, distinto por input,
+    string vacío.
+  - `sanitize`: PII keys → `*Hash`, secret keys eliminadas, recursivo,
+    case-insensitive, primitivos intactos, valor no-string mantiene
+    key original.
+  - `truncateIp`: IPv4 → /24, IPv6 → /48, no-IP intacto.
+  - `initSentry`: degradación silenciosa sin DSN; whitespace tratado
+    como vacío; con DSN llama `Sentry.init` con `beforeSend`;
+    idempotente.
+  - `beforeSend`: sanitiza `event.extra`, `event.user.email` (→ hash +
+    delete email), `event.user.ip_address` (→ truncado), `event.request.data`
+    (password eliminado).
+  - `capture*` helpers: NO-OP sin Sentry, sanitizan extras con Sentry.
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **195 / 195** ✅
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅ (cero warnings)
+- `pnpm --filter @repo/mobile exec jest --watchman=false` → **73 / 73**
+  ✅ (48 + 25 nuevos)
+
+### Commits
+
+- `c26a449` — `feat(mobile): Fase 2D — Sentry RN integrado con PII pseudonymization`
+
+### Pendiente Pierre (handoff)
+
+1. Verificar keystore activo (NO `.broken`):
+   `keytool -list -keystore ~/.android-keystores/pos-chile-release.keystore`.
+2. Prebuild + build APK release con `./scripts/mobile-build-apk.sh`.
+3. `adb install -r releases/pos-chile-v1.0.5-vc6.apk` (preserva data
+   local: SQLite, sesión, queue offline).
+4. Tap el botón crash test en /perfil → verificar evento llega a
+   https://dy-company.sentry.io/projects/pos-chile-mobile/.
+5. Si MIUI Security bloquea instalación: `adb push` a
+   `/sdcard/Download/` + instalar manual via Mi File Manager
+   (gotcha G-M47).
+
+### Estado al cierre
+
+✅ DR-12 implementado. Código + tests + docs completos. Pendiente solo
+   rebuild + verificación crash test (handoff a Pierre con device
+   físico).
+
+🟢 Próxima fase: **3A** — features comerciales. Candidatos por orden
+   de prioridad comercial: CSV import productos (DR-08, desbloquea
+   onboarding cliente con catálogo grande), onboarding tenants
+   automatizado (iterar `provision-tenant.sh`), smoke prod automatizado
+   (DR-07).
+
+---
+
 ## Sesión 2026-05-01 · Fase 2C.1 — Consistencia visual completa cerrada
 
 **Contexto:** seguimiento natural de 2C. Codex aprobó cerrar la
