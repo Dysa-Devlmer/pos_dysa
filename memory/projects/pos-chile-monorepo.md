@@ -2031,11 +2031,73 @@ adoptado: `import-actions.ts` ("use server") + `import-helpers.ts`
 ### Commits
 
 - `a6977ab` — `feat(web): Fase 3A — CSV import productos para onboarding rápido`
+- `2669b89` — `fix(productos/import): revalidar payload server-side en commitImportProductos (Fase 3A patch)`
+
+### Patch 2026-05-01 — revalidación server-side del payload (commit `2669b89`)
+
+**Hueco detectado post-cierre:** `commitImportProductos` confiaba en
+`preview.validRows` que el cliente reenvía intacto desde `previewImportProductos`.
+Aunque la UI no permite editar el payload, un cliente malicioso puede
+serializar arbitrariamente el body de la Server Action y bypassear los
+límites del parser (precio 0..99.999.999, stock 0..1.000.000,
+descripción ≤500, max 5k filas, duplicados intra-CSV).
+
+**Fix aplicado:**
+
+1. **`import-helpers.ts`** — nueva `validateCommitPayload(rows)` que
+   revalida en server side:
+   - `nombre` 2..120 chars
+   - `codigoBarras` 3..60 chars
+   - `precio` entero 0..99.999.999
+   - `stock` entero 0..1.000.000
+   - `alertaStock` entero ≥0 o null
+   - `descripcion` ≤500 chars o null
+   - `activo` boolean
+   - máximo 5.000 filas
+   - duplicados intra-payload por `codigoBarras`
+
+2. **`import-helpers.ts::parseRowsToProductos`** — agregada validación
+   `descripcion ≤500` que faltaba en el parser original (drift entre
+   parser y validateCommitPayload eliminado).
+
+3. **`import-actions.ts::commitImportProductos`** — llama
+   `validateCommitPayload` ANTES de iniciar la transacción Prisma.
+   Rechaza con mensaje fijo `"Preview inválido o desactualizado.
+   Vuelve a subir el CSV."` — **sin filtrar detalles internos** del
+   error (no decir "fila X precio fuera de rango", solo mensaje
+   genérico para no dar info al atacante). `categoriaId` del payload
+   sigue ignorado — solo usa la re-resolución desde DB por nombre.
+
+4. **5 tests nuevos** en `import-csv.test.ts` cubren cada caso:
+   precio fuera de rango, stock fuera de rango, descripción >500,
+   duplicados intra-payload, >MAX_ROWS. Total web: **243/243**.
+
+### Patrón canónico capturado
+
+🔒 **G-WEB-SERVER-ACTION-TRUST**: Un Server Action **NUNCA** puede
+confiar en payloads que vinieron de una Server Action previa, aunque
+la UI no exponga edición. El cliente serializa lo que quiere — el
+"preview" solo es UX. Patrón obligatorio para flujos
+preview→commit:
+
+1. Validar el payload del commit con las MISMAS reglas que el preview.
+2. Re-resolver IDs externos (categoría, cliente, etc.) desde DB por
+   nombre/clave, NO confiar en el id que vino en el payload.
+3. Mensaje de error genérico al cliente — no filtrar qué fila/campo
+   falló (eso lo cubre el preview que ya pasó). El commit-time
+   rechazo es defense-in-depth, no UX.
+
+Aplicado por primera vez en `commitImportProductos`. Reglas
+extensibles a futuros flujos de import bulk (clientes, ventas, etc.)
+y a cualquier Server Action que reciba arrays de objetos derivados de
+una preview.
 
 ### Estado al cierre
 
 ✅ Fase 3A cerrada — onboarding comercial desbloqueado. Cliente con 500+
    productos puede subir CSV en lugar de capturar uno por uno.
+✅ Patch 3A aplicado — payload revalidado server-side, hueco de
+   defense-in-depth tapado.
 
 🟢 Próxima fase aprobada por Pierre: **documentación funcional para
    dueño/cliente** (manuales de uso, no técnicos). Candidato.

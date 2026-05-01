@@ -257,7 +257,27 @@ Ejecución baseline (`pnpm audit --audit-level=low`):
 | Secrets | `checkEnv` | Longitud 32+ + rechazo placeholders |
 | File upload | Avatar route | Content-Length pre-check + 2MB cap + sharp → 200×200 JPEG |
 | Race conditions | Devoluciones | `SELECT FOR UPDATE NOWAIT` primera op |
+| Server Action payload trust | `commitImportProductos` (Fase 3A patch `2669b89`) | `validateCommitPayload()` revalida payload con mismas reglas que preview; re-resuelve `categoriaId` por nombre desde DB; mensaje de error genérico |
 | Number format | `formatCLP` | Normalize `\u202f`, `\u00a0` → espacio |
+
+### Patrón G-WEB-SERVER-ACTION-TRUST (Fase 3A patch, commit `2669b89`)
+
+Un Server Action **nunca** confía en payloads que vinieron de una Server
+Action previa (ej: flujo `previewImportProductos` → `commitImportProductos`),
+aunque la UI no exponga edición. El cliente serializa lo que quiere — el
+"preview" solo es UX. Patrón obligatorio para flujos preview→commit:
+
+1. Revalidar el payload en commit con las MISMAS reglas que el preview
+   (rangos numéricos, longitud strings, unicidad, max rows).
+2. Re-resolver IDs externos (categoría, cliente, etc.) desde DB por
+   nombre/clave — ignorar el id que vino en el payload.
+3. Mensaje de error genérico al cliente al rechazar (`"Preview inválido o
+   desactualizado. Vuelve a subir el CSV."`) — no filtrar qué fila/campo
+   falló. El commit-time es defense-in-depth, no UX; el detalle ya lo
+   cubre la preview previa.
+
+Aplicable a futuros flujos bulk (import clientes, ventas) y a cualquier
+Server Action que reciba arrays de objetos derivados de preview.
 
 ## Tests de seguridad
 
