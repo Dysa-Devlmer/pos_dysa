@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Upload } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { SOFT_BADGE, estadoBadge } from "@/lib/badge-styles";
 import { formatCLP } from "@/lib/utils";
 import { toast } from "sonner";
 import { ProductoForm } from "./producto-form";
+import { ImportCsvDialog } from "./import-csv-dialog";
 import { eliminarProducto } from "./actions";
 
 export interface ProductoRow {
@@ -37,6 +38,7 @@ export function ProductosTable({
   categorias: Array<{ id: number; nombre: string }>;
 }) {
   const [formOpen, setFormOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ProductoRow | null>(null);
   const [deleting, setDeleting] = React.useState<ProductoRow | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
@@ -192,10 +194,25 @@ export function ProductosTable({
         searchPlaceholder="Buscar producto..."
         emptyMessage="No hay productos registrados."
         toolbar={
-          <Button onClick={openCrear} disabled={categorias.length === 0}>
-            <Plus className="size-4" />
-            Nuevo producto
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              disabled={categorias.length === 0}
+              title={
+                categorias.length === 0
+                  ? "Crea al menos una categoría antes de importar"
+                  : "Importar productos desde CSV"
+              }
+            >
+              <Upload className="size-4" />
+              Importar CSV
+            </Button>
+            <Button onClick={openCrear} disabled={categorias.length === 0}>
+              <Plus className="size-4" />
+              Nuevo producto
+            </Button>
+          </>
         }
         emptyState={
           <EmptyState
@@ -244,6 +261,8 @@ export function ProductosTable({
         confirmLabel="Eliminar"
         onConfirm={handleDelete}
       />
+
+      <ImportCsvDialog open={importOpen} onOpenChange={setImportOpen} />
     </>
   );
 }

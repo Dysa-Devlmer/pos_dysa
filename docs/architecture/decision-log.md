@@ -108,12 +108,25 @@ crear venta de prueba, eliminar) contra prod en headless.
 **Riesgo:** ensuciar AuditLog prod con pruebas. Mitigar con flag o tenant
 "staging" dedicado.
 
-### DR-08 — Importación CSV de catálogo (media)
+### DR-08 — Importación CSV de catálogo — IMPLEMENTADO 2026-05-01
 
-Onboarding rápido del cliente requiere subir productos en bulk. Hoy sólo CRUD
-unitario via UI.
+Onboarding rápido del cliente con catálogos grandes. Implementado en
+Fase 3A:
 
-**Recomendación agente:** feature explícita en próxima fase comercial.
+- Server Actions `previewImportProductos` + `commitImportProductos` en
+  `apps/web/app/(dashboard)/productos/import-actions.ts`.
+- Helpers puros (parser CSV, validador Zod-style, plantilla) en
+  `import-helpers.ts`.
+- UI dialog en `import-csv-dialog.tsx` con dropzone, descargar plantilla,
+  preview con tabla de filas válidas + errores, checkbox "actualizar
+  existentes", confirm.
+- Decisiones aprobadas: nombre categoría (no id), precio CL flexible
+  ("1.990", "$1.990"), all-or-nothing pre-validación, 5 MB / 5.000 filas,
+  AuditLog accion CREATE + diff `PRODUCTOS_IMPORT_CSV`.
+- 43 tests unit + contract pasando.
+
+**Estado:** cerrado por implementación. Onboarding desbloqueado para
+clientes con 500+ productos.
 
 ### DR-09 — Connection pooling Postgres (baja)
 
