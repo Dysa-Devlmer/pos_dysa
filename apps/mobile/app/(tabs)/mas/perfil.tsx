@@ -273,9 +273,8 @@ export default function PerfilScreen() {
         </TouchableOpacity>
 
         {/* Sentry crash-test (Fase 2D) — gated por __DEV__: NO se renderiza
-            en release builds (Hermes inlinea __DEV__ a false en release y
-            tree-shakea el bloque). Permite verificar que Sentry captura un
-            crash controlado durante smoke local. */}
+            en release builds. Permite verificar captura en dev sin exponer
+            un botón destructivo en APKs instalables o publicables. */}
         {__DEV__ ? (
           <TouchableOpacity
             onPress={() => {

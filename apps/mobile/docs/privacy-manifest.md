@@ -129,44 +129,25 @@ https://dy-pos.zgamersa.com/privacidad
 
 ---
 
-## 4. Sentry mobile — pendiente F-13
+## 4. Sentry mobile — implementado Fase 2D
 
-> El SDK `@sentry/react-native` **NO está instalado** en `apps/mobile`
-> a la fecha de este doc. Cuando se instale (F-13), aplicar el mismo
-> patrón `beforeSend` que `apps/web/sentry.{server,edge,client}.config.ts`:
+El SDK `@sentry/react-native` está instalado en `apps/mobile` y se inicializa
+desde `apps/mobile/app/_layout.tsx` mediante `apps/mobile/lib/sentry.ts`.
 
-```ts
-// apps/mobile/sentry.config.ts (futuro)
-import * as Sentry from "@sentry/react-native";
-import { pseudonymize, truncateIP } from "./lib/privacy"; // helper local
+Controles de privacidad aplicados:
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  environment: __DEV__ ? "development" : "production",
-  sendDefaultPii: false,
-  beforeSend(event) {
-    if (event.user?.email) {
-      event.user.email = pseudonymize(event.user.email);
-    }
-    if (event.user?.ip_address && event.user.ip_address !== "{{auto}}") {
-      event.user.ip_address = truncateIP(event.user.ip_address) ?? undefined;
-    }
-    return event;
-  },
-});
-```
+- Si `EXPO_PUBLIC_SENTRY_DSN` está vacío, Sentry no se inicializa y los helpers
+  `captureExceptionSafe` / `captureMessageSafe` quedan como no-op.
+- Sólo error tracking en este sprint (`tracesSampleRate: 0`).
+- `beforeSend` pseudonimiza `email`, `rut`, `telefono` y `phone` antes de enviar
+  eventos.
+- `password`, `token`, `authorization` y `cookie` se eliminan de `extra`,
+  `tags` y `request.data`.
+- `event.user.email` se reemplaza por `emailHash`; la IP se trunca antes de
+  salir del device.
 
-**Trabajo necesario para F-13:**
-
-1. `pnpm --filter @repo/mobile add @sentry/react-native`
-2. `npx @sentry/wizard@latest -i reactNative` (configura Xcode + Gradle)
-3. Crear `apps/mobile/lib/privacy.ts` (port liviano de `apps/web/lib/privacy.ts`
-   usando `expo-crypto` en vez de Node `crypto`)
-4. Crear `apps/mobile/sentry.config.ts` con el bloque arriba
-5. Importar `sentry.config` en `apps/mobile/app/_layout.tsx` ANTES de cualquier
-   `import` que pueda crashear
-6. **Rebuild APK** — Sentry React Native requiere bundle nativo nuevo
-7. Documentar en este doc + `memory/projects/pos-chile-mobile.md` como gotcha
+El DSN vive en `apps/mobile/.env` local, gitignored. No commitear DSNs reales
+ni tokens de Sentry.
 
 ---
 

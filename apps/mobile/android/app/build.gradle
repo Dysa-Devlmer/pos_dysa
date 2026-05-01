@@ -47,7 +47,14 @@ react {
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
-    // nodeExecutableAndArgs = ["node"]
+    //
+    // Fase 2D — SDK 54 + Metro 0.83 requieren Node ≥ 22 (uses
+    // Array.prototype.toReversed añadido en Node 20.4 / 22). Si gradle se
+    // invoca desde un shell sin nvm activo, el `node` que resuelve por
+    // PATH puede ser 18 viejo y el bundle JS falla con
+    // `configs.toReversed is not a function`. Resolvemos NODE_BINARY
+    // desde la env var, con fallback al `node` del PATH.
+    nodeExecutableAndArgs = [System.getenv("NODE_BINARY") ?: "node"]
 
     //
     //   The path to the CLI configuration file. Default is empty.
@@ -92,6 +99,8 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+apply from: new File(["node", "--print", "require('path').dirname(require.resolve('@sentry/react-native/package.json'))"].execute().text.trim(), "sentry.gradle")
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -103,8 +112,8 @@ android {
         applicationId 'cl.zgamersa.poschile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 6
+        versionName "1.0.5"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

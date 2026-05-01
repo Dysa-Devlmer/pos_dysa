@@ -8,6 +8,7 @@ build/
 .idea
 .gradle
 local.properties
+sentry.properties
 *.iml
 *.hprof
 .cxx/
