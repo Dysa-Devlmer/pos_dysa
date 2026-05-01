@@ -1718,3 +1718,115 @@ Backlog P2 (Fase 2E candidato — fixtures dev).
 
 🟢 Próxima fase candidatos: 2D mobile+Sentry, 2E fixtures dev, 3A
    features comerciales (CSV import, etc.).
+
+---
+
+## Sesión 2026-05-01 · Fase 2C.1 — Consistencia visual completa cerrada
+
+**Contexto:** seguimiento natural de 2C. Codex aprobó cerrar la
+adopción de `PageHeader/KpiCard/Alert` en TODAS las rutas operativas
+restantes (no solo P0 como en 2C). Cero cambios backend / contratos
+/ DB. El cimiento ya estaba — esta fase solo pinta consistencia.
+
+### Mini-audit previo
+
+20 rutas restantes auditadas. Hallazgos: 5 estilos de header coexistían
+todavía; banners hardcoded `amber-50/950` en /usuarios, /cajas, /caja/
+movimientos; `StatCard` local en /caja/movimientos con tones extra
+no presentes en `KpiCard`; iconos en h1 de /alertas; Card-en-Card
+pesado en /reportes y /alertas; sub-rutas /caja/* y /ventas/* con
+flex+div ad-hoc.
+
+Excluidas del swap (3): `/docs` (solo redirect), `/devoluciones/[id]`
+(solo notFound), `/caja/[aperturaId]/cierre` (vista print-friendly
+con layout específico).
+
+### Cambios técnicos
+
+**Bloque 1 — Catálogo / admin / herramientas (5 rutas):**
+- `/categorias`, `/usuarios`, `/cajas`: PageHeader. Banners amber
+  hardcoded → `Alert variant="warning"` con tokens.
+- `/alertas`: PageHeader sin icono `AlertTriangle` (política nueva
+  NO iconos en h1). 3 Card-en-Card → 3 KpiCard con tone destructive
+  cuando bajoStockCount > 0.
+- `/reportes`: PageHeader. 3 Card numéricas → 3 KpiCard. La 4ª
+  (Métodos usados) se mantiene como Card porque es lista.
+
+**Bloque 2 — Sub-rutas /caja (4 rutas):**
+- `/caja/abrir`, `/caja/cerrar`, `/caja/movimientos/nuevo`:
+  PageHeader (max-w preservados).
+- `/caja/movimientos`: StatCard local (con tones muted/info que no
+  se usaban) eliminado. Reemplazado por KpiCard. Nuevo tone
+  `warning` (orange-700/400) agregado al `KpiCard` global para
+  retiros (acción reversible — semántica distinta de `amber`
+  que indica atención persistente). Banner truncamiento amber
+  hardcoded → `Alert variant="warning"`.
+
+**Bloque 3 — Ventas / Devoluciones detalles + forms (5 rutas):**
+- `/ventas/nueva`: PageHeader con action="Volver a ventas".
+- `/ventas/[id]`: PageHeader con title + subtitle font-mono
+  (numeroBoleta) + action slot que mantiene los 3 botones
+  condicionales (Volver / Devolución / Editar enabled|disabled).
+- `/ventas/[id]/editar`: PageHeader con title que incluye
+  numeroBoleta inline (font-mono).
+- `/ventas/eliminadas`: PageHeader.
+- `/devoluciones/nueva` (2 ramas):
+  - Rama bloqueada (devolución total): `Card border-destructive` →
+    `Alert variant="destructive"` con CTA "Ver detalle de la venta".
+  - Rama "todos devueltos": `Card amber-300/950` → `Alert
+    variant="warning"`. Iconos `AlertTriangle` removidos del título.
+
+### Smoke browser (Claude_in_Chrome MCP) verificado
+
+Desktop 1280×800: las 14 rutas tocadas verificaron PageHeader/KpiCard/
+Alert correctamente. KPIs reales en `/reportes` (Total facturado,
+Ticket promedio, IVA 19% incluido), `/caja/movimientos` (Movimientos,
+Ingresos, Egresos, Retiros, Neto sobre caja). `/ventas/[id]` con los
+3 botones condicionales (Volver, Nueva devolución, Editar).
+
+Mobile 375×812: hamburger button + heading "Alertas de Stock" sin
+icono renderizan correctamente.
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **195 / 195** ✅ (sin regresiones)
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --passWithNoTests --watchman=false`
+  → **48 / 48** ✅
+
+### Cobertura final del sistema (post-2C + 2C.1)
+
+22 rutas dashboard:
+- 21 usan PageHeader (excepción `/` premium).
+- 11 usan KpiCard.
+- 7 usan Alert (warning + destructive variants).
+- 3 excluidas con justificación documentada.
+
+### Commits
+
+- `bd5d595` — `feat(ui): Fase 2C.1 bloque 1 — catalogo/admin/herramientas`
+- `ce66f2c` — `feat(ui): Fase 2C.1 bloque 2 — sub-rutas /caja`
+- `e83c4ce` — `feat(ui): Fase 2C.1 bloque 3 — ventas/devoluciones detalles+forms`
+
+### Lo que NO se hizo (intencional)
+
+- ❌ `/docs`, `/devoluciones/[id]`, `/caja/[aperturaId]/cierre`
+  excluidas con justificación documentada.
+- ❌ Sin cambios backend / API / DB / contratos.
+- ❌ Sin tests Vitest de componentes (config "node" sin React plugin).
+- ❌ Sin deploy prod.
+
+### Estado al cierre
+
+✅ Fase 2C.1 cerrada — TODA la consistencia visual del dashboard
+   completada. App densa, profesional, responsive, dark mode preservado.
+   Cero rutas con headers ad-hoc o KPIs hand-rolled (excepto la home
+   premium documentada).
+
+🟢 Próxima fase: **2D Mobile + Sentry** (cuando Pierre tenga ventana
+   con device físico) o **2E Dev fixtures/seed** (desbloquea smoke
+   RBAC local del cajero — G-DEV-CAJERO).

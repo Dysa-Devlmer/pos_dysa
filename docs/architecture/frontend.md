@@ -155,8 +155,17 @@ dos patrones que coexistían pre-2C:
 />
 ```
 
-Tones: `default` | `amber` | `destructive` | `success`. Cada tono respeta
-dark mode con `dark:text-...-400`. **No** anidar Cards dentro de Cards.
+Tones: `default` | `amber` | `destructive` | `success` | `warning`.
+Cada tono respeta dark mode con `dark:text-...-400`. **No** anidar
+Cards dentro de Cards.
+
+Convención semántica de tones:
+
+- `default` — sin connotación (counts neutros).
+- `success` — emerald, valor positivo confirmado (ingresos, OK).
+- `destructive` — red, valor negativo o crítico (egresos, errores).
+- `warning` — orange, valor neutral con signo o reversible (retiros).
+- `amber` — atención persistente que requiere acción (devuelto, banner).
 
 ### `<Alert variant title description action? />`
 
@@ -193,6 +202,44 @@ Política: cada segmento de alta superficie debería tener su propio
 `error.tsx` para que un fallo en `/devoluciones` no tumbe la
 navegación. Hoy solo `(dashboard)` lo tiene; expandir si en el futuro
 hay segmentos que ameriten boundary propio.
+
+## 4.3. Cobertura del sistema (Fase 2C.1)
+
+Tras Fase 2C.1, **todas las rutas operativas** del dashboard usan el
+mismo sistema. Inventario actualizado:
+
+**Adoptan PageHeader (todas):**
+- Operación: `/`, `/caja`, `/caja/abrir`, `/caja/cerrar`,
+  `/caja/movimientos`, `/caja/movimientos/nuevo`, `/ventas`,
+  `/ventas/nueva`, `/ventas/[id]`, `/ventas/[id]/editar`,
+  `/ventas/eliminadas`, `/devoluciones`, `/devoluciones/nueva`.
+- Catálogo: `/categorias`, `/productos`, `/clientes`, `/alertas`.
+- Herramientas: `/reportes`, `/perfil`.
+- Administración: `/usuarios`, `/cajas`, `/mobile-releases`.
+
+Excepción única documentada: `/` (dashboard root) usa header premium
+con `font-display` + sections tagged. El resto sigue PageHeader sobrio.
+
+**Adoptan KpiCard:**
+- `/ventas` (3 cards), `/clientes` (3), `/devoluciones` (3),
+  `/alertas` (3), `/reportes` (3 + 1 Card residual para "Métodos
+  usados" porque es lista, no KPI numérico), `/caja/movimientos` (5).
+
+**Adoptan Alert (con variants):**
+- `warning`: `/productos`, `/usuarios`, `/cajas`, `/caja/movimientos`
+  (banner truncamiento), `/devoluciones/nueva` (todos devueltos).
+- `destructive`: `(dashboard)/error.tsx` global de segmento,
+  `/devoluciones/nueva` (devolución total bloqueante).
+
+**Excluidas del swap (sin h1 propio):**
+- `/docs` — solo `redirect()` a Scalar UI.
+- `/devoluciones/[id]` — solo `notFound()`.
+- `/caja/[aperturaId]/cierre` — vista de impresión print-friendly,
+  layout específico que el PageHeader rompería.
+
+**Componentes locales eliminados en 2C.1:**
+- `StatCard` privado en `/caja/movimientos` reemplazado por `KpiCard`
+  (con nuevo tone `warning` añadido al sistema global).
 
 ```tsx
 // Ejemplo cn() pattern
