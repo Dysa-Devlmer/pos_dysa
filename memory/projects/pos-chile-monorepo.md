@@ -1342,3 +1342,123 @@ de dueño que sí estaban disponibles en el repo local.
 **Estado:** DR-11 cerrado. No se tocaron Cloudflare, GitHub Settings,
 UptimeRobot ni off-site backups porque requieren credenciales externas de
 Pierre.
+
+---
+
+## Sesión 2026-04-30 · Fase 2B-P0 — Backend/API hardening cerrada
+
+**Contexto:** Codex aprobó Fase 2B-P0 con alcance acotado tras un
+mini-audit de los 18 endpoints `/api/v1/*` que detectó (entre otros)
+que `POST /api/v1/ventas` carecía de idempotency — riesgo de ventas
+duplicadas en escenario `syncStore` mobile retry tras red inestable.
+Q1-Q4 respondidas: idempotency solo en ventas; envelope estándar
+`{ error, code?, details? }` con 10 códigos canónicos; tests de
+contrato dentro del sprint; `Idempotency-Key` reutiliza `row.id`
+(nanoid existente en `sync_queue`) — sin migración SQLite.
+
+### Decisiones técnicas
+
+1. **Store idempotency híbrido** (`apps/web/lib/idempotency.ts`):
+   Upstash Redis si está configurado (SETNX atómico, TTL 24h, prod);
+   memoria in-process como fallback (dev/CI/prod sin Upstash —
+   degradación documentada). In-flight lock para concurrencia con
+   polling 5s. Status <500 se cachea (incluyendo 4xx negocio
+   determinístico); 5xx no se cachea para permitir retry.
+
+2. **Envelope estándar `{ error, code?, details? }`** con 10 códigos
+   canónicos en type `ApiErrorCode`. `error` siempre presente
+   (backwards compat). `details` para Zod preserva `issues[]`
+   estructurado (path + message + code) — no string aplanado.
+
+3. **`jsonError` extendido** mantiene compat: firma vieja
+   `jsonError(message, status)` sigue funcionando. Nueva firma
+   `jsonError(message, status, opts)` agrega `{ code, details, headers }`.
+
+4. **`jsonZodError(zodError)`** nuevo helper: emite 422 +
+   `code: "VALIDATION_FAILED"` + `details.issues[]`. Convención
+   REST: 400 = body NO JSON; 422 = JSON válido + Zod fail.
+
+5. **`withIdempotencyResponse(request, scope, userId, handler)`**
+   wrapper de alto nivel. Sin header → ejecución directa (graceful
+   degradation pre-2B). Con header → dedupe via store. Header
+   `Idempotent-Replay: true` en cache hit.
+
+6. **`POST /api/v1/ventas`** refactor: lógica core extraída a
+   `createVenta(args)` que retorna `{ status, body }` — habilita
+   wrapping idempotency. Body no-JSON → 400 + VALIDATION_FAILED.
+   Zod fail → 422 + VALIDATION_FAILED + details.issues. Errores de
+   negocio (caja cerrada, stock, producto) etiquetados con
+   `code: BUSINESS_RULE`.
+
+7. **Mobile `db/sync.ts`**: `flushSyncQueue` envía `Idempotency-Key:
+   row.id` en cada retry. `row.id` ya era nanoid 21 chars persistido
+   en `sync_queue` desde M5 — el comentario en `schema.ts` ya lo
+   anticipaba como idempotency key. Sin migración SQLite.
+
+8. **`packages/api-client`**: `post/put/patch/delete` aceptan
+   `opts.headers` per-request (no breaking — param opcional).
+
+9. **`/auth/login` mantenido como excepción documentada**: devuelve
+   body raw (no `{data}` envelope) porque la APK desplegada lo
+   consume así. Cambiar romperia compat. Documentado en backend.md.
+
+### Tests añadidos (31 nuevos)
+
+- `apps/web/lib/__tests__/idempotency.test.ts` — 7 tests del store.
+- `apps/web/app/api/v1/__tests__/helpers.test.ts` — 12 tests de helpers.
+- `apps/web/app/api/v1/ventas/__tests__/contract.test.ts` — 10 tests
+  de contrato (idempotency miss/hit, 422 Zod, 409 stock, etc.).
+- `apps/mobile/__tests__/syncIdempotency.test.ts` — 2 tests
+  (mobile envía Idempotency-Key + retry reutiliza misma key).
+
+### Verificación gate
+
+- `pnpm --filter web type-check` ✅
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → **155 / 155** ✅ (12 suites)
+- `pnpm --filter web build` ✅
+- `pnpm --filter @repo/mobile type-check` ✅
+- `pnpm --filter @repo/mobile lint` ✅
+- `pnpm --filter @repo/mobile exec jest --watchman=false` → **48 / 48** ✅
+
+### Lo que NO se hizo (intencional)
+
+- ❌ Sin migración Prisma — toda la persistencia idempotency vive en
+  Upstash o memoria. Si en futuro se requiere DB persistent store,
+  abrir ADR con mini-diseño antes de migrar.
+- ❌ Idempotency NO aplicada masivamente. Solo `POST /api/v1/ventas`
+  en este sprint. El helper `withIdempotencyResponse` es genérico
+  para extender luego a devoluciones, movimientos caja, clientes,
+  productos — sin nuevas migraciones.
+- ❌ Shape de `/auth/login` intacto.
+- ❌ Sin `/api/v2`.
+- ❌ Sin UI visual.
+- ❌ Sin breaking de APK desplegada (clientes mobile pre-2B siguen
+  funcionando — header opcional).
+
+### Gotcha nuevo registrado
+
+🟡 **G-IDEMP-MEM**: Sin `UPSTASH_REDIS_REST_URL` configurado, la
+garantía de idempotency degrada a memoria in-process. Si el container
+`pos-web` reinicia (deploy, crash, scale), las keys se pierden y un
+retry mobile post-reinicio puede duplicar la venta. Aceptado como
+degradación intencional Fase 2B-P0; mitigación = configurar Upstash
+en `.env.docker` (cubierto por DR-06/DR-10 pendientes).
+
+### Commits
+
+- `9a9fda7` — `feat(api): Fase 2B-P0 — error envelope + idempotency POST /api/v1/ventas`
+
+### Estado al cierre
+
+✅ Fase 2B-P0 cerrada — backend con error envelope estándar, idempotency
+   crítica funcionando, status codes consistentes y tests de contrato.
+
+🟢 Próxima fase libre: continuar 2B-P1 (extender idempotency a
+   devoluciones/movimientos/clientes/productos + schemas compartidos
+   adicionales + más tests de contrato) o cambiar de track a 2C
+   (UX polish) / 2D (mobile + Sentry).
+
+🟡 **Bloqueos operacionales pendientes Pierre** (ya documentados Fase
+   2A): DR-01 branch protection, DR-06 UptimeRobot, DR-10 off-site
+   backups, items checklist externo (DNS/SSL apk-dypos).
