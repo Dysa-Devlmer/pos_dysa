@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 
 import { auth } from "@/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/page-header";
 
 import { CajasTable } from "./cajas-table";
 import type { CajaRow } from "./types";
@@ -35,20 +37,22 @@ export default async function CajasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cajas</h1>
-        <p className="text-sm text-muted-foreground">
-          {canManage
+      <PageHeader
+        title="Cajas"
+        subtitle={
+          canManage
             ? "Gestiona las cajas registradoras del local: crear, editar, desactivar."
-            : "Vista solo lectura. Solo el rol ADMIN puede modificar cajas."}
-        </p>
-      </div>
+            : "Vista solo lectura. Solo el rol ADMIN puede modificar cajas."
+        }
+      />
 
       {!canManage ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Tu rol actual no permite modificar cajas. Contacta un ADMIN si
-          necesitas crear una nueva caja.
-        </div>
+        <Alert variant="warning">
+          <AlertDescription>
+            Tu rol actual no permite modificar cajas. Contacta un ADMIN si
+            necesitas crear una nueva caja.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <CajasTable data={rows} canManage={canManage} />

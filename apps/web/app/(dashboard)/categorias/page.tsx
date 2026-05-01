@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@repo/db";
+
+import { PageHeader } from "@/components/page-header";
+
 import { CategoriasTable, type CategoriaRow } from "./categorias-table";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +25,10 @@ export default async function CategoriasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Categorías</h1>
-        <p className="text-sm text-muted-foreground">
-          Administra las categorías del catálogo de productos.
-        </p>
-      </div>
+      <PageHeader
+        title="Categorías"
+        subtitle="Administra las categorías del catálogo de productos."
+      />
       <CategoriasTable data={rows} />
     </div>
   );

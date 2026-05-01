@@ -5,6 +5,8 @@ import { prisma } from "@repo/db";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
@@ -82,12 +84,10 @@ export default async function ReportesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Reportes</h1>
-        <p className="text-sm text-muted-foreground">
-          Filtra ventas por rango de fechas y descarga el reporte en PDF o Excel.
-        </p>
-      </div>
+      <PageHeader
+        title="Reportes"
+        subtitle="Filtra ventas por rango de fechas y descarga el reporte en PDF o Excel."
+      />
 
       <ReportesWorkspace
         desde={desdeYMD}
@@ -95,46 +95,18 @@ export default async function ReportesPage({
         ventasEnPeriodo={totalVentas}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ventas en el período
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{totalVentas}</p>
-            <p className="text-xs text-muted-foreground">
-              del {desdeYMD.split("-").reverse().join("/")} al{" "}
-              {hastaYMD.split("-").reverse().join("/")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total facturado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums">
-              {formatCLP(totalCLP)}
-            </p>
-            <p className="text-xs text-muted-foreground">IVA 19% incluido</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ticket promedio
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold tabular-nums">
-              {formatCLP(ticket)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Ventas en el período"
+          value={totalVentas}
+          sublabel={`del ${desdeYMD.split("-").reverse().join("/")} al ${hastaYMD.split("-").reverse().join("/")}`}
+        />
+        <KpiCard
+          label="Total facturado"
+          value={formatCLP(totalCLP)}
+          sublabel="IVA 19% incluido"
+        />
+        <KpiCard label="Ticket promedio" value={formatCLP(ticket)} />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

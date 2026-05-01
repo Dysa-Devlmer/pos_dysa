@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/page-header";
+
 import { UsuariosTable, type UsuarioRow } from "./usuarios-table";
 
 export const dynamic = "force-dynamic";
@@ -33,20 +37,22 @@ export default async function UsuariosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
-        <p className="text-sm text-muted-foreground">
-          {canManage
+      <PageHeader
+        title="Usuarios"
+        subtitle={
+          canManage
             ? "Gestiona los usuarios del sistema: crear, editar, desactivar."
-            : "Vista solo lectura. Solo el rol ADMIN puede modificar usuarios."}
-        </p>
-      </div>
+            : "Vista solo lectura. Solo el rol ADMIN puede modificar usuarios."
+        }
+      />
 
       {!canManage ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Tu rol actual no permite modificar usuarios. Contacta un ADMIN si
-          necesitas acceso.
-        </div>
+        <Alert variant="warning">
+          <AlertDescription>
+            Tu rol actual no permite modificar usuarios. Contacta un ADMIN
+            si necesitas acceso.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <UsuariosTable
