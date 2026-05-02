@@ -66,6 +66,9 @@ export async function crearUsuario(
         password: passwordHash,
         rol: data.rol,
         activo: data.activo ?? true,
+        // Fase 3C.2: contraseña asignada por ADMIN es temporal —
+        // el usuario debe cambiarla en su primer login.
+        mustChangePassword: true,
       },
     });
 
@@ -115,6 +118,7 @@ export async function actualizarUsuario(
       rol: Rol;
       activo: boolean;
       password?: string;
+      mustChangePassword?: boolean;
     } = {
       nombre: data.nombre,
       email: data.email,
@@ -123,6 +127,11 @@ export async function actualizarUsuario(
     };
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 12);
+      // Fase 3C.2: reset de password por ADMIN obliga al usuario a
+      // cambiarla en su próximo login. Si el ADMIN se resetea a sí
+      // mismo, también queda obligado — comportamiento esperado y
+      // documentado.
+      updateData.mustChangePassword = true;
     }
 
     await prisma.usuario.update({ where: { id }, data: updateData });

@@ -48,6 +48,13 @@ model Usuario {
   rol       Rol      @default(CAJERO)
   activo    Boolean  @default(true)
   avatar    String? // Data URL base64 (JPEG 200x200 comprimido, ~50-100 KB)
+  // Fase 3C.2 — flujo de contraseña temporal.
+  // true cuando el ADMIN crea el usuario o resetea su contraseña, lo que
+  // obliga al titular a cambiarla en el próximo login (gate en
+  // app/(dashboard)/layout.tsx → redirect a /cambiar-password). El propio
+  // usuario al cambiarla con éxito vuelve a setearlo en false.
+  // Default false para usuarios existentes — no rompe producción.
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

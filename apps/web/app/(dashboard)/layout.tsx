@@ -19,7 +19,16 @@ const getPerfilCacheado = (userId: number) =>
     () =>
       prisma.usuario.findUnique({
         where: { id: userId },
-        select: { avatar: true, nombre: true, email: true },
+        // mustChangePassword incluido en el cache porque se chequea en
+        // el gate del layout. El tag `usuario:${id}` ya se invalida en
+        // perfil/actions.ts y usuarios/actions.ts → cambio de password
+        // se refleja en la siguiente nav.
+        select: {
+          avatar: true,
+          nombre: true,
+          email: true,
+          mustChangePassword: true,
+        },
       }),
     ["dashboard-perfil", String(userId)],
     { revalidate: 300, tags: [`usuario:${userId}`] },
@@ -40,6 +49,15 @@ export default async function DashboardLayout({
     getPerfilCacheado(Number(session.user.id)),
     contarAlertasStock().catch(() => 0),
   ]);
+
+  // Fase 3C.2 — gate de contraseña temporal.
+  // Si ADMIN creó al usuario o le reseteó password, debe cambiarla antes
+  // de poder usar el sistema. Redirige a /cambiar-password (ruta fuera
+  // del grupo (dashboard) → no genera loop). Se revalida vía el tag
+  // `usuario:${id}` cuando el cambio se completa.
+  if (perfil?.mustChangePassword) {
+    redirect("/cambiar-password");
+  }
 
   return (
     <div className="flex min-h-screen bg-muted/20">

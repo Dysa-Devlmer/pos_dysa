@@ -151,8 +151,18 @@ export async function cambiarPassword(
     const hash = await bcrypt.hash(parsed.nueva, 12);
     await prisma.usuario.update({
       where: { id },
-      data: { password: hash },
+      // Fase 3C.2: cambio voluntario válido limpia el flag de
+      // obligación. Aplica también al flujo "reset por ADMIN +
+      // primer login" cuando el usuario llega al formulario de
+      // perfil normal en vez de /cambiar-password (no debería
+      // pasar por el gate del layout, pero es defense-in-depth).
+      data: { password: hash, mustChangePassword: false },
     });
+
+    // Invalidar cache del layout dashboard que incluye
+    // mustChangePassword (Fase 3C.2). Sin esto el flag cacheado
+    // podría re-redirigir al gate hasta los 5 min.
+    revalidateTag(`usuario:${id}`);
 
     return { ok: true };
   } catch (err) {
