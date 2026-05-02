@@ -84,10 +84,20 @@ aliases:
 > la UI que decía "Boleta Electrónica" a "Comprobante interno" y se
 > agregó compartir en web/mobile sin WhatsApp Business API ni impresora
 > térmica. Gate local: web lint/type-check/test/build ✅, mobile
-> lint/type-check/jest ✅. Pendiente operativo: aplicar/verificar la
-> migración en BD local/prod vía flujo normal; en sandbox `prisma migrate`
-> devolvió `Schema engine error` sin detalle y acceso Docker/psql elevado
-> fue bloqueado por límite de uso.
+> lint/type-check/jest ✅. Deploy prod ejecutado por `scripts/deploy.sh`
+> el 2026-05-02 con backup automático; migración `public_token` aplicada
+> y verificada en DB prod; smoke HTTPS + browser prod verde para venta,
+> devolución e invalid token. DR-01 sigue abierto como deuda de
+> gobernanza, no como bloqueo de 3C.1.
+
+> [!info] Milestone 2026-05-02 — Hardening post-deploy 3C.1
+> Se declaró `eslint-plugin-react-hooks` como devDependency directa de
+> `apps/web` para evitar el warning Docker build donde
+> `eslint-config-next/core-web-vitals` no resolvía el plugin. Verificado
+> localmente: web lint/type-check/test/build ✅, mobile
+> lint/type-check/jest ✅ y `pnpm install --frozen-lockfile --offline` ✅.
+> Docker build quedó como `needs-verification` por bloqueo de metadata
+> Docker Hub en el entorno.
 
 > [!success] Milestone 2026-04-19 — Estado producción 100/100
 > **Proyecto declarado completo y production-ready.**
