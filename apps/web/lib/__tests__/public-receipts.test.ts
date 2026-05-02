@@ -14,10 +14,15 @@ beforeEach(() => {
 });
 
 describe("public receipt masking", () => {
-  test("enmascara nombres conservando solo primer nombre + inicial", () => {
-    expect(maskNombre("Pierre Benites Solier")).toBe("Pierre S.");
+  test("enmascara nombres a primer nombre + inicial del primer apellido", () => {
+    // Convención hispana: primer apellido = segundo token, no el último.
+    expect(maskNombre("Pierre Benites Solier")).toBe("Pierre B.");
+    expect(maskNombre("María González")).toBe("María G.");
     expect(maskNombre("Caja")).toBe("Caja");
     expect(maskNombre("")).toBe("Cliente");
+    // Espacios extra y solo nombre.
+    expect(maskNombre("   Juan   ")).toBe("Juan");
+    expect(maskNombre("Ana  Pérez  Soto")).toBe("Ana P.");
   });
 
   test("enmascara RUT chileno y no expone cuerpo completo", () => {
@@ -109,5 +114,7 @@ describe("getPublicRefundReceipt", () => {
     });
     expect(receipt).not.toHaveProperty("usuario");
     expect(receipt).not.toHaveProperty("creadoPor");
+    // motivo: texto libre interno, NO debe estar en el payload público.
+    expect(receipt).not.toHaveProperty("motivo");
   });
 });

@@ -84,7 +84,9 @@ export function PublicRefundReceiptView({
           <InfoRow label="RUT" value={receipt.venta.cliente.rut} />
         </>
       ) : null}
-      <InfoRow label="Motivo" value={receipt.motivo} />
+      {/* `motivo` deliberadamente NO se muestra: texto libre interno
+          que puede contener PII / data sensible. Solo visible en la
+          vista admin autenticada. */}
       <Items items={receipt.items} />
       <section className="border-t pt-3">
         <div className="flex items-center justify-between text-base font-bold">

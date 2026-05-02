@@ -26,7 +26,10 @@ export type PublicRefundReceipt = {
   kind: "devolucion";
   publicToken: string;
   fecha: Date;
-  motivo: string;
+  // `motivo` deliberadamente excluido del tipo público: es texto libre
+  // ingresado por el cajero y puede contener PII o datos internos
+  // ("cliente reclamó por whatsapp, RUT 12.345.678-9"). Vive en la DB
+  // y en el detalle admin, NO en la página pública.
   esTotal: boolean;
   montoDevuelto: number;
   venta: {
@@ -40,10 +43,13 @@ export type PublicRefundReceipt = {
 export function maskNombre(nombre: string | null | undefined): string {
   const clean = (nombre ?? "").trim().replace(/\s+/g, " ");
   if (!clean) return "Cliente";
-  const parts = clean.split(" ");
+  const parts = clean.split(" ").filter(Boolean);
   const first = parts[0] ?? "Cliente";
-  const lastInitial = parts.length > 1 ? `${parts[parts.length - 1]![0]}.` : "";
-  return [first, lastInitial].filter(Boolean).join(" ");
+  // Convención hispana: primer apellido = segundo token.
+  // "Pierre Benites Solier" → "Pierre B." (NO "Pierre S.").
+  // "María González" → "María G.". "Pierre" solo → "Pierre".
+  const surnameInitial = parts.length > 1 ? `${parts[1]![0]}.` : "";
+  return [first, surnameInitial].filter(Boolean).join(" ");
 }
 
 export function maskRut(rut: string | null | undefined): string {
@@ -149,7 +155,6 @@ export async function getPublicRefundReceipt(
     kind: "devolucion",
     publicToken: devolucion.publicToken,
     fecha: devolucion.fecha,
-    motivo: devolucion.motivo,
     esTotal: devolucion.esTotal,
     montoDevuelto: devolucion.montoDevuelto,
     venta: {
