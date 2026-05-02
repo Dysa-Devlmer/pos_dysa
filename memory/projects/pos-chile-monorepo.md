@@ -2325,6 +2325,138 @@ Pierre pidió revisión, no implementación. Hallazgos registrados:
 
 ---
 
+## Sesión 2026-05-02 (madrugada Chile) · Cierre coordinación 3C.1 + gobernanza segundo cerebro
+
+**Contexto:** Pierre coordinó a Worktree, Codex y Cowork sobre los
+4 open-loops abiertos del cierre anterior (commit `117f46e`
+mezclado, DR-01, A/B/C de la review, Obsidian). 3 commits
+productivos en cascada, 1 incidente histórico aceptado, 1 bug
+crítico cerrado.
+
+### Decisiones técnicas (3 commits, ordenados cronológicamente)
+
+1. **Sección "Gobernanza" en `second-brain-system.md`** (`2a00f06` por Worktree)
+   - +147 líneas resolviendo los 3 hallazgos urgentes A/B/C de la
+     review previa: anti-duplicación, matriz de ruteo, regla de
+     migración entre carpetas + cierre de open-loops con evidencia.
+   - Política INDEX.md: solo crear cuando carpeta supere 10 notas.
+   - Backlog explícito de tooling NO implementado: `lint-memory.sh`,
+     archivado trimestral, revisión quincenal de stale.
+2. **Primera nota real `open-loops/dr-01-branch-protection.md`** (`2a00f06`)
+   - Worktree aplicó su propia regla anti-duplicación: NO la trató
+     como loop fresco. Referencia historia previa F-5 + G-M49 en
+     este archivo (líneas 559, 667, 964). Posicionada como
+     "verificación post-F-5 / regresión a advisory".
+3. **Push del propio `2a00f06`** disparó warning `Required status
+   check ... is expected` y completó. **Evidencia en vivo del
+   problema DR-01** que la nota documenta.
+4. **Fix PII Fase 3C.1** (`8bf79b1` por Worktree)
+   - `apps/web/lib/public-receipts.ts::maskNombre` ahora usa
+     `parts[1]` (primer apellido hispano) en vez de `parts.last`
+     (apellido materno). Test corregido: `"Pierre Benites Solier"
+     → "Pierre B."`.
+   - Campo `motivo` removido del type `PublicRefundReceipt` y del
+     return de `getPublicRefundReceipt`. Solo admin lo ve.
+   - `apps/web/app/comprobante/receipt-view.tsx`: `<InfoRow
+     label="Motivo" />` eliminado.
+   - Gate: 250/250 tests web.
+5. **Fix bug crítico middleware** (`439c5b2` por Codex)
+   - `apps/web/middleware.ts` matcher excluye `/comprobante` (cubre
+     `/comprobante/[token]` y `/comprobante/devolucion/[token]`).
+     Sin este fix, toda Fase 3C.1 estaba rota end-to-end (302 a
+     login).
+   - Test de regresión `apps/web/__tests__/middleware-public-routes.test.ts`.
+   - Nota `memory/problems/2026-05-02-middleware-comprobante-publico-auth.md`.
+   - Gate: 251/251 tests web.
+6. **Codex retiene push de `439c5b2` deliberadamente** "porque DR-01
+   sigue abierto y no quiero seguir normalizando bypass directo a
+   `main`". Primera evidencia de que la gobernanza recién
+   formalizada se aplica a sí misma.
+
+### Decisiones canónicas establecidas esta sesión
+
+7. **Política "forward-fix > force-push"** — el commit `117f46e`
+   ya pushed con mensaje engañoso queda permanente. Worktree y
+   Codex rechazaron force-push para split. Aplicaron forward-fixes
+   en commits separados con mensajes correctos.
+   Nota completa: `memory/learnings/forward-fix-over-force-push.md`.
+8. **Definition of Done canónica** para features con migration o
+   ruta pública (sentenciada por Codex al cerrar 3C.1): code green
+   ≠ feature done. Cinco gates operativos obligatorios: migration
+   verificada en entorno real + smoke browser end-to-end en
+   incógnito por cada ruta nueva + deploy via `scripts/deploy.sh` +
+   pre-requisitos operativos (DR-01) en estado correcto.
+   Nota completa: `memory/learnings/code-green-no-es-deploy-done.md`.
+9. **Codex congela roadmap hasta cierre operativo de 3C.1**: no
+   abre nueva feature mientras los 5 gates de DoD no estén
+   verificados.
+
+### Patrón operativo nuevo capturado
+
+🔒 **G-COWORK-STAGING-CHECK** (esta sesión, sesión previa de Cowork):
+antes de `git add memory/` en `/session-end`, hacer `git status`
+y verificar que NO haya staging pre-existente de otro agente. El
+incidente `117f46e` ocurrió porque Cowork agregó memory/ sin ver
+que Codex/Worktree habían dejado staged 33 archivos de Fase 3C.1.
+El commit envolvió todo bajo mensaje `chore(memory):` engañoso.
+Mitigación operativa, no requiere nota completa porque el
+aprendizaje técnico se captura en `forward-fix-over-force-push`
+(qué hacer cuando el daño ya está pushed).
+
+### Estado al cierre
+
+✅ Los 3 hallazgos urgentes A/B/C de la review previa cerrados por
+   Worktree en `2a00f06`.
+✅ Bug crítico middleware Fase 3C.1 corregido en código por Codex
+   en `439c5b2`. Tests + lint + build OK.
+✅ Política forward-fix > force-push registrada como `learning`.
+✅ DoD operativa registrada como `learning`.
+🟡 **Verificación local 2026-05-02 por Codex**:
+   - PostgreSQL local confirmado por `docker compose exec`.
+   - `_prisma_migrations` registra
+     `20260501010000_public_receipt_tokens`.
+   - `ventas.public_token` y `devoluciones.public_token` existen,
+     son `NOT NULL` y tienen índices unique.
+   - Backfill local verificado: ventas 24/24 con token único;
+     devoluciones 11/11 con token único.
+   - Smoke HTTP local contra `localhost:3001`:
+     `/comprobante/<token-venta>` → 200 OK,
+     `/comprobante/devolucion/<token-devolucion>` → 200 OK,
+     `/comprobante/token-invalido` → 404.
+   - HTML verificado sin RUT completo `12.345.678-5`, sin nombre
+     completo `Cliente de Prueba`, sin motivo interno de devolución
+     y sin login.
+🟠 **Gates pendientes para cerrar 3C.1 en producción (orden lógico)**:
+   1. DR-01 (Pierre) o decisión explícita de bypass temporal.
+   2. Push de `439c5b2` + memoria de verificación a `origin/main`.
+   3. Deploy vía `scripts/deploy.sh` con backup automático.
+   4. Migration `public_token` aplicada/verificada en prod.
+   5. Smoke browser incógnito prod `/comprobante/[token]` (venta).
+   6. Smoke browser incógnito prod `/comprobante/devolucion/[token]`.
+🛑 **Roadmap congelado**: no abrir nueva feature hasta cerrar los
+   5 gates.
+❌ Daño histórico aceptado: `117f46e` permanente con mensaje
+   engañoso. Mitigación: nota episódica
+   `memory/episodes/2026-05-01-fase-3c1-comprobantes-publicos.md`
+   ya creada por Codex/Worktree explica el contenido real.
+
+### Commits
+
+- `2a00f06` — `docs(memory): reglas de gobernanza del segundo cerebro` (Worktree, pushed)
+- `8bf79b1` — `fix(receipts): correcciones PII Fase 3C.1 (maskNombre + motivo)` (Worktree, pushed)
+- `439c5b2` — `fix(receipts): excluir comprobantes publicos del middleware auth` (Codex, **LOCAL retenido por DR-01**)
+
+### Coordinación entre agentes (patrón consolidándose)
+
+🟢 Esta sesión los 3 agentes (Codex, Worktree, Cowork) trabajaron
+   en cascada con verificación cruzada y respeto de scope:
+   Worktree validó trabajo de Codex sin re-ejecutar tests
+   redundantes; Codex aplicó forward-fix a hallazgo flagged por
+   Worktree fuera-de-scope; Cowork registró sin actuar. Standby
+   total funcionando como diseño.
+
+---
+
 ## Sesión 2026-05-01 · Fase 2C.1 — Consistencia visual completa cerrada
 
 **Contexto:** seguimiento natural de 2C. Codex aprobó cerrar la

@@ -28,6 +28,18 @@ compartir en web/mobile.
 - Tests web: 250/250.
 - Tests mobile: 73/73.
 - Build web: verde; rutas públicas aparecen como dinámicas en output.
+- Smoke local 2026-05-02:
+  - DB local registra migración `20260501010000_public_receipt_tokens`.
+  - `ventas.public_token` y `devoluciones.public_token` son `NOT NULL`.
+  - Índices unique existen: `ventas_public_token_key`,
+    `devoluciones_public_token_key`.
+  - Backfill local: ventas 24/24 con token único; devoluciones 11/11
+    con token único.
+  - `GET /comprobante/<token-venta>` → 200 OK sin login.
+  - `GET /comprobante/devolucion/<token-devolucion>` → 200 OK sin login.
+  - `GET /comprobante/token-invalido` → 404.
+  - HTML no contiene RUT completo `12.345.678-5`, nombre completo
+    `Cliente de Prueba`, motivo interno de devolución ni texto de login.
 
 ## Impacto
 
@@ -45,7 +57,7 @@ cajero ni IDs internos.
 
 ## Pendientes
 
-- Verificar aplicación de migración en BD local/prod.
-- Smoke browser real post-migration.
+- Verificar aplicación de migración en BD prod.
+- Smoke browser incógnito en prod post-deploy.
 - Si se despliega a prod: usar `scripts/deploy.sh` con backup automático
   y smoke incógnito.

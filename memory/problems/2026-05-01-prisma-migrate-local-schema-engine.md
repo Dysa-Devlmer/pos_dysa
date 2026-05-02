@@ -42,6 +42,15 @@ controlado con backup pre-migration.
 
 - `packages/db/prisma/schema.prisma` válido con `prisma validate`.
 - Migración nueva: `20260501010000_public_receipt_tokens`.
+- Verificación directa PostgreSQL local 2026-05-02:
+  - `_prisma_migrations` contiene
+    `20260501010000_public_receipt_tokens` con `finished_at`.
+  - `ventas.public_token` y `devoluciones.public_token` existen y son
+    `NOT NULL`.
+  - Índices unique existentes: `ventas_public_token_key`,
+    `devoluciones_public_token_key`.
+  - Conteo local: ventas 24/24 con token y 24 tokens únicos;
+    devoluciones 11/11 con token y 11 tokens únicos.
 - Gate de app:
   - web lint/type-check/test/build verde.
   - mobile lint/type-check/jest verde.
@@ -70,4 +79,7 @@ Antes de deploy:
 
 ## Estado actual
 
-Active hasta que una ejecución real de migración confirme la BD.
+Parcialmente resuelto: la BD local quedó confirmada por consulta directa a
+PostgreSQL. Sigue activo como anomalía de tooling porque `prisma migrate
+dev/status` continúa devolviendo `Schema engine error` sin detalle, y la
+migración productiva aún debe validarse mediante el flujo normal de deploy.
