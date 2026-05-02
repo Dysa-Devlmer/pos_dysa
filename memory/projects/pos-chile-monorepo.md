@@ -2110,6 +2110,97 @@ una preview.
 
 ---
 
+## Sesión 2026-05-01 (cont.) · Fase 3B — Manual funcional dueño/cajero cerrada
+
+**Contexto:** Pierre aprobó documentación no técnica para usuario final
+como continuación natural de 3A. Cero código tocado. Solo `docs/product/`.
+
+### Cambios técnicos
+
+1. **`docs/product/README.md`** — índice + glosario + qué leer según rol
+   (dueño / cajero / admin). Lista explícita de "lo que SÍ hace DyPos CL
+   hoy" vs "lo que NO hace todavía".
+2. **`docs/product/manual-web.md`** — 14 secciones del panel web: login,
+   dashboard, POS Caja, productos (con import CSV de Fase 3A),
+   categorías, clientes, devoluciones, reportes, alertas, usuarios,
+   perfil, mobile releases.
+3. **`docs/product/manual-mobile.md`** — app Android: instalación APK
+   (incluye gotcha MIUI), 4 tabs, flujo de venta paso a paso, trabajo
+   offline, troubleshooting, buenas prácticas.
+4. **`docs/product/onboarding-cliente.md`** — roadmap Día 0 → Día 7 desde
+   contrato hasta primer turno. Qué hace Dyon Labs, qué hace el cliente,
+   qué NO necesita aprender, addon Premium.
+5. **`docs/product/faq.md`** — preguntas frecuentes (producto, SII,
+   mobile, privacidad, precios, soporte, operación, roadmap).
+6. **`docs/README.md`** — indexa la nueva carpeta `product/`.
+
+### Patches post-cierre (Codex verificó docs vs código real)
+
+**Patch 1 (`b89b178`)** — Codex detectó 8 sobrepromesas/imprecisiones:
+
+| # | Promesa incorrecta en docs | Realidad del código |
+|---|----------------------------|----------------------|
+| 1 | "el sistema obliga cambio de password al primer login" | NO obliga; ahora se recomienda cambiarlo desde Mi perfil |
+| 2 | "podés vender sin abrir caja" | sistema redirige a `/caja/abrir` si no hay caja activa |
+| 3 | "compartí la boleta por WhatsApp" | NO hay integración real; web solo "ver detalle + imprimir browser" |
+| 4 | "impresora térmica Bluetooth funcional" | NO implementada — movida a roadmap |
+| 5 | "cajón de dinero auto-abre" | feature física no implementada |
+| 6 | "Sentry mobile pendiente" | ya validado en Fase 2D, issue POS-CHILE-MOBILE-1 |
+| 7 | "backup off-site automático" | actualmente disco USB manual (`scripts/backup-project.sh`) |
+| 8 | varios menores en faq | reescritos con scope honesto |
+
+**Patch 2 (`c6d4ad3`)** — Codex detectó 2 residuos del patch 1:
+- `README.md` decía "imprime/comparte boleta interna" → reemplazado por
+  "muestra el comprobante en pantalla al cliente".
+- `manual-web.md` (Devoluciones) decía "comprobante que podés
+  imprimir/compartir" → reemplazado por "ver en pantalla y, si necesitás
+  papel, imprimir desde el navegador cuando corresponda".
+
+### Verificación gate
+
+- Sin código tocado — gate técnico no aplica (solo `*.md` en `docs/`).
+- Codex verificó docs **leyendo el código** (no asumiendo features), por
+  eso saltaron los 10 errores en 2 patches.
+
+### Commits
+
+- `e625cf5` — `docs(product): manual funcional para dueño/cajero (Fase 3B)`
+- `b89b178` — `docs(product): correcciones de precisión funcional (Fase 3B patch)`
+- `c6d4ad3` — `docs(product): quitar promesas de share/print residuales (Fase 3B patch²)`
+
+### Patrón canónico capturado
+
+🔒 **G-DOCS-VS-CODE**: Cuando se escribe documentación funcional para
+usuario final, **verificar cada afirmación contra el código real
+ANTES de publicarla**, no contra la visión/roadmap del producto. Es
+fácil que un manual mencione features que existen en el plan pero no
+en el binario:
+
+- "el sistema te obliga a X" → ¿hay un guard/redirect que lo fuerce?
+- "podés compartir Y por Z" → ¿existe la integración o solo el botón?
+- "el dispositivo abre Q automáticamente" → ¿hay driver/protocolo
+  conectado o es solo una promesa de marketing?
+
+Patrón aplicado por Codex en Fase 3B: revisar `docs/` ↔ código en
+ambos sentidos. Si la doc promete una feature que el código no tiene
+todavía, mover la línea a la sección "Roadmap" o eliminarla. Aplicable
+a todas las fases futuras donde se escriba doc orientada a cliente.
+
+### Lo que NO se hizo (intencional)
+
+- ❌ Sin video tutoriales (sale en Fase posterior si Pierre aprueba).
+- ❌ Sin traducción a otros idiomas — DyPos CL solo es-CL hoy.
+- ❌ Sin manual técnico ops/sysadmin (eso vive en `docs/architecture/`).
+
+### Estado al cierre
+
+✅ Fase 3B cerrada — onboarding del cliente final desbloqueado. Pierre
+   puede entregar `docs/product/` al primer cliente como deliverable.
+✅ Sin código tocado, sin gates técnicos, sin migrations.
+✅ Patrón G-DOCS-VS-CODE registrado para futuras fases con docs.
+
+---
+
 ## Sesión 2026-05-01 · Fase 2C.1 — Consistencia visual completa cerrada
 
 **Contexto:** seguimiento natural de 2C. Codex aprobó cerrar la

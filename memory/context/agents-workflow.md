@@ -62,6 +62,22 @@ Sin esto el agente NO puede decir "listo". Pierre rechaza el reporte si no inclu
 
 Razón: los agentes a veces generan reportes optimistas ("todo OK") con bugs reales en el código. Verificar es barato; arreglar un bug en producción no lo es.
 
+> [!warning] G-DOCS-VS-CODE — docs orientada a cliente
+> Cuando un agente escribe documentación funcional (manuales, FAQ,
+> onboarding) para usuario final, **cada afirmación se verifica contra
+> el código real, no contra la visión/roadmap del producto**. Es fácil
+> prometer features que existen en el plan pero no en el binario.
+>
+> Casos típicos de sobrepromesa detectados en Fase 3B (`b89b178`,
+> `c6d4ad3`):
+> - "el sistema te obliga a X" → verificar guard/redirect en código.
+> - "podés compartir Y por Z" → verificar integración real, no solo el botón.
+> - "el dispositivo abre Q automáticamente" → verificar driver/protocolo.
+>
+> Aplicar a `docs/product/`, `README.md` orientado a cliente,
+> emails de onboarding, copy comercial. Lo que el código no hace
+> hoy va en sección "Roadmap" o se elimina.
+
 ### 4. Gemini siempre reporta con evidencia
 
 Formato obligatorio para hallazgos de Gemini:
