@@ -239,8 +239,9 @@ Para anular o devolver una venta:
      "anulada".
    - **Devolución parcial**: marcás cuántas unidades de cada
      producto se devuelven. El sistema ajusta el total.
-3. Confirmá. Aparece un comprobante de devolución que podés
-   imprimir/compartir.
+3. Confirmá. Aparece el comprobante de devolución, que podés ver
+   en pantalla y, si necesitás papel, imprimir desde el navegador
+   (Ctrl/Cmd + P) cuando corresponda.
 
 > ⚠️ Las devoluciones quedan registradas en AuditLog. NO se pueden
 > eliminar — eso es deliberado para mantener trazabilidad contable.

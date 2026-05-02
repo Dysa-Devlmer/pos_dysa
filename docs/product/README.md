@@ -18,7 +18,8 @@ Tiene dos partes que funcionan juntas:
    productos, ves reportes, gestionás caja y devoluciones.
 2. **App Android** — se instala en un celular o tablet del cajero.
    Es el "puesto del cajero": vende rápido, escanea códigos de
-   barra, cobra, imprime/comparte boleta interna.
+   barra, cobra y muestra el comprobante interno en pantalla al
+   cliente.
 
 Cada cliente que contrata DyPos CL recibe **su propia copia
 aislada**: su dominio (ej. `tubodega.dypos.zgamersa.com`), su base
