@@ -7,6 +7,13 @@ Esta carpeta es el manual técnico oficial de DyPos CL. No se despliega al VPS
 
 ```
 docs/
+├── product/                  ← MANUAL DE USUARIO (Fase 3B — para dueño/cajero, no técnico)
+│   ├── README.md             # Índice + glosario + qué leer según tu rol
+│   ├── manual-web.md         # Panel web (ADMIN + CAJERO en escritorio)
+│   ├── manual-mobile.md      # App Android (CAJERO en piso)
+│   ├── onboarding-cliente.md # Día 0 → Día 7: alta de cliente nuevo
+│   └── faq.md                # Preguntas frecuentes + límites actuales
+│
 ├── architecture/             ← FUENTE DE VERDAD ARQUITECTÓNICA (Fase 1)
 │   ├── README.md             # Visión técnica + diagrama Mermaid
 │   ├── frontend.md           # Next.js 15, RSC, Tailwind v4, shadcn/ui
@@ -49,6 +56,11 @@ docs/
 
 ## Cómo empezar
 
+**Si sos dueño de negocio o cajero usando DyPos CL:**
+
+- Empezá por [`product/README.md`](./product/README.md). Está
+  escrito en lenguaje no técnico y tiene un mapa según tu rol.
+
 **Si sos un agente nuevo** (Claude Code Worktree, CLI, Codex):
 
 1. Leer `CLAUDE.md` raíz (reglas absolutas).
@@ -84,4 +96,4 @@ docs/
 
 ---
 
-_Última revisión del índice: 2026-04-29 — Fase 1 cerrada._
+_Última revisión del índice: 2026-05-01 — Fase 3B (manuales producto)._
