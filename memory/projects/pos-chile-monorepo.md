@@ -2404,14 +2404,15 @@ crítico cerrado.
 ### Patrón operativo nuevo capturado
 
 🔒 **G-COWORK-STAGING-CHECK** (esta sesión, sesión previa de Cowork):
-antes de `git add memory/` en `/session-end`, hacer `git status`
-y verificar que NO haya staging pre-existente de otro agente. El
-incidente `117f46e` ocurrió porque Cowork agregó memory/ sin ver
-que Codex/Worktree habían dejado staged 33 archivos de Fase 3C.1.
-El commit envolvió todo bajo mensaje `chore(memory):` engañoso.
-Mitigación operativa, no requiere nota completa porque el
-aprendizaje técnico se captura en `forward-fix-over-force-push`
-(qué hacer cuando el daño ya está pushed).
+evoluciona a snapshot obligatorio para TODOS los agentes antes de
+cualquier brief o reporte:
+`git fetch`, `git log origin/main..HEAD --oneline`, `git status -sb`.
+Antes era una regla enfocada en `git add memory/`; ahora cubre también
+desfase de modelo mental entre agentes. El incidente `117f46e` ocurrió
+porque Cowork agregó memory/ sin ver que Codex/Worktree habían dejado
+staged 33 archivos de Fase 3C.1. El desfase posterior "ahead 2 vs ahead
+3" confirmó que el snapshot debe ir al inicio de cada interacción, no
+solo antes de commitear.
 
 ### Estado al cierre operativo 2026-05-02
 

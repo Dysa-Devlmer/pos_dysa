@@ -31,6 +31,43 @@ Relacionado: [[pos-chile-monorepo]] · [[security-owasp]] · [[business-logic]]
 
 ## Principios de trabajo
 
+### 0. Snapshot real antes de cualquier brief o reporte
+
+Todo brief que Cowork entregue y todo reporte que vuelva de un agente
+debe empezar con un snapshot real del repo:
+
+```bash
+git fetch
+git log origin/main..HEAD --oneline
+git status -sb
+```
+
+Formato mínimo esperado al inicio del mensaje:
+
+```markdown
+## Snapshot repo
+- `git fetch`: OK / error exacto
+- `git log origin/main..HEAD --oneline`: <salida exacta o "(vacío)">
+- `git status -sb`: <salida exacta>
+```
+
+Razón: con cuatro agentes, el modelo mental del estado git se desfasa
+fácilmente. En Fase 3C.1 se observó una discrepancia real: Codex pensó
+que `main` estaba ahead 2 cuando el estado efectivo incluía otro commit
+de memoria (`420ebbe`). Este snapshot detecta automáticamente cambios
+locales, commits ahead, commits no pusheados y trabajo de otro agente
+antes de recomendar, verificar, commitear o reportar.
+
+Regla operativa:
+
+- Si `git fetch` falla, reportar el error y continuar solo con lectura
+  local o pedir escalación si la tarea depende del remoto.
+- Si `git log origin/main..HEAD --oneline` no está vacío, listar esos
+  commits antes de decir "main está sincronizado".
+- Si `git status -sb` muestra cambios locales, declarar si son propios,
+  de otro agente o desconocidos. No tocarlos sin scope explícito.
+- Esta regla aplica también a tareas "solo docs" y "solo memoria".
+
 ### 1. Toda instrucción indica el agente destinatario
 
 La primera línea de cualquier prompt que Cowork redacta es:
@@ -197,6 +234,9 @@ Requisitos locales del repo:
 
 ## Checklist antes de iniciar una nueva fase
 
+- [ ] Ejecutar y pegar snapshot repo:
+      `git fetch`, `git log origin/main..HEAD --oneline`,
+      `git status -sb`
 - [ ] Leer `CLAUDE.md` en raíz — reglas absolutas del proyecto
 - [ ] Leer `memory/projects/pos-chile-monorepo.md` — estado global
 - [ ] Leer `memory/README.md` — mapa del segundo cerebro
