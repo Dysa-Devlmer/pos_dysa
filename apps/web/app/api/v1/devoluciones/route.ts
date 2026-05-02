@@ -1,5 +1,6 @@
 import { prisma } from "@repo/db";
 import { z } from "zod";
+import { generatePublicToken } from "@/lib/public-token";
 import {
   requireAuth,
   requireRateLimit,
@@ -210,6 +211,7 @@ export async function POST(request: Request) {
 
       const devolucion = await tx.devolucion.create({
         data: {
+          publicToken: generatePublicToken(),
           ventaId: venta.id,
           motivo: input.motivo,
           montoDevuelto,
@@ -217,7 +219,12 @@ export async function POST(request: Request) {
           creadoPor: usuarioId,
           items: { create: lineas },
         },
-        select: { id: true, esTotal: true, montoDevuelto: true },
+        select: {
+          id: true,
+          publicToken: true,
+          esTotal: true,
+          montoDevuelto: true,
+        },
       });
 
       for (const l of lineas) {

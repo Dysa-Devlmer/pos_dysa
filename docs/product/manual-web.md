@@ -102,6 +102,8 @@ Antes de la primera venta del día:
 7. Click en **"Finalizar venta"**.
 8. Aparece el **comprobante** con el detalle. Podés:
    - **Ver el detalle** en pantalla.
+   - **Compartir** un link público del comprobante interno. El link
+     protege datos personales: nombre abreviado y RUT enmascarado.
    - **Imprimir** el comprobante con el navegador (Ctrl/Cmd + P
      desde la vista del detalle).
    - Cerrar el modal y atender al siguiente cliente.
@@ -240,8 +242,8 @@ Para anular o devolver una venta:
    - **Devolución parcial**: marcás cuántas unidades de cada
      producto se devuelven. El sistema ajusta el total.
 3. Confirmá. Aparece el comprobante de devolución, que podés ver
-   en pantalla y, si necesitás papel, imprimir desde el navegador
-   (Ctrl/Cmd + P) cuando corresponda.
+   en pantalla, compartir por link protegido y, si necesitás papel,
+   imprimir desde el navegador (Ctrl/Cmd + P) cuando corresponda.
 
 > ⚠️ Las devoluciones quedan registradas en AuditLog. NO se pueden
 > eliminar — eso es deliberado para mantener trazabilidad contable.

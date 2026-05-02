@@ -577,6 +577,7 @@ export function CajaPos({ productos, categorias }: CajaPosProps) {
       const boletaData: BoletaData = {
         id: res.data!.id,
         numeroBoleta: res.data!.numeroBoleta,
+        publicToken: res.data!.publicToken,
         fecha: new Date().toISOString(),
         items: items.map((it) => ({
           nombre: it.nombre,

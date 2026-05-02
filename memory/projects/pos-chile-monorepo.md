@@ -77,6 +77,18 @@ aliases:
 > abiertos. Regla nueva: si una experiencia deja aprendizaje reutilizable,
 > debe quedar en la carpeta correcta de `memory/`, con evidencia.
 
+> [!success] Milestone 2026-05-01 — Fase 3C.1 comprobantes públicos
+> DyPos CL ahora tiene comprobantes internos compartibles para ventas y
+> devoluciones con `publicToken` dedicado, rutas públicas no indexables y
+> política privacy-first: nombre abreviado + RUT enmascarado. Se corrigió
+> la UI que decía "Boleta Electrónica" a "Comprobante interno" y se
+> agregó compartir en web/mobile sin WhatsApp Business API ni impresora
+> térmica. Gate local: web lint/type-check/test/build ✅, mobile
+> lint/type-check/jest ✅. Pendiente operativo: aplicar/verificar la
+> migración en BD local/prod vía flujo normal; en sandbox `prisma migrate`
+> devolvió `Schema engine error` sin detalle y acceso Docker/psql elevado
+> fue bloqueado por límite de uso.
+
 > [!success] Milestone 2026-04-19 — Estado producción 100/100
 > **Proyecto declarado completo y production-ready.**
 > - Build limpio en 2m22s, 68/68 tests en 1.07s, typecheck en 11.8s
@@ -2210,6 +2222,106 @@ a todas las fases futuras donde se escriba doc orientada a cliente.
    puede entregar `docs/product/` al primer cliente como deliverable.
 ✅ Sin código tocado, sin gates técnicos, sin migrations.
 ✅ Patrón G-DOCS-VS-CODE registrado para futuras fases con docs.
+
+---
+
+## Sesión 2026-05-01 (cont.) · Segundo cerebro completo formalizado + review
+
+**Contexto:** Codex (vía Pierre) reorganizó `memory/` desde "notas
+técnicas dispersas" a "segundo cerebro vivo" con 7 capas explícitas.
+Cowork (Claude) revisó el sistema sin tocar nada — el user pidió
+"solo mira por ahora".
+
+### Cambios técnicos (commit `b3cb827`)
+
+1. **Nuevas carpetas + READMEs** en `memory/`:
+   - `episodes/` — sesiones, deploys, builds APK, smoke tests, incidentes.
+   - `problems/` — bugs, riesgos, deudas, brechas docs↔código.
+   - `solutions/` — fixes reutilizables, patrones probados, runbooks.
+   - `learnings/` — reglas nuevas nacidas de experiencia real.
+   - `ideas/` — features candidatas, sin tratarlas como promesa.
+   - `recommendations/` — recomendaciones vigentes con dueño + prioridad.
+   - `open-loops/` — pendientes que no deben perderse.
+2. **`memory/README.md`** — mapa central del cerebro, 10 reglas de
+   actualización, formato mínimo por nota, estados permitidos.
+3. **`memory/context/second-brain-system.md`** — protocolo de memoria
+   viva: tipos de memoria, evidencia obligatoria, plantillas
+   (problemas/aprendizajes/ideas), regla de lectura al iniciar tarea,
+   regla de cierre.
+4. **`memory/context/agents-workflow.md`** — añadido bloque "Segundo
+   cerebro completo" + 2 ítems al checklist (`leer memory/README.md`
+   y `second-brain-system.md` cuando aplica).
+5. **`memory/projects/pos-chile-monorepo.md`** — Mapa de contexto
+   ahora linkea `[[../README]]` y `[[second-brain-system]]`. Milestone
+   block "2026-05-01 — Segundo cerebro completo" agregado.
+
+### Review de Cowork (sin modificar nada)
+
+Pierre pidió revisión, no implementación. Hallazgos registrados:
+
+**🔴 Urgentes — decisiones bloqueantes antes de poblar contenido**
+
+- **A. Regla de migración para `G-*` existentes** sin definir. Los
+  gotchas G-WEB-USE-SERVER, G-WEB-SERVER-ACTION-TRUST, G-DOCS-VS-CODE,
+  G-M40, G-M43, G-M44 viven repartidos entre `CLAUDE.md`,
+  `pos-chile-monorepo.md` y secciones "Patrón canónico capturado".
+  Si `learnings/` no aclara si los reemplaza o convive, hay 3 fuentes
+  de verdad para la misma regla.
+- **B. Routing matrix ausente** — frontera `problems/` ↔ `solutions/`
+  ↔ `learnings/` borrosa. Un bug fixeado puede generar 3 archivos
+  cruzados sin regla clara. Propuesta: tabla "si pasa X → escribir
+  en Y" en `second-brain-system.md`.
+- **C. Solapamiento `recommendations/` ↔ `decisions/`** y
+  `ideas/` ↔ `roadmap.md`. Sin regla de migración (cuándo una
+  recomendación aceptada se vuelve decisión; cuándo una idea aprobada
+  baja a roadmap), drift garantizado en 2 meses.
+
+**🟡 No urgentes — atender antes de Q3 2026**
+
+- `INDEX.md` por carpeta o tags consistentes (sin esto, en 3 meses
+  abrir `episodes/` con 60 notas deja de ser útil).
+- `scripts/lint-memory.sh` para validar frontmatter mínimo
+  (`title`, `date`, `status`, `tags`).
+- Política de archivado: `episodes/2026-Q2/`, `2026-Q3/`, etc. +
+  revisión quincenal de `open-loops/` con status stale.
+
+**🟠 Observación operativa**
+
+- **DR-01 vivo** — el push del propio commit `b3cb827` registró bypass
+  de branch protection en `main`. El sistema que se formaliza
+  para proteger trazabilidad fue creado bypaseando la regla
+  operativa que debería proteger. Candidato natural a primera nota
+  real del sistema: `open-loops/dr-01-branch-protection.md`
+  (`status: active`, dueño Pierre, criterio de cierre = "branch
+  protection habilitada en GitHub Settings").
+
+### Lo que SÍ funciona del sistema nuevo
+
+- Modelo cognitivo (semántica + episódica + problemas + soluciones +
+  aprendizajes + ideas + recomendaciones + open-loops) coincide con
+  cómo trabaja memoria operativa real.
+- Regla de evidencia obligatoria (`second-brain-system.md` líneas
+  134-150) es la mejor parte: distingue "verificado en código" vs
+  "en roadmap" vs "documentado pero no existe". G-DOCS-VS-CODE
+  elevado a regla del sistema.
+- Estados explícitos cubren el ciclo de vida real.
+- Self-referential bien resuelto: el `.pending-notes` capturó el
+  propio commit `b3cb827` y esta `/session-end` lo procesa.
+
+### Estado al cierre
+
+🟡 **Sistema formalizado pero NO poblado.** Las 7 carpetas tienen
+   solo el README stub. Decisión de Pierre pendiente sobre A/B/C
+   antes de generar primeras notas reales.
+🟠 DR-01 (branch protection bypass) sigue abierto — DR-01 ya estaba
+   pendiente desde 2026-04-29; este commit no lo creó pero lo hizo
+   visible de nuevo.
+✅ Mapa de contexto en `pos-chile-monorepo.md` actualizado.
+✅ Checklist de inicio de tarea en `agents-workflow.md` actualizado.
+
+### Commits
+
+- `b3cb827` — `docs(memory): formaliza segundo cerebro completo`
 
 ---
 

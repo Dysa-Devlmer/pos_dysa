@@ -38,6 +38,7 @@ export default async function DevolucionesPage({
 
   const rows: DevolucionRow[] = devoluciones.map((d) => ({
     id: d.id,
+    publicToken: d.publicToken,
     fechaISO: d.fecha.toISOString(),
     motivo: d.motivo,
     montoDevuelto: d.montoDevuelto,

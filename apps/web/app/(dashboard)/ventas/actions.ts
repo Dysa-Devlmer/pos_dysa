@@ -7,6 +7,7 @@ import { prisma, MetodoPago, Prisma, AuditAccion, EstadoApertura } from "@repo/d
 import { auth } from "@/auth";
 import { calcularDesglose } from "@/lib/utils";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
+import { generatePublicToken } from "@/lib/public-token";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -104,7 +105,7 @@ function consolidarItems(
 
 export async function crearVenta(
   input: VentaInput,
-): Promise<ActionResult<{ id: number; numeroBoleta: string }>> {
+): Promise<ActionResult<{ id: number; numeroBoleta: string; publicToken: string }>> {
   try {
     const session = await requireSession();
     const data = ventaInputSchema.parse(input);
@@ -242,12 +243,14 @@ export async function crearVenta(
     }
 
     const numeroBoleta = generarNumeroBoleta();
+    const publicToken = generatePublicToken();
 
     const venta = await prisma.$transaction(async (tx) => {
       // 1. Crear la venta + detalles + pagos
       const v = await tx.venta.create({
         data: {
           numeroBoleta,
+          publicToken,
           subtotal: subtotalBruto,
           descuentoPct: data.descuentoPct,
           descuentoMonto: descuentoMontoEfectivo,
@@ -268,7 +271,7 @@ export async function crearVenta(
             })),
           },
         },
-        select: { id: true, numeroBoleta: true, fecha: true },
+        select: { id: true, numeroBoleta: true, publicToken: true, fecha: true },
       });
 
       // 2. Actualizar stock y contador ventas por cada producto
@@ -302,7 +305,11 @@ export async function crearVenta(
 
     return {
       ok: true,
-      data: { id: venta.id, numeroBoleta: venta.numeroBoleta },
+      data: {
+        id: venta.id,
+        numeroBoleta: venta.numeroBoleta,
+        publicToken: venta.publicToken,
+      },
     };
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -577,7 +584,7 @@ export async function restaurarVenta(
 export async function editarVenta(
   id: number,
   input: VentaInput,
-): Promise<ActionResult<{ id: number; numeroBoleta: string }>> {
+): Promise<ActionResult<{ id: number; numeroBoleta: string; publicToken: string }>> {
   try {
     const session = await requireSession();
     const data = ventaInputSchema.parse(input);
@@ -789,7 +796,7 @@ export async function editarVenta(
             })),
           },
         },
-        select: { id: true, numeroBoleta: true, fecha: true },
+        select: { id: true, numeroBoleta: true, publicToken: true, fecha: true },
       });
 
       // ─── 3. APLICAR efectos nuevos ──
@@ -825,6 +832,7 @@ export async function editarVenta(
       data: {
         id: ventaActualizada.id,
         numeroBoleta: ventaActualizada.numeroBoleta,
+        publicToken: ventaActualizada.publicToken,
       },
     };
   } catch (err) {

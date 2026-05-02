@@ -164,13 +164,14 @@ Aparece el comprobante con todo el detalle. Acciones:
 
 - **Mostrar** el comprobante en pantalla para que el cliente vea
   el detalle.
+- **Compartir comprobante** → abre el menú nativo de Android para
+  enviarlo por WhatsApp, email u otra app. El link público protege
+  datos personales: nombre abreviado y RUT enmascarado.
 - **"Cerrar"** → vuelve a la pantalla de Caja, lista para la
   siguiente venta.
 
-> ℹ️ Compartir comprobante por WhatsApp y la impresión por
-> impresora térmica Bluetooth están en roadmap; hoy no están
-> integradas en la app móvil. Si necesitás un comprobante físico
-> mientras tanto, imprimí desde el panel web.
+> ℹ️ La impresión por impresora térmica Bluetooth sigue en roadmap.
+> Si necesitás comprobante físico, imprimí desde el panel web.
 
 > 💡 Tip de velocidad: con un cliente normal, escanear → cobrar
 > efectivo → confirmar son ~5 segundos. Practicá el flujo en hora

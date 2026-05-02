@@ -53,7 +53,7 @@ antes de empezar:
 | **Cliente** | Un comprador identificado por nombre y RUT. Opcional — la mayoría de las ventas son a "consumidor final" sin RUT. |
 | **Venta** | Una transacción concreta. Tiene un total, los productos vendidos, el método de pago, la fecha. Genera una **boleta interna** (no e-boleta SII). |
 | **Devolución** | Anular total o parcialmente una venta. Devuelve stock al producto y genera un registro auditable. |
-| **Boleta interna** | Comprobante que emite DyPos CL (en pantalla, imprimible desde el navegador). **NO es boleta electrónica SII** — eso viene en una versión futura. |
+| **Boleta interna** | Comprobante que emite DyPos CL (en pantalla, compartible por link protegido e imprimible desde el navegador). **NO es boleta electrónica SII** — eso viene en una versión futura. |
 | **Stock** | Cuántas unidades te quedan de un producto. Baja al vender, sube al recibir devolución. |
 | **Alerta de stock** | Umbral por producto. Cuando el stock cae debajo del umbral, aparece en el panel de alertas para que repongas. |
 | **Reporte** | Vista resumida de tus ventas, productos más vendidos, ingresos por día/semana/mes. Exportable a PDF y Excel. |
@@ -70,7 +70,8 @@ antes de empezar:
    barra del celular.
 ✅ Cobrar mixto: efectivo + tarjeta + transferencia + crédito en una
    misma venta.
-✅ Generar boleta interna en pantalla, imprimible desde el navegador.
+✅ Generar boleta interna en pantalla, compartirla por link protegido
+   e imprimirla desde el navegador.
 ✅ Devoluciones totales o parciales con devolución automática de stock.
 ✅ Reportes de ventas por día / semana / mes / cajero / producto.
 ✅ Exportar reportes a PDF y Excel.

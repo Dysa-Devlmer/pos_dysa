@@ -79,6 +79,7 @@
         "properties": {
           "id": { "type": "integer" },
           "numeroBoleta": { "type": "string", "example": "BOL-1729123456789" },
+          "publicToken": { "type": "string", "description": "Token público no enumerable para compartir comprobante interno" },
           "fecha": { "type": "string", "format": "date-time" },
           "subtotal": { "type": "integer", "description": "Subtotal bruto en CLP (antes de descuentos)" },
           "descuentoPct": { "type": "number", "description": "Descuento porcentual aplicado (0-100)", "minimum": 0, "maximum": 100, "default": 0 },

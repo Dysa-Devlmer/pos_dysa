@@ -32,6 +32,7 @@ import { useCartStore, type CartItem } from "@/stores/cartStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { enqueueVenta } from "@/db/sync";
 import { buscarEnCache, toProducto } from "@/db/productos-cache";
+import { shareReceipt } from "@/lib/publicReceipt";
 
 /**
  * Caja POS mobile — M4.
@@ -866,6 +867,27 @@ function VentaExitosaModal({
               </Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              if (!venta?.publicToken) return;
+              void shareReceipt({
+                token: venta.publicToken,
+                numeroBoleta: venta.numeroBoleta,
+              }).catch((e) => {
+                Alert.alert(
+                  "No se pudo compartir",
+                  e instanceof Error ? e.message : "Intenta de nuevo",
+                );
+              });
+            }}
+            disabled={!venta?.publicToken}
+            className="border-primary mt-4 w-full items-center rounded-lg border py-3"
+          >
+            <Text className="text-primary font-semibold">
+              Compartir comprobante
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={onClose}

@@ -7,6 +7,7 @@ import { CheckCircle2, FileText, Printer, Receipt } from "lucide-react";
 import type { MetodoPago } from "@repo/db";
 
 import { Badge } from "@/components/ui/badge";
+import { ReceiptShareButton } from "@/components/receipt-share-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,7 @@ import { formatCLP } from "@/lib/utils";
 export interface BoletaData {
   id: number;
   numeroBoleta: string;
+  publicToken: string;
   fecha: string; // ISO
   items: Array<{
     nombre: string;
@@ -68,6 +70,11 @@ function formatFechaHora(iso: string): string {
 // ──────────────────────────────────────────────────────────────────────────
 
 export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
+  const publicUrl =
+    boleta && typeof window !== "undefined"
+      ? `${window.location.origin}/comprobante/${boleta.publicToken}`
+      : "";
+
   const handlePrint = () => {
     if (!boleta) return;
 
@@ -176,7 +183,7 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boleta ${esc(boleta.numeroBoleta)}</title>
+  <title>Comprobante ${esc(boleta.numeroBoleta)}</title>
   <style>
     /* ─── Reset y base ─── */
     * {
@@ -446,7 +453,7 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
 <body>
   <div class="header">
     <div class="store-name">POS CHILE</div>
-    <div class="doc-type">Boleta Electrónica</div>
+    <div class="doc-type">Comprobante interno</div>
     <div class="empresa-info">
       Punto de Venta Autorizado<br/>
       Santiago · Chile
@@ -487,8 +494,8 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
   <div class="footer">
     <div class="gracias">¡Gracias por su compra!</div>
     <div class="disclaimer">
-      Conserve esta boleta como comprobante de su compra.<br/>
-      Documento emitido electrónicamente.
+      Conserve este comprobante interno como respaldo de su compra.<br/>
+      Documento interno de DyPos CL. No reemplaza boleta electrónica SII.
     </div>
     <div class="impreso">Impreso: ${esc(impresoEn)}</div>
   </div>
@@ -516,7 +523,7 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
             Venta registrada
           </DialogTitle>
           <DialogDescription>
-            Boleta electrónica emitida correctamente.
+            Comprobante interno generado correctamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -540,7 +547,7 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
                 />
                 <p className="text-base font-bold tracking-wide">POS CHILE</p>
                 <p className="text-[10px] uppercase text-muted-foreground">
-                  Boleta electrónica
+                  Comprobante interno
                 </p>
               </div>
 
@@ -703,6 +710,11 @@ export function BoletaModal({ boleta, onClose }: BoletaModalProps) {
                 </Link>
               </Button>
               <div className="flex gap-2">
+                <ReceiptShareButton
+                  url={publicUrl}
+                  title={`Comprobante ${boleta.numeroBoleta}`}
+                  text={`Comprobante interno DyPos CL ${boleta.numeroBoleta}`}
+                />
                 <Button type="button" variant="outline" onClick={handlePrint}>
                   <Printer className="size-4" />
                   Imprimir

@@ -264,6 +264,10 @@ implementado en la app móvil ni en el panel web. Mientras tanto, si
 necesitás comprobante físico podés imprimir el detalle de la venta
 desde el navegador (Ctrl/Cmd + P) en una impresora normal.
 
+También podés compartir el comprobante interno por link protegido.
+Ese link enmascara datos personales del cliente (nombre abreviado y
+RUT protegido) y no reemplaza la boleta electrónica SII.
+
 Si para tu negocio es bloqueante, avisanos — priorizamos según
 demanda.
 
@@ -283,8 +287,7 @@ En orden de prioridad:
 
 1. **Boleta electrónica SII** (Sprint F-8, 6–8 semanas).
 2. **Inventory v2**: kardex, valuación, análisis ABC (post F-8).
-3. **Integración con impresora térmica Bluetooth** (ESC/POS) y
-   compartir comprobante por WhatsApp desde la app móvil.
+3. **Integración con impresora térmica Bluetooth** (ESC/POS).
 4. **iOS** app móvil (long-term).
 5. **API pública** para integraciones B2B (eCommerce, contabilidad).
 

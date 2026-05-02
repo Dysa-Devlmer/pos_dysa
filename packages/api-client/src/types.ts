@@ -124,6 +124,7 @@ export type DetalleVenta = z.infer<typeof DetalleVentaSchema>;
 export const VentaSchema = z.object({
   id: z.number().int(),
   numeroBoleta: z.string(),
+  publicToken: z.string().optional(),
   fecha: z.string(),
   subtotal: z.number().int(),
   impuesto: z.number().int(),
@@ -222,6 +223,7 @@ export type CrearVentaRequest = z.infer<typeof CrearVentaRequestSchema>;
 export const VentaCreadaSchema = z.object({
   id: z.number().int(),
   numeroBoleta: z.string(),
+  publicToken: z.string().optional(),
   subtotal: z.number().int(),
   impuesto: z.number().int(),
   total: z.number().int(),
@@ -403,6 +405,7 @@ export type DevolucionItem = z.infer<typeof DevolucionItemSchema>;
 
 export const DevolucionSchema = z.object({
   id: z.number().int(),
+  publicToken: z.string().optional(),
   ventaId: z.number().int(),
   motivo: z.string(),
   montoDevuelto: z.number().int(),

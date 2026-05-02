@@ -10,6 +10,7 @@ import {
   withIdempotencyResponse,
 } from "../_helpers";
 import { computeFingerprint } from "@/lib/idempotency";
+import { generatePublicToken } from "@/lib/public-token";
 import { VENTAS_VISIBLES } from "@/lib/db-helpers";
 
 export async function GET(request: Request) {
@@ -216,6 +217,7 @@ async function createVenta(args: {
       const impuesto = Math.round(subtotal * 0.19);
       const total = subtotal + impuesto;
       const numeroBoleta = `BOL-${Date.now()}`;
+      const publicToken = generatePublicToken();
 
       // Resolver pagos. Normalizamos al mismo shape: { metodo, monto, referencia? }.
       // metodoPago a nivel root sigue siendo back-compat: si NO viene `pagos`
@@ -258,6 +260,7 @@ async function createVenta(args: {
       const venta = await tx.venta.create({
         data: {
           numeroBoleta,
+          publicToken,
           subtotal,
           impuesto,
           total,

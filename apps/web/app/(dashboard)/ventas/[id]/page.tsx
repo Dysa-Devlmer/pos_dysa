@@ -10,6 +10,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReceiptShareButton } from "@/components/receipt-share-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import {
@@ -21,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ResumenVenta } from "@/components/resumen-venta";
+import { getPublicReceiptUrl } from "@/lib/public-receipts";
 import { formatCLP } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +88,11 @@ export default async function VentaDetallePage({
                 Volver
               </Link>
             </Button>
+            <ReceiptShareButton
+              url={getPublicReceiptUrl(venta.publicToken)}
+              title={`Comprobante ${venta.numeroBoleta}`}
+              text={`Comprobante interno DyPos CL ${venta.numeroBoleta}`}
+            />
             {!tieneDevolucionTotal ? (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/devoluciones/nueva?ventaId=${venta.id}`}>
@@ -273,6 +280,12 @@ export default async function VentaDetallePage({
                       <p className="tabular-nums font-semibold text-amber-700 dark:text-amber-400">
                         − {formatCLP(d.montoDevuelto)}
                       </p>
+                      <ReceiptShareButton
+                        className="mt-2"
+                        url={getPublicReceiptUrl(d.publicToken, "devolucion")}
+                        title={`Devolución ${venta.numeroBoleta}`}
+                        text={`Comprobante interno de devolución DyPos CL ${venta.numeroBoleta}`}
+                      />
                     </div>
                   </div>
                   <ul className="ml-2 space-y-0.5 border-l-2 border-amber-200 pl-3 text-xs dark:border-amber-900">

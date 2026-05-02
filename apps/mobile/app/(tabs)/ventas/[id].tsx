@@ -3,6 +3,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -15,6 +16,7 @@ import { VentaSchema, type Venta } from "@repo/api-client";
 import { formatCLP } from "@repo/domain";
 
 import { apiClient } from "@/stores/authStore";
+import { shareReceipt } from "@/lib/publicReceipt";
 
 /**
  * Detalle de una venta — M6.
@@ -179,6 +181,29 @@ export default function VentaDetalleScreen() {
             <Row label="Total" value={formatCLP(venta.total)} bold />
           </View>
         </View>
+
+        {venta.publicToken ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() =>
+              shareReceipt({
+                token: venta.publicToken!,
+                numeroBoleta: venta.numeroBoleta,
+              }).catch((e) => {
+                Alert.alert(
+                  "No se pudo compartir",
+                  e instanceof Error ? e.message : "Intenta de nuevo",
+                );
+              })
+            }
+            className="border-primary flex-row items-center justify-center gap-2 rounded-xl border px-4 py-3"
+          >
+            <MaterialIcons name="ios-share" size={20} color="#f97316" />
+            <Text className="text-primary font-semibold">
+              Compartir comprobante
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* Acción: crear devolución */}
         <Link

@@ -185,6 +185,7 @@ model Cliente {
 model Venta {
   id             Int        @id @default(autoincrement())
   numeroBoleta   String     @unique @map("numero_boleta")
+  publicToken    String     @unique @map("public_token")
   fecha          DateTime   @default(now())
   // ⚠ SCH1 deferred — ver comentario en Producto.precio.
   // GUARDRAILS ACTIVOS: ventas_subtotal_int4_guardrail_chk +
@@ -362,6 +363,7 @@ model DetalleVenta {
 
 model Devolucion {
   id            Int      @id @default(autoincrement())
+  publicToken   String   @unique @map("public_token")
   ventaId       Int      @map("venta_id")
   venta         Venta    @relation(fields: [ventaId], references: [id])
   fecha         DateTime @default(now())

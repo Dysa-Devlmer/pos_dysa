@@ -8,6 +8,7 @@ import { Eye, Receipt, RotateCcw, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { IconButton } from "@/components/icon-button";
+import { ReceiptShareButton } from "@/components/receipt-share-button";
 import {
   Table,
   TableBody,
@@ -21,6 +22,7 @@ import { formatCLP } from "@/lib/utils";
 
 export interface DevolucionRow {
   id: number;
+  publicToken: string;
   fechaISO: string;
   motivo: string;
   montoDevuelto: number;
@@ -137,12 +139,20 @@ export function DevolucionesList({ data }: { data: DevolucionRow[] }) {
                 − {formatCLP(d.montoDevuelto)}
               </TableCell>
               <TableCell className="text-right">
-                <IconButton
-                  label="Ver venta original"
-                  href={`/ventas/${d.ventaId}`}
-                >
-                  <Eye className="size-4" />
-                </IconButton>
+                <div className="flex justify-end gap-1">
+                  <ReceiptShareButton
+                    path={`/comprobante/devolucion/${d.publicToken}`}
+                    title={`Devolución ${d.ventaNumeroBoleta}`}
+                    text={`Comprobante interno de devolución DyPos CL ${d.ventaNumeroBoleta}`}
+                    label="Compartir"
+                  />
+                  <IconButton
+                    label="Ver venta original"
+                    href={`/ventas/${d.ventaId}`}
+                  >
+                    <Eye className="size-4" />
+                  </IconButton>
+                </div>
               </TableCell>
             </motion.tr>
           ))}

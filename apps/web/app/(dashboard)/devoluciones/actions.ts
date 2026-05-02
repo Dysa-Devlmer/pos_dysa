@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@repo/db";
 import { auth } from "@/auth";
+import { generatePublicToken } from "@/lib/public-token";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -44,7 +45,7 @@ async function requireSession() {
 
 export async function crearDevolucion(
   input: CrearDevolucionInput,
-): Promise<ActionResult<{ id: number; esTotal: boolean }>> {
+): Promise<ActionResult<{ id: number; esTotal: boolean; publicToken: string }>> {
   try {
     const session = await requireSession();
     const usuarioId = Number(session.user.id);
@@ -164,6 +165,7 @@ export async function crearDevolucion(
       // 7. Crear Devolucion + items
       const devolucion = await tx.devolucion.create({
         data: {
+          publicToken: generatePublicToken(),
           ventaId: venta.id,
           motivo: data.motivo,
           montoDevuelto,
@@ -171,7 +173,7 @@ export async function crearDevolucion(
           creadoPor: usuarioId,
           items: { create: lineas },
         },
-        select: { id: true, esTotal: true },
+        select: { id: true, esTotal: true, publicToken: true },
       });
 
       // 8. Revertir stock y contador de ventas por cada producto devuelto
@@ -269,6 +271,7 @@ export async function listarDevoluciones({
       venta: {
         select: {
           id: true,
+          publicToken: true,
           numeroBoleta: true,
           total: true,
           fecha: true,

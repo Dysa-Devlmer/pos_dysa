@@ -128,6 +128,35 @@ Ejemplo: `B-20260419-A7K3M2PX`.
 - **Unicidad**: columna `numeroBoleta` es `@unique` en Prisma. Si nanoid colisiona (improbable pero posible), el `INSERT` falla y el `$transaction` se aborta.
 - **No es SII**: este no es un folio electrónico ante el SII, es un identificador interno. Integración SII electrónico es fase futura.
 
+### 4.2. Comprobantes públicos compartibles — Fase 3C.1
+
+Las ventas y devoluciones tienen un token público dedicado:
+
+```prisma
+Venta.publicToken      String @unique @map("public_token")
+Devolucion.publicToken String @unique @map("public_token")
+```
+
+Reglas:
+
+- `numeroBoleta` sigue siendo referencia humana interna, NO llave pública.
+- El link público usa `/comprobante/[token]` o
+  `/comprobante/devolucion/[token]`.
+- Los links no requieren auth, pero tienen `noindex,nofollow`.
+- Venta/devolución con `deletedAt != null` responde 404 silencioso.
+- El comprobante público refleja estado vivo, no snapshot histórico.
+- PII siempre enmascarada: nombre abreviado (`Pierre B.`) y RUT
+  protegido (`12.***.***-9`).
+- Nunca exponer en comprobante público: email, teléfono, dirección,
+  usuario/cajero, IDs internos o datos administrativos.
+
+UI:
+
+- Web: `navigator.share` → fallback clipboard → fallback `wa.me`.
+- Mobile: React Native `Share.share`.
+- Texto oficial: **Comprobante interno**. No usar "Boleta Electrónica"
+  hasta integrar SII F-8.
+
 ### 4.1. Impresión de boleta — ventana autónoma (commit `2fa2477` + `3fdefe9`)
 
 El approach original con `@media print` sobre el `<BoletaModal />` de Radix falló por incompatibilidad con portal + framer-motion transforms. Pattern canónico ahora:
