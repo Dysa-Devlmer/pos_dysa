@@ -52,6 +52,11 @@ aliases:
 
 ## Mapa de contexto
 
+- [[../README]] — sistema operativo del segundo cerebro: qué se guarda,
+  dónde se guarda y cuándo actualizarlo
+- [[second-brain-system]] — protocolo de memoria viva: recuerdos,
+  problemas, soluciones, aprendizajes, ideas, recomendaciones y
+  pendientes
 - [[stack-tech]] — versiones exactas, deps por feature, gotchas por capa
 - [[auth-patterns]] — NextAuth v5 patterns, middleware RBAC, gotchas beta
 - [[security-owasp]] — audits OWASP, Gemini G1-G5, GAP-1/2, GAP-PROD-1/2
@@ -64,6 +69,13 @@ aliases:
 **Guía externa replicable**: [`OBSIDIAN-CLAUDE-SETUP.md`](../../OBSIDIAN-CLAUDE-SETUP.md) en la raíz del repo — documenta cómo replicar el segundo cerebro en proyectos nuevos (arquitectura + instalación paso a paso + checklist + gotchas + tiempo estimado).
 
 **Roadmap post-prod**: [[roadmap]] — 11 gaps priorizados del audit 2026-04-21 (4 quick-wins + 4 esfuerzo medio + 3 nice-to-have). Cada ítem tiene agente sugerido + dependencias + criterio de completitud.
+
+> [!info] Milestone 2026-05-01 — Segundo cerebro completo
+> `memory/` fue formalizado como un cerebro vivo, no solo como notas
+> técnicas. Se añadieron capas explícitas para recuerdos episódicos,
+> problemas, soluciones, aprendizajes, ideas, recomendaciones y asuntos
+> abiertos. Regla nueva: si una experiencia deja aprendizaje reutilizable,
+> debe quedar en la carpeta correcta de `memory/`, con evidencia.
 
 > [!success] Milestone 2026-04-19 — Estado producción 100/100
 > **Proyecto declarado completo y production-ready.**

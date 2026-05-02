@@ -199,9 +199,27 @@ Requisitos locales del repo:
 
 - [ ] Leer `CLAUDE.md` en raíz — reglas absolutas del proyecto
 - [ ] Leer `memory/projects/pos-chile-monorepo.md` — estado global
+- [ ] Leer `memory/README.md` — mapa del segundo cerebro
 - [ ] Leer nota de contexto relevante (`auth-patterns.md`, `security-owasp.md`, etc.)
+- [ ] Si la tarea toca memoria, docs, proceso o roadmap: leer `memory/context/second-brain-system.md`
 - [ ] Decidir agente destinatario (CLI vs Worktree vs Gemini)
 - [ ] Redactar prompt con `AGENTE:` + `## Verificación` + lista de archivos esperados
 - [ ] Al recibir reporte: verificar independientemente leyendo archivos
 - [ ] Tras merge: actualizar `memory/projects/pos-chile-monorepo.md` con commit + estado
 - [ ] Si hay gotcha nueva: documentar en `CLAUDE.md` + nota de contexto apropiada
+
+## Segundo cerebro completo
+
+Desde 2026-05-01, `memory/` no guarda solo estado técnico. Funciona como
+un segundo cerebro completo y actualizable:
+
+- `episodes/` — recuerdos de sesiones, deploys, builds, smokes e incidentes.
+- `problems/` — bugs, riesgos, deudas y brechas entre docs y código.
+- `solutions/` — soluciones reutilizables y patrones probados.
+- `learnings/` — aprendizajes que cambian reglas de trabajo.
+- `ideas/` — mejoras y features candidatas, sin tratarlas como promesas.
+- `recommendations/` — recomendaciones vigentes con criterio y prioridad.
+- `open-loops/` — pendientes, bloqueos y decisiones que no deben perderse.
+
+Regla: si una experiencia deja aprendizaje reutilizable, no basta con
+contarla en el chat. Debe quedar en la carpeta correcta de `memory/`.
