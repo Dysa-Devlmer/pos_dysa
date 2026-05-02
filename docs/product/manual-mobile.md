@@ -14,7 +14,7 @@ La app es la **herramienta del cajero en piso**. Sirve para:
 ✅ Vender rápido escaneando códigos de barra con la cámara del
    celular.
 ✅ Cobrar efectivo, tarjeta, transferencia o pago mixto.
-✅ Mostrar boleta interna al cliente y compartirla por WhatsApp.
+✅ Mostrar boleta interna al cliente en pantalla.
 ✅ Ver tus últimas ventas del turno.
 ✅ Hacer devoluciones (si tenés permiso).
 ✅ Trabajar **offline** un rato — si se cae el internet, podés seguir
@@ -67,9 +67,18 @@ administrador desde el panel web.
 ### Actualizar la app
 
 Cuando salga una versión nueva (mejoras o correcciones), el ADMIN
-te avisa y te pasa la APK nueva. La instalás encima de la actual
-— **no perdés ningún dato** porque toda la información vive en la
-nube de tu negocio, no en el celular.
+te avisa y te pasa la APK nueva. Instalala encima de la actual:
+**si la firma de la APK es la misma** (Android lo verifica solo),
+los datos locales y tu sesión se preservan. Como la mayoría de la
+información vive en la nube de tu negocio, el riesgo en la práctica
+es bajo.
+
+> ⚠️ Antes de actualizar, **forzá la sincronización** desde
+> tab Más → "Sincronizar ahora". Eso garantiza que cualquier venta
+> offline pendiente quedó subida al servidor antes de tocar la app.
+> Si por algún motivo Android pide desinstalar la versión vieja
+> (firma distinta o conflicto), los datos locales se borran — por
+> eso el sync previo es importante.
 
 ---
 
@@ -77,7 +86,8 @@ nube de tu negocio, no en el celular.
 
 1. Abrir la app — pantalla de login.
 2. Ingresar tu **email** y **contraseña** (los que te dio el ADMIN).
-3. La primera vez vas a tener que cambiar la contraseña.
+3. La primera vez, por seguridad cambiá tu contraseña desde
+   **Más → Mi perfil** apenas entres.
 4. Listo. La sesión queda guardada en el celular — no necesitás
    loguearte cada día, solo si cerrás sesión a propósito.
 
@@ -152,12 +162,15 @@ Tocar **"Confirmar venta"**.
 
 Aparece el comprobante con todo el detalle. Acciones:
 
-- **"Compartir"** → abre WhatsApp/email/etc para mandar la boleta
-  al cliente.
-- **"Imprimir"** (si tenés impresora térmica conectada por
-  Bluetooth — opcional).
+- **Mostrar** el comprobante en pantalla para que el cliente vea
+  el detalle.
 - **"Cerrar"** → vuelve a la pantalla de Caja, lista para la
   siguiente venta.
+
+> ℹ️ Compartir comprobante por WhatsApp y la impresión por
+> impresora térmica Bluetooth están en roadmap; hoy no están
+> integradas en la app móvil. Si necesitás un comprobante físico
+> mientras tanto, imprimí desde el panel web.
 
 > 💡 Tip de velocidad: con un cliente normal, escanear → cobrar
 > efectivo → confirmar son ~5 segundos. Practicá el flujo en hora

@@ -13,7 +13,8 @@
 2. Andá a la dirección que te dieron al contratar, por ejemplo:
    `https://tubodega.dypos.zgamersa.com`.
 3. En la pantalla de login, ingresá tu **email** y tu **contraseña**.
-4. Si es la primera vez, vas a tener que cambiar la contraseña inicial.
+4. Si es la primera vez, por seguridad cambiá la contraseña desde
+   **Mi perfil** apenas entres.
 
 > 💡 Recomendación: dejá un acceso directo en el escritorio del
 > computador para no tener que escribir la dirección cada vez.
@@ -72,8 +73,10 @@ Antes de la primera venta del día:
    en la caja chica al empezar).
 4. Confirmá. Ya podés vender.
 
-> ⚠️ Si no abrís caja, el sistema igual te deja vender, pero después
-> el cuadre de cierre va a ser impreciso. Acostumbrá a abrir SIEMPRE.
+> ⚠️ El sistema **no permite vender sin caja abierta**. Si entrás a
+> POS Caja sin haber abierto, te redirige a `/caja/abrir` para que
+> hagás la apertura primero. No es opcional — es el primer paso del
+> turno.
 
 ### 4.2 Vender — el módulo POS Caja
 
@@ -98,8 +101,9 @@ Antes de la primera venta del día:
      al total.
 7. Click en **"Finalizar venta"**.
 8. Aparece el **comprobante** con el detalle. Podés:
-   - **Ver / imprimir** la boleta interna en PDF.
-   - **Compartir por WhatsApp** (copia el link de la boleta).
+   - **Ver el detalle** en pantalla.
+   - **Imprimir** el comprobante con el navegador (Ctrl/Cmd + P
+     desde la vista del detalle).
    - Cerrar el modal y atender al siguiente cliente.
 
 > 💡 IVA: el sistema usa 19% fijo (Chile). El subtotal y el IVA se

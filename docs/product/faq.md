@@ -32,10 +32,14 @@ ahora — iOS está en roadmap.
 
 ### ¿Cuántas terminales puedo conectar?
 
-Sin límite técnico. Todos los celulares y computadores se conectan
-al mismo servidor. La diferencia entre planes está en el volumen
-de **ventas mensuales** (Starter hasta 500, Pro hasta 5.000,
-Business ilimitado).
+Soporta múltiples terminales conectándose al mismo servidor. El
+límite práctico depende de la **infraestructura del VPS y del plan
+contratado** — no hay un tope codificado, pero a más terminales en
+paralelo, más recursos consume. La diferencia entre planes está
+sobre todo en el volumen de **ventas mensuales** (Starter hasta
+500, Pro hasta 5.000, Business sin tope práctico). Si proyectás un
+escenario muy intensivo, conversémoslo antes para dimensionar el
+servidor.
 
 ---
 
@@ -119,16 +123,27 @@ tareas de soporte que vos pidas, y todo queda en logs auditables.
 
 ### ¿Cumplen con la Ley 21.719 (datos personales Chile)?
 
-Sí. La arquitectura de "deployment dedicado" facilita el
+La arquitectura de "deployment dedicado" **facilita** el
 cumplimiento porque tus datos están físicamente aislados de los de
-otros clientes.
+otros clientes y existe trazabilidad de cambios vía AuditLog. Esto
+no equivale a una certificación legal: el cumplimiento total
+depende también de tus políticas internas (avisos de privacidad,
+manejo de RUT en boletas, retención, etc.) y de una revisión por
+abogado especializado. Te ayudamos con la parte técnica, pero la
+revisión legal queda de tu lado.
 
 ### ¿Hacen backups?
 
-Sí, **automáticamente** antes de cada actualización del sistema.
-Mantenemos los últimos 14 backups por cliente. Si algo falla
-durante una actualización, restauramos sin que tengas que hacer
-nada.
+Sí, hacemos un **backup automático pre-actualización** antes de
+cada deploy del sistema y mantenemos las últimas **14 copias** en
+el mismo VPS. Si algo falla durante una actualización, restauramos
+sin que tengas que hacer nada.
+
+> ℹ️ La política de **backups diarios** y **copia off-site** (a
+> S3 / Backblaze u otro proveedor externo) está como decisión
+> pendiente (DR-10 en `docs/architecture/decision-log.md`). Si tu
+> negocio requiere RPO/RTO formal, conversémoslo para incluir un
+> plan de retención dedicado.
 
 ### ¿Puedo descargar mi propia data?
 
@@ -228,9 +243,11 @@ cliente en reportes.
 
 ### ¿Cuántos cajeros pueden vender al mismo tiempo?
 
-Sin límite técnico. Cada uno con su usuario. El sistema maneja
-ventas concurrentes correctamente — no hay riesgo de "robarse"
-stock entre cajeros mientras estén online.
+DyPos CL soporta múltiples cajeros en paralelo, cada uno con su
+usuario. El **límite práctico depende de la infraestructura y del
+plan contratado**. El sistema maneja ventas concurrentes
+correctamente — no hay riesgo de "robarse" stock entre cajeros
+mientras estén online.
 
 ### ¿Y si el internet del local se cae completamente?
 
@@ -241,16 +258,20 @@ sigue trabajando.
 
 ### ¿Puedo conectar una impresora térmica?
 
-Sí, por **Bluetooth** desde el celular. Soportamos el formato
-ESC/POS estándar (la mayoría de impresoras chinas baratas
-funcionan). La configuración inicial la hacemos juntos en el
-onboarding.
+**Hoy no — está en roadmap.** La integración con impresoras térmicas
+(Bluetooth ESC/POS) requiere desarrollo específico que aún no está
+implementado en la app móvil ni en el panel web. Mientras tanto, si
+necesitás comprobante físico podés imprimir el detalle de la venta
+desde el navegador (Ctrl/Cmd + P) en una impresora normal.
+
+Si para tu negocio es bloqueante, avisanos — priorizamos según
+demanda.
 
 ### ¿Puedo conectar un cajón de dinero?
 
-Si la impresora térmica tiene salida `RJ-11` para cajón, abre el
-cajón al imprimir cada boleta. El cajón en sí no se conecta
-directamente al celular — pasa por la impresora.
+Como la impresora térmica todavía no está integrada (ver pregunta
+anterior), tampoco se puede abrir un cajón de dinero electrónico
+desde DyPos CL. Por ahora el manejo del cajón es manual.
 
 ---
 
@@ -262,10 +283,16 @@ En orden de prioridad:
 
 1. **Boleta electrónica SII** (Sprint F-8, 6–8 semanas).
 2. **Inventory v2**: kardex, valuación, análisis ABC (post F-8).
-3. **Sentry mobile** observabilidad: ya implementado, pendiente
-   validación final en device físico.
+3. **Integración con impresora térmica Bluetooth** (ESC/POS) y
+   compartir comprobante por WhatsApp desde la app móvil.
 4. **iOS** app móvil (long-term).
 5. **API pública** para integraciones B2B (eCommerce, contabilidad).
+
+> ✅ **Observabilidad mobile (Sentry)**: ya implementado y validado
+> con el issue `POS-CHILE-MOBILE-1`. Cualquier crash o error en la
+> app móvil se reporta automáticamente al dashboard de Sentry de
+> Dyon Labs para diagnóstico — no perdés visibilidad si algo
+> falla.
 
 ### ¿Puedo pedir features?
 

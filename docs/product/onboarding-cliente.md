@@ -63,8 +63,9 @@ Vas a recibir por email:
 
 1. Abrí la URL en Chrome.
 2. Ingresás email y contraseña.
-3. El sistema te obliga a **cambiar la contraseña inicial** —
-   elegí algo que recuerdes pero que no sea fácil de adivinar.
+3. **Por seguridad, cambiá la contraseña inicial** desde **Mi
+   perfil** apenas entres — elegí algo que recuerdes pero que no
+   sea fácil de adivinar.
 4. Ya estás dentro. Vas a ver el Dashboard vacío (cero ventas, cero
    productos).
 
@@ -153,7 +154,7 @@ hacerla con el local cerrado o en hora muerta.
    - Login.
    - Escanear código de barra → vender.
    - Cobrar efectivo + cobrar mixto.
-   - Compartir boleta por WhatsApp.
+   - Mostrar el comprobante al cliente en pantalla.
    - Hacer una devolución.
    - Sincronizar manualmente.
 3. **(15 min)** Reglas operativas del local:
@@ -212,8 +213,12 @@ Después de este check-in, las revisiones pasan a ser **mensuales**.
 Tranquilidad: hay cosas que **NO son tu problema** y nunca te
 vamos a pedir que las hagas:
 
-- ❌ No tenés que **hacer backups** — los hacemos nosotros
-  automáticamente antes de cada actualización del sistema.
+- ❌ No tenés que **hacer backups del sistema** — hacemos un
+  backup automático **pre-actualización** antes de cada deploy y
+  mantenemos las últimas 14 copias en el VPS. (Backups diarios y
+  copia off-site están como decisión pendiente — ver
+  [`faq.md`](./faq.md#hacen-backups). Si tu negocio lo requiere,
+  conversémoslo.)
 - ❌ No tenés que **actualizar el servidor** — lo hacemos nosotros
   desde el lado de Dyon Labs.
 - ❌ No tenés que **mantener el dominio** — está incluido.
@@ -249,7 +254,9 @@ add-on **Onboarding Premium** ($150.000 CLP por única vez):
 - 4 horas presenciales en tu negocio.
 - Carga de catálogo asistida.
 - Capacitación cajeros en su lugar de trabajo.
-- Configuración de impresora térmica si tenés.
+- Asistencia para impresión de comprobantes desde el navegador
+  (la integración nativa con impresora térmica Bluetooth está
+  en roadmap, ver [`faq.md`](./faq.md)).
 - Quedamos hasta tu primera hora de venta real.
 
 Ideal si:
