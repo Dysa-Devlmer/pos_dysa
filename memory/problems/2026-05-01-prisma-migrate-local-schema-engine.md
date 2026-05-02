@@ -1,7 +1,7 @@
 ---
 title: Problema — Prisma migrate local devolvió Schema engine error sin detalle
 date: 2026-05-01
-status: active
+status: resolved
 severity: medium
 tags:
   - prisma
@@ -33,10 +33,10 @@ psql elevados quedaron bloqueados por límite de uso de la app.
 
 ## Impacto
 
-La migración de `public_token` fue creada y el código compila, pero la
-aplicación de la migración no quedó verificada localmente desde esta
-sesión. Debe validarse antes de deploy productivo o durante el deploy
-controlado con backup pre-migration.
+La migración de `public_token` fue creada y el código compila. Al inicio
+existía una brecha de verificación porque `prisma migrate dev/status`
+fallaba localmente con error opaco. Esa brecha quedó cerrada por
+consulta directa a PostgreSQL local y por deploy productivo controlado.
 
 ## Evidencia
 
@@ -54,6 +54,14 @@ controlado con backup pre-migration.
 - Gate de app:
   - web lint/type-check/test/build verde.
   - mobile lint/type-check/jest verde.
+- Verificación producción 2026-05-02:
+  - `scripts/deploy.sh` ejecutó `prisma migrate deploy`.
+  - `_prisma_migrations` prod contiene
+    `20260501010000_public_receipt_tokens` con `finished_at`.
+  - `ventas.public_token` y `devoluciones.public_token` aplicados en prod.
+  - Conteo prod: ventas 5/5 con token y 5 tokens únicos; devoluciones 1/1
+    con token y 1 token único.
+  - Smoke público HTTPS y browser prod verde.
 
 ## Solución propuesta o aplicada
 
@@ -79,7 +87,7 @@ Antes de deploy:
 
 ## Estado actual
 
-Parcialmente resuelto: la BD local quedó confirmada por consulta directa a
-PostgreSQL. Sigue activo como anomalía de tooling porque `prisma migrate
-dev/status` continúa devolviendo `Schema engine error` sin detalle, y la
-migración productiva aún debe validarse mediante el flujo normal de deploy.
+Resuelto para Fase 3C.1: la migración quedó verificada local y en
+producción. La anomalía opaca de `prisma migrate dev/status` queda como
+señal de tooling a vigilar si se repite, pero ya no bloquea ni compromete
+los comprobantes públicos.

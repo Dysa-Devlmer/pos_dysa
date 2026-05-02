@@ -2403,7 +2403,7 @@ Mitigación operativa, no requiere nota completa porque el
 aprendizaje técnico se captura en `forward-fix-over-force-push`
 (qué hacer cuando el daño ya está pushed).
 
-### Estado al cierre
+### Estado al cierre operativo 2026-05-02
 
 ✅ Los 3 hallazgos urgentes A/B/C de la review previa cerrados por
    Worktree en `2a00f06`.
@@ -2411,7 +2411,7 @@ aprendizaje técnico se captura en `forward-fix-over-force-push`
    en `439c5b2`. Tests + lint + build OK.
 ✅ Política forward-fix > force-push registrada como `learning`.
 ✅ DoD operativa registrada como `learning`.
-🟡 **Verificación local 2026-05-02 por Codex**:
+✅ **Verificación local 2026-05-02 por Codex**:
    - PostgreSQL local confirmado por `docker compose exec`.
    - `_prisma_migrations` registra
      `20260501010000_public_receipt_tokens`.
@@ -2426,26 +2426,50 @@ aprendizaje técnico se captura en `forward-fix-over-force-push`
    - HTML verificado sin RUT completo `12.345.678-5`, sin nombre
      completo `Cliente de Prueba`, sin motivo interno de devolución
      y sin login.
-🟠 **Gates pendientes para cerrar 3C.1 en producción (orden lógico)**:
-   1. DR-01 (Pierre) o decisión explícita de bypass temporal.
-   2. Push de `439c5b2` + memoria de verificación a `origin/main`.
-   3. Deploy vía `scripts/deploy.sh` con backup automático.
-   4. Migration `public_token` aplicada/verificada en prod.
-   5. Smoke browser incógnito prod `/comprobante/[token]` (venta).
-   6. Smoke browser incógnito prod `/comprobante/devolucion/[token]`.
-🛑 **Roadmap congelado**: no abrir nueva feature hasta cerrar los
-   5 gates.
+✅ **Cierre producción 2026-05-02 por Codex**:
+   - Bypass temporal DR-01 usado con autorización explícita de Pierre
+     para no dejar media feature viva. GitHub volvió a advertir:
+     "Changes must be made through a pull request" y status check
+     `web` esperado. DR-01 sigue abierto.
+   - Push `8bf79b1..420ebbe main -> main` completado.
+   - Deploy vía `scripts/deploy.sh` completado con backup automático.
+   - Backup DB pre-migrations:
+     `/var/backups/dypos-cl-db/pre-deploy-20260502-011419.sql.gz`.
+   - `prisma migrate deploy` aplicó
+     `20260501010000_public_receipt_tokens` en producción.
+   - Health prod OK:
+     `{"status":"ok","database":"connected","version":"2.0.0"}`.
+   - DB prod verificada por consulta directa en VPS:
+     ventas 5/5 con token único; devoluciones 1/1 con token único.
+   - Smoke HTTPS prod:
+     `/comprobante/<token-venta>` → 200,
+     `/comprobante/devolucion/<token-devolucion>` → 200,
+     `/comprobante/token-invalido` → 404.
+   - Smoke browser prod con Browser MCP: venta y devolución renderizan
+     sin login, con "Comprobante interno", aviso SII, botones
+     "Compartir" e "Imprimir comprobante"; devolución muestra
+     `Pierre S.` y `25.***.***-0`, sin RUT completo, sin nombre
+     completo y sin motivo interno.
+✅ **Fase 3C.1 cerrada en producción.**
+🟠 **DR-01 sigue abierto**: branch protection real todavía depende de
+   Pierre/GitHub Settings. El bypass de este cierre fue una excepción
+   operativa, no una regla nueva.
+🟡 **Nuevo problema activo**: durante el build Docker de deploy apareció
+   warning de ESLint por `eslint-plugin-react-hooks` no resuelto. No
+   bloqueó el build, pero debe cerrarse en el siguiente hardening para
+   evitar que lint quede degradado dentro del contenedor.
 ❌ Daño histórico aceptado: `117f46e` permanente con mensaje
    engañoso. Mitigación: nota episódica
    `memory/episodes/2026-05-01-fase-3c1-comprobantes-publicos.md`
-   ya creada por Codex/Worktree explica el contenido real.
+   explica el contenido real.
 
 ### Commits
 
 - `2a00f06` — `docs(memory): reglas de gobernanza del segundo cerebro` (Worktree, pushed)
 - `8bf79b1` — `fix(receipts): correcciones PII Fase 3C.1 (maskNombre + motivo)` (Worktree, pushed)
-- `439c5b2` — `fix(receipts): excluir comprobantes publicos del middleware auth` (Codex, **LOCAL retenido por DR-01**)
-- `18a2afa` — `chore(memory): registra smoke local Fase 3C.1` (Codex, **LOCAL retenido por DR-01** — incluye verificación local de gates 2 y 3, creación de las 2 notas canónicas en `learnings/` y captura de bullets de Cowork sobre la sesión)
+- `439c5b2` — `fix(receipts): excluir comprobantes publicos del middleware auth` (Codex, pushed)
+- `18a2afa` — `chore(memory): registra smoke local Fase 3C.1` (Codex, pushed)
+- `420ebbe` — `chore(memory): session notes 2026-05-02 — cierre coordinación 3C.1 + commit 18a2afa` (Codex, pushed)
 
 ### Coordinación entre agentes (patrón consolidándose)
 

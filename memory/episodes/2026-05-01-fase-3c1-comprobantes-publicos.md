@@ -1,7 +1,7 @@
 ---
 title: Episodio — Fase 3C.1 comprobantes públicos compartibles
 date: 2026-05-01
-status: active
+status: resolved
 tags:
   - fase-3c1
   - comprobantes
@@ -40,6 +40,24 @@ compartir en web/mobile.
   - `GET /comprobante/token-invalido` → 404.
   - HTML no contiene RUT completo `12.345.678-5`, nombre completo
     `Cliente de Prueba`, motivo interno de devolución ni texto de login.
+- Cierre producción 2026-05-02:
+  - Push a `origin/main` completado con bypass temporal DR-01 autorizado
+    por Pierre. GitHub volvió a advertir que faltan PR obligatorio y
+    status check `web`.
+  - Deploy ejecutado por `scripts/deploy.sh`.
+  - Backup DB pre-migrations:
+    `/var/backups/dypos-cl-db/pre-deploy-20260502-011419.sql.gz`.
+  - `prisma migrate deploy` aplicó
+    `20260501010000_public_receipt_tokens`.
+  - Health prod OK: `status=ok`, `database=connected`, `version=2.0.0`.
+  - DB prod: ventas 5/5 con token único; devoluciones 1/1 con token único.
+  - HTTPS prod:
+    `/comprobante/<token-venta>` → 200,
+    `/comprobante/devolucion/<token-devolucion>` → 200,
+    `/comprobante/token-invalido` → 404.
+  - Browser MCP prod: venta y devolución renderizan sin login. Devolución
+    verificada con PII enmascarada (`Pierre S.`, `25.***.***-0`) y sin
+    motivo interno.
 
 ## Impacto
 
@@ -57,7 +75,8 @@ cajero ni IDs internos.
 
 ## Pendientes
 
-- Verificar aplicación de migración en BD prod.
-- Smoke browser incógnito en prod post-deploy.
-- Si se despliega a prod: usar `scripts/deploy.sh` con backup automático
-  y smoke incógnito.
+- Ninguno para Fase 3C.1.
+- DR-01 branch protection queda abierto como deuda de gobernanza, no como
+  bloqueo de esta feature.
+- Warning Docker build ESLint `react-hooks` queda registrado como problema
+  activo separado para hardening.
