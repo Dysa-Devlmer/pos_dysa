@@ -2445,6 +2445,7 @@ aprendizaje técnico se captura en `forward-fix-over-force-push`
 - `2a00f06` — `docs(memory): reglas de gobernanza del segundo cerebro` (Worktree, pushed)
 - `8bf79b1` — `fix(receipts): correcciones PII Fase 3C.1 (maskNombre + motivo)` (Worktree, pushed)
 - `439c5b2` — `fix(receipts): excluir comprobantes publicos del middleware auth` (Codex, **LOCAL retenido por DR-01**)
+- `18a2afa` — `chore(memory): registra smoke local Fase 3C.1` (Codex, **LOCAL retenido por DR-01** — incluye verificación local de gates 2 y 3, creación de las 2 notas canónicas en `learnings/` y captura de bullets de Cowork sobre la sesión)
 
 ### Coordinación entre agentes (patrón consolidándose)
 
@@ -2454,6 +2455,19 @@ aprendizaje técnico se captura en `forward-fix-over-force-push`
    redundantes; Codex aplicó forward-fix a hallazgo flagged por
    Worktree fuera-de-scope; Cowork registró sin actuar. Standby
    total funcionando como diseño.
+
+🟡 **Patrón `117f46e` repetido en versión menor en `18a2afa`**: Codex
+   ejecutó `git add memory/` mientras Cowork tenía edits pendientes en
+   `pos-chile-monorepo.md`. El commit envolvió las 132 líneas de
+   Cowork bajo mensaje "registra smoke local Fase 3C.1". Mensaje
+   técnicamente correcto pero incompleto. **Daño operativo: ninguno**
+   (mismo dominio memory/, anti-duplicación funcionó: las versiones
+   canónicas cortas de Codex en `learnings/` reemplazaron las versiones
+   largas que Cowork iba a escribir, exactamente como pide la regla).
+   Aprendizaje refuerza **G-COWORK-STAGING-CHECK**: aplica a TODOS los
+   agentes, no solo Cowork. Antes de `git add memory/`, todos
+   verifican `git status` y comunican al resto del equipo si hay
+   trabajo en vuelo.
 
 ---
 
