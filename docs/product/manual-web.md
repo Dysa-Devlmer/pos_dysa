@@ -13,8 +13,9 @@
 2. Andá a la dirección que te dieron al contratar, por ejemplo:
    `https://tubodega.dypos.zgamersa.com`.
 3. En la pantalla de login, ingresá tu **email** y tu **contraseña**.
-4. Si es la primera vez, por seguridad cambiá la contraseña desde
-   **Mi perfil** apenas entres.
+4. Si es una contraseña temporal, el sistema te lleva automáticamente
+   a **Cambiar contraseña** antes de mostrar el Dashboard. Ahí ingresás
+   la temporal que recibiste y elegís una nueva.
 
 > 💡 Recomendación: dejá un acceso directo en el escritorio del
 > computador para no tener que escribir la dirección cada vez.
@@ -292,11 +293,16 @@ Solo el ADMIN puede gestionar usuarios.
 - Email (debe ser único).
 - Nombre.
 - **Rol**: ADMIN o CAJERO.
-- Contraseña inicial — el usuario debe cambiarla al primer login.
+- Contraseña inicial — queda marcada como temporal. En el primer login
+  web, el usuario debe escribir esa temporal y elegir una nueva.
 
-**Resetear contraseña**: click en el usuario → "Resetear
-contraseña" → ingresar nueva. El usuario verá la nueva al próximo
-login y deberá cambiarla.
+**Resetear contraseña**: editar el usuario → ingresar una nueva
+contraseña temporal. En el próximo login web, el usuario deberá
+cambiarla antes de entrar al Dashboard.
+
+> ℹ️ La app móvil no acepta usuarios con contraseña temporal. Si un
+> cajero intenta entrar primero desde el celular, verá un mensaje
+> pidiendo cambiar la contraseña en el panel web.
 
 **Desactivar usuario**: marcar "Activo: no". No puede entrar al
 sistema pero su historial de ventas queda intacto.

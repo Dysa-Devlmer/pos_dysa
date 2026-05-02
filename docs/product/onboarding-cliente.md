@@ -63,9 +63,9 @@ Vas a recibir por email:
 
 1. Abrí la URL en Chrome.
 2. Ingresás email y contraseña.
-3. **Por seguridad, cambiá la contraseña inicial** desde **Mi
-   perfil** apenas entres — elegí algo que recuerdes pero que no
-   sea fácil de adivinar.
+3. Si es la contraseña inicial, el sistema te redirige a
+   **Cambiar contraseña**. Ingresá la temporal que recibiste y
+   elegí una nueva que recuerdes pero que no sea fácil de adivinar.
 4. Ya estás dentro. Vas a ver el Dashboard vacío (cero ventas, cero
    productos).
 
@@ -121,6 +121,8 @@ Desde **Usuarios** → "+ Nuevo usuario". Para cada cajero:
 - Nombre.
 - Rol: **CAJERO**.
 - Contraseña inicial — pensá una temporal y pasásela en persona.
+  El cajero debe entrar primero al panel web para cambiarla. La app
+  móvil bloquea el login con contraseña temporal.
 
 > 💡 No compartas un solo usuario entre varios cajeros. Tener un
 > usuario por persona te permite saber **quién** vendió qué — clave

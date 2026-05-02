@@ -1,7 +1,7 @@
 ---
 title: Episodio — Fase 3C.2 contraseña temporal + actividad real
 date: 2026-05-02
-status: resolved
+status: needs-verification
 phase: 3C.2
 tags:
   - episode
@@ -28,10 +28,10 @@ tags:
    - `cambiarPassword` (perfil propio) limpia el flag a false al
      éxito + `revalidateTag('usuario:${id}')`.
    - Nuevo `cambiarPasswordObligatorio` en
-     `app/cambiar-password/actions.ts`: NO pide password actual
-     (usuario la conoce porque ADMIN la entregó), valida que la
-     nueva sea distinta a la actual con `bcrypt.compare`, hashea,
-     setea `mustChangePassword: false`, invalida tag y redirige a `/`.
+     `app/cambiar-password/actions.ts`: pide la contraseña temporal de
+     nuevo, valida que sea correcta con `bcrypt.compare`, valida que la
+     nueva sea distinta a la temporal, hashea, setea
+     `mustChangePassword: false`, invalida tag y redirige a `/`.
 3. **Gate**: en `app/(dashboard)/layout.tsx`, después del session check,
    `getPerfilCacheado` ahora incluye `mustChangePassword`. Si true →
    `redirect('/cambiar-password')`. La ruta queda fuera del grupo
@@ -63,10 +63,10 @@ tags:
   cacheada de 5 min — costo despreciable.
 - **`/cambiar-password` fuera de `(dashboard)`**: garantiza no-loop
   con el gate. Sí requiere auth (no público).
-- **Ruta no pide password actual**: el usuario la conoce porque
-  ADMIN se la entregó hace minutos y bcrypt.compare en login ya
-  validó. Pedirla otra vez es fricción innecesaria. El perfil
-  voluntario sí la pide porque puede ser sesión vieja.
+- **Ruta pide contraseña temporal/actual**: el primer diseño no la
+  pedía, pero revisión independiente detectó un trade-off innecesario.
+  La versión vigente repite la verificación en el momento de cambio
+  para reducir riesgo ante sesión abierta o cookie robada.
 - **Verificación "nueva != actual"**: defense-in-depth. Si admin
   asignó "temp123" y usuario tipea "temp123" en el formulario
   obligatorio, lo rechazamos. El usuario debe elegir algo distinto.
@@ -74,38 +74,47 @@ tags:
   ADMINs que no venden (creaban productos/categorías y veían vacío),
   imports CSV, devoluciones, ediciones. Cuando se sume audit a
   productos/clientes/categorías individuales, aparecen automáticamente.
+- **Mobile no puede saltarse el gate**: `/api/v1/auth/login` devuelve
+  403 si `mustChangePassword=true`. La app muestra el mensaje y no
+  persiste token. El cambio obligatorio se realiza en el panel web.
 
 ## Gates ejecutados
 
 - `pnpm --filter @repo/db db:generate` ✓
 - `pnpm --filter web type-check` ✓
 - `pnpm --filter web lint` ✓
-- `pnpm --filter web test` → **262/262** (antes 250)
+- `pnpm --filter web test` → **265/265** (antes 250)
 - `pnpm --filter web build` ✓ (ruta `/cambiar-password` en output, 3.55 kB)
 - `pnpm --filter @repo/mobile type-check` ✓
 - `pnpm --filter @repo/mobile lint` ✓
-- `pnpm --filter @repo/mobile exec jest --watchman=false` → **73/73**
+- `pnpm --filter @repo/mobile exec jest --watchman=false` → **74/74**
 - Migración aplicada local con `prisma migrate deploy`: clean, no
   errores.
 
 ## Pendiente explícito (NO hecho en este patch)
 
-- **Smoke browser end-to-end real**: levantar dev, login como admin,
-  crear usuario test, logout, login como test, verificar redirect a
-  `/cambiar-password`, cambiar password, verificar que entra al
-  dashboard. NO se pudo desde CLI sin browser (Server Actions exigen
-  el `$ACTION_ID` compilado). Verificación parcial vía dev server +
-  curl confirmó:
-    - `/cambiar-password` sin sesión → 302 a /login (gate OK).
-    - `/perfil` sin sesión → 302 a /login.
-    - 262 unit tests cubren el contrato de las 4 actions.
-  Pierre o Codex deben hacer smoke browser real antes de deploy a
-  prod.
-- **Manuales**: no se actualizaron en este commit. Pierre pidió
-  hacerlo "solo después de que el código exista". El código existe;
-  los manuales del usuario deberían actualizarse en un patch
-  separado (ej: agregar paso "primer login te lleva a cambiar
-  contraseña" en `docs/product/manual-web.md` y onboarding).
+- **Smoke browser local end-to-end**: ejecutado por Codex con dev
+  server local. Flujo verificado: ADMIN crea usuario temporal →
+  logout → login usuario temporal → redirect a `/cambiar-password` →
+  error con temporal incorrecta → éxito con temporal correcta →
+  dashboard CAJERO → `/cambiar-password` manual redirige a `/perfil`
+  porque el flag ya quedó en false.
+- **Manuales**: actualizados después de verificar código real. Web y
+  onboarding describen el redirect obligatorio. Mobile documenta que
+  la app bloquea el login si la contraseña sigue temporal.
+- **Pendiente operacional**: deploy por `scripts/deploy.sh`,
+  migración en prod y smoke browser prod. Hasta eso, la fase queda
+  `needs-verification`, no `resolved` operativo.
+
+## Patch Codex 2026-05-02 — defense-in-depth
+
+- `cambiarPasswordObligatorio` ahora exige campo `actual`.
+- `/api/v1/auth/login` bloquea mobile con 403 si el usuario debe
+  cambiar contraseña.
+- Tests agregados:
+  - API login temporal → 403 sin JWT.
+  - Auth store mobile preserva mensaje 403 y no guarda token.
+  - Cambio obligatorio rechaza temporal incorrecta.
 
 ## Observación de smoke (NO scope)
 
@@ -116,4 +125,3 @@ no se pudo repetir por restricciones del sandbox). NO toqué
 middleware ni 3C.1 — Pierre dijo que solo lo haga si hay regresión
 verificada. Anotado para que Codex/Pierre lo confirmen en una
 próxima verificación de 3C.1.
-

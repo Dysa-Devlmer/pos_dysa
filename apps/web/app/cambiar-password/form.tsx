@@ -17,6 +17,20 @@ export function CambiarPasswordForm() {
   return (
     <form action={action} className="space-y-4" noValidate>
       <div className="space-y-2">
+        <Label htmlFor="actual">Contraseña temporal</Label>
+        <Input
+          id="actual"
+          name="actual"
+          type="password"
+          autoComplete="current-password"
+          required
+          maxLength={200}
+          disabled={pending}
+          autoFocus
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="nueva">Nueva contraseña</Label>
         <Input
           id="nueva"
@@ -27,7 +41,6 @@ export function CambiarPasswordForm() {
           minLength={6}
           maxLength={200}
           disabled={pending}
-          autoFocus
         />
       </div>
 

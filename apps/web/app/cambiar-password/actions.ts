@@ -8,13 +8,11 @@
  * redirige a /login.
  *
  * Diferencia con `cambiarPassword` de `app/(dashboard)/perfil/actions.ts`:
- * - Acá NO se pide la contraseña actual. El usuario llegó porque ADMIN le
- *   asignó una temporal y la conoce de la entrega. Pedirla de nuevo es
- *   fricción innecesaria; el bcrypt.compare de login ya validó que la
- *   conoce. (El `cambiarPassword` del perfil sí la pide, porque es flujo
- *   voluntario y queremos confirmar identidad fresca.)
- * - Acá se valida que la NUEVA sea distinta a la actual (defense-in-depth
- *   contra "cambio cosmético" donde el usuario reusa la temporal).
+ * - Acá también se pide la contraseña temporal/actual. Aunque el login ya
+ *   probó conocimiento de la contraseña, repetir la verificación al cambiar
+ *   reduce riesgo ante una sesión abierta o cookie robada.
+ * - Se valida que la NUEVA sea distinta a la actual (defense-in-depth contra
+ *   "cambio cosmético" donde el usuario reusa la temporal).
  */
 
 import { redirect } from "next/navigation";
@@ -28,12 +26,17 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const schema = z
   .object({
+    actual: z.string().min(1, "Contraseña temporal requerida").max(200),
     nueva: z.string().min(6, "Mínimo 6 caracteres").max(200),
     confirmar: z.string().min(1, "Confirmación requerida"),
   })
   .refine((v) => v.nueva === v.confirmar, {
     path: ["confirmar"],
     message: "Las contraseñas no coinciden",
+  })
+  .refine((v) => v.nueva !== v.actual, {
+    path: ["nueva"],
+    message: "La nueva contraseña debe ser distinta a la temporal",
   });
 
 export async function cambiarPasswordObligatorio(
@@ -48,6 +51,7 @@ export async function cambiarPasswordObligatorio(
   const id = Number(session.user.id);
 
   const parsed = schema.safeParse({
+    actual: formData.get("actual"),
     nueva: formData.get("nueva"),
     confirmar: formData.get("confirmar"),
   });
@@ -62,6 +66,11 @@ export async function cambiarPasswordObligatorio(
   });
   if (!usuario) {
     redirect("/login");
+  }
+
+  const actualOk = await bcrypt.compare(parsed.data.actual, usuario.password);
+  if (!actualOk) {
+    return { error: "La contraseña temporal es incorrecta" };
   }
 
   // Si por alguna razón el flag ya estaba en false, dejamos pasar pero

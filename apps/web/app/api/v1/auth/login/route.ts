@@ -133,6 +133,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (usuario.mustChangePassword) {
+      return NextResponse.json(
+        {
+          error:
+            "Debes cambiar tu contraseña temporal en el panel web antes de usar la app móvil.",
+        },
+        { status: 403 },
+      );
+    }
+
     // ── 4. Emitir JWT con encode() compat v5 ─────────────────────────────
     const now = Math.floor(Date.now() / 1000);
     const token = await encode({

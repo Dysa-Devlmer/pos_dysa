@@ -1,10 +1,8 @@
 /**
  * Unit tests — cambiarPasswordObligatorio (Fase 3C.2).
  *
- * Server Action de la ruta /cambiar-password. Diferencia con
- * cambiarPassword del perfil: NO pide la contraseña actual (el usuario
- * la conoce, ADMIN se la entregó), pero SÍ verifica que la nueva sea
- * distinta a la temporal.
+ * Server Action de la ruta /cambiar-password. Pide la contraseña temporal
+ * de nuevo como defense-in-depth, y verifica que la nueva sea distinta.
  */
 
 import { describe, test, expect, beforeEach } from "vitest";
@@ -35,6 +33,7 @@ beforeEach(() => {
 describe("cambiarPasswordObligatorio", () => {
   test("rechaza si nueva y confirmar no coinciden", async () => {
     const res = await cambiarPasswordObligatorio(undefined, fd({
+      actual: "temp123",
       nueva: "abc1234",
       confirmar: "DIFERENTE",
     }));
@@ -44,10 +43,29 @@ describe("cambiarPasswordObligatorio", () => {
 
   test("rechaza si nueva tiene menos de 6 chars", async () => {
     const res = await cambiarPasswordObligatorio(undefined, fd({
+      actual: "temp123",
       nueva: "abc",
       confirmar: "abc",
     }));
     expect(res.error).toMatch(/6/i);
+    expect(prismaMock.usuario.update).not.toHaveBeenCalled();
+  });
+
+  test("rechaza si la contraseña temporal es incorrecta", async () => {
+    const tempPwd = "temp123";
+    const hash = await bcrypt.hash(tempPwd, 12);
+    prismaMock.usuario.findUnique.mockResolvedValue({
+      password: hash,
+      mustChangePassword: true,
+    } as never);
+
+    const res = await cambiarPasswordObligatorio(undefined, fd({
+      actual: "incorrecta",
+      nueva: "nueva-segura-9",
+      confirmar: "nueva-segura-9",
+    }));
+
+    expect(res.error).toMatch(/temporal es incorrecta/i);
     expect(prismaMock.usuario.update).not.toHaveBeenCalled();
   });
 
@@ -60,6 +78,7 @@ describe("cambiarPasswordObligatorio", () => {
     } as never);
 
     const res = await cambiarPasswordObligatorio(undefined, fd({
+      actual: tempPwd,
       nueva: tempPwd,
       confirmar: tempPwd,
     }));
@@ -77,6 +96,7 @@ describe("cambiarPasswordObligatorio", () => {
     prismaMock.usuario.update.mockResolvedValue({} as never);
 
     await cambiarPasswordObligatorio(undefined, fd({
+      actual: tempPwd,
       nueva: "nueva-segura-9",
       confirmar: "nueva-segura-9",
     }));
@@ -105,6 +125,7 @@ describe("cambiarPasswordObligatorio", () => {
 
     await expect(
       cambiarPasswordObligatorio(undefined, fd({
+        actual: "temp123",
         nueva: "nueva-segura-9",
         confirmar: "nueva-segura-9",
       })),

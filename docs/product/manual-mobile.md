@@ -86,8 +86,9 @@ es bajo.
 
 1. Abrir la app — pantalla de login.
 2. Ingresar tu **email** y **contraseña** (los que te dio el ADMIN).
-3. La primera vez, por seguridad cambiá tu contraseña desde
-   **Más → Mi perfil** apenas entres.
+3. Si la contraseña todavía es temporal, la app no inicia sesión y
+   te pide cambiarla primero desde el panel web. Entrá al panel web,
+   cambiá la temporal por una nueva y después volvé a la app.
 4. Listo. La sesión queda guardada en el celular — no necesitás
    loguearte cada día, solo si cerrás sesión a propósito.
 

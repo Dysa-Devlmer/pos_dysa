@@ -51,7 +51,8 @@ export default async function CambiarPasswordPage() {
         <CambiarPasswordForm />
 
         <p className="text-center text-xs text-muted-foreground">
-          Mínimo 6 caracteres. Distinta a la temporal.
+          Ingresá la temporal que recibiste y elegí una nueva distinta.
+          Mínimo 6 caracteres.
         </p>
       </div>
     </main>

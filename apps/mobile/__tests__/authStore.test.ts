@@ -18,6 +18,11 @@
  */
 
 // MOCKS antes del import del store (Jest hoistea jest.mock al top).
+import * as SecureStore from "expo-secure-store";
+import { ApiClientError } from "@repo/api-client";
+
+import { apiClient, useAuthStore } from "../stores/authStore";
+
 jest.mock("@repo/api-client", () => {
   const actual = jest.requireActual("@repo/api-client");
   return {
@@ -29,11 +34,6 @@ jest.mock("@repo/api-client", () => {
     })),
   };
 });
-
-import * as SecureStore from "expo-secure-store";
-import { ApiClientError } from "@repo/api-client";
-
-import { apiClient, useAuthStore } from "../stores/authStore";
 
 const mockedSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 const mockedApiPost = apiClient.post as jest.MockedFunction<
@@ -158,6 +158,26 @@ describe("authStore", () => {
     expect(state.token).toBeNull();
     expect(state.error).toBe("Credenciales inválidas");
     expect(mockedSecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  test("login 403 por contraseña temporal: muestra mensaje y no guarda token", async () => {
+    mockedApiPost.mockRejectedValue(
+      new ApiClientError(
+        "Debes cambiar tu contraseña temporal en el panel web antes de usar la app móvil.",
+        403,
+      ),
+    );
+
+    const ok = await useAuthStore
+      .getState()
+      .login("cajero@pos-chile.cl", "temporal");
+
+    expect(ok).toBe(false);
+    const state = useAuthStore.getState();
+    expect(state.token).toBeNull();
+    expect(state.error).toMatch(/contraseña temporal/i);
+    expect(mockedSecureStore.setItemAsync).not.toHaveBeenCalled();
+    expect(mockedApiSetToken).not.toHaveBeenCalledWith(expect.any(String));
   });
 
   test("login error genérico (network): mensaje fallback español", async () => {
