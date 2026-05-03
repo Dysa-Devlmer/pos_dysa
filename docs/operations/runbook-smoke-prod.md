@@ -15,9 +15,9 @@ no ensucia AuditLog, no muta datos.
 
 > **Fase 3D.1 (2026-05-03)**: la variante `A.1 — Smoke básico (sin
 > credenciales)` se invoca **automáticamente** al final de
-> `scripts/deploy.sh` como paso 7/7. Si falla, dispara el mismo
-> rollback que un health check fallido. Más detalles abajo en la
-> nota de **Parte A.1**.
+> `scripts/deploy.sh` como paso 7/7. Si falla, el deploy termina con
+> exit 1 y conserva backups; rollback automático para smoke-fail solo
+> se activa con `SMOKE_ROLLBACK_ON_FAIL=1`. Más detalles abajo.
 
 ### A.1 — Smoke básico (sin credenciales)
 
@@ -46,14 +46,20 @@ después del health check (paso 7/7). Comportamiento:
 
 - Si `smoke-prod.sh` retorna exit 0 → deploy se considera exitoso,
   se limpian backups antiguos (conservando últimos 3).
-- Si `smoke-prod.sh` retorna exit ≠ 0 → mismo rollback que
-  health-fail (`do_rollback_and_exit`): containers down, restaurar
-  backup más reciente, reiniciar, exit 1.
-- Si el script no existe o no es ejecutable → rollback (estado
-  anómalo, no asumir OK).
+- Si `smoke-prod.sh` retorna exit ≠ 0 → deploy fallido, exit 1,
+  backups preservados, sin limpieza de backups antiguos.
+- Rollback automático en smoke-fail requiere opt-in:
+  `SMOKE_ROLLBACK_ON_FAIL=1 ./scripts/deploy.sh`.
+- Si el script no existe o no es ejecutable → deploy fallido, exit 1,
+  backups preservados.
 - `SKIP_SMOKE=1 ./scripts/deploy.sh` permite saltar el smoke en
   casos puntuales (debugging, deploys docs-only). NO recomendado
   en flujos normales.
+
+Razón del default sin rollback: el smoke se ejecuta desde la máquina
+admin contra el dominio público. Puede fallar por DNS/red local aunque
+el VPS esté sano. El health check sigue siendo el gatillo de rollback
+automático.
 
 NO se ejecuta `--with-auth` automáticamente: requiere credenciales
 SMOKE_ADMIN_*. Pendiente decisión Pierre — ver

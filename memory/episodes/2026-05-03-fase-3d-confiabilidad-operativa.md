@@ -114,8 +114,7 @@ quiere features comerciales nuevas hasta que la base operativa esté.
    solo en el path de health-fail) se extrajo a la función
    `do_rollback_and_exit "razón"`. Ahora se invoca desde:
    - Health check fail (comportamiento previo, mismo efecto).
-   - Smoke prod fail (nuevo).
-   - Smoke script ausente o no ejecutable (nuevo, defensivo).
+   - Smoke prod fail con `SMOKE_ROLLBACK_ON_FAIL=1` (opt-in).
 2. **Nueva fase 7/7 "Smoke Prod (read-only)"** después del health
    check (paso 6/7 antes era 6/6). Renumeración de headers
    `1/6..6/6` → `1/7..6/7` + `5a-bis/7`, `5b/7` para coherencia
@@ -124,10 +123,15 @@ quiere features comerciales nuevas hasta que la base operativa esté.
    `--with-auth`. Cubre `/api/health` (con keyword), `/login`,
    `/privacidad`, gate `/perfil`. Stderr del script (mensajes
    `[OK]`/`[FAIL]`) se propagan al operador.
-4. **Escape hatch**: `SKIP_SMOKE=1 ./scripts/deploy.sh` salta el
+4. **Smoke-fail default**: exit 1, backup preservado, sin cleanup de
+   backups antiguos. No rollback automático porque el smoke corre desde
+   la máquina admin y puede fallar por DNS/red local aunque el VPS esté
+   sano. Rollback automático queda disponible con
+   `SMOKE_ROLLBACK_ON_FAIL=1`.
+5. **Escape hatch**: `SKIP_SMOKE=1 ./scripts/deploy.sh` salta el
    smoke con warning. Para casos puntuales (debugging, deploys
    docs-only). NO recomendado en flujos normales.
-5. **Cleanup de backups movido**: ahora ocurre SOLO después de smoke
+6. **Cleanup de backups movido**: ahora ocurre SOLO después de smoke
    OK. Eso preserva la red de seguridad mientras la verificación
    está en curso (antes se limpiaba justo después del health).
 
@@ -136,10 +140,12 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 - **Sin `--with-auth`**: el brief explícito de Pierre prohíbe agregar
   `SMOKE_ADMIN_*` por ahora. Smoke básico cubre regresiones de ruta
   pública sin credenciales.
-- **Rollback simétrico al health-fail**: si una ruta pública se
-  rompe entre deploys, es regresión real. El rollback es la respuesta
-  correcta — mismo comportamiento que si el container ni siquiera
-  arrancó.
+- **Rollback automático solo para health-fail**: health se verifica
+  contra el servicio recién recreado y es señal fuerte de deploy roto.
+  Smoke público puede fallar por DNS/red local del operador; por eso
+  marca el deploy como fallido y conserva backup, pero no revierte por
+  default. Si Pierre quiere la política agresiva, puede ejecutar con
+  `SMOKE_ROLLBACK_ON_FAIL=1`.
 - **Refactor mínimo**: extraje solo `do_rollback_and_exit`.
   Estructura de fases preservada. Sin tocar rsync, ni ssh_run, ni
   prisma migrate. Exit codes y `set -euo pipefail` intactos.
@@ -154,15 +160,17 @@ quiere features comerciales nuevas hasta que la base operativa esté.
   | Rama | Configuración | Esperado | Resultado |
   |---|---|---|---|
   | 1. SKIP | `SKIP_SMOKE=1` | warn + continuar (exit 0) | ✅ exit 0 |
-  | 2. ausente | `SMOKE_SCRIPT=/nonexistent/...` | error + rollback (exit 1) | ✅ exit 1 |
-  | 3. fail-net | URL inválida `http://nonexistent.invalid` | smoke fail + rollback (exit 1) | ✅ exit 1 |
+  | 2. ausente | `SMOKE_SCRIPT=/nonexistent/...` | error + exit 1, backup preservado | ✅ exit 1 |
+  | 3. fail-net | URL inválida `http://nonexistent.invalid` | smoke fail + exit 1, backup preservado | ✅ exit 1 |
   | 4. ok-dev | dev server `http://localhost:3000` | success (exit 0) | ✅ exit 0 |
 
 ### NO ejecutado contra prod
 
 `./scripts/deploy.sh` con el wire-up activo no se invocó contra
 `https://dy-pos.zgamersa.com`. Pierre debe autorizar la primera
-ejecución y registrar evidencia (smoke OK o rollback exitoso) en
+ejecución y registrar evidencia: smoke OK, o fallo capturado con backup
+preservado. Rollback automático solo si se usa
+`SMOKE_ROLLBACK_ON_FAIL=1`. Registrar en
 `memory/episodes/YYYY-MM-DD-deploy-wire-up-3d1.md` o similar.
 
 Mientras tanto, el smoke ejecutable manualmente sigue siendo el

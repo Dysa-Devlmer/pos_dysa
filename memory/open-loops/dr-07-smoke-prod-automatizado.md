@@ -28,7 +28,7 @@ multi-tenant y deja ventanas ciegas.
 | Validación local con dev server | ✅ verificado | 6/6 sin auth, 11/11 con auth contra seed admin. Exit 1 con creds malas (verificado) |
 | Smoke prod básico real | ✅ verificado | `./scripts/smoke-prod.sh https://dy-pos.zgamersa.com` → PASS=6 / FAIL=0 el 2026-05-03 |
 | Runbook smoke ejecutable (script + checklist UI) | ✅ implementado | `docs/operations/runbook-smoke-prod.md` |
-| **Wire-up automático en `scripts/deploy.sh`** | ✅ implementado (Fase 3D.1) | Paso 7/7 invoca `smoke-prod.sh` post-health. Fail → `do_rollback_and_exit` (mismo path que health-fail). `SKIP_SMOKE=1` para escape hatch. 4 ramas verificadas en dry-run local: SKIP, script ausente, smoke fail, smoke OK. |
+| **Wire-up automático en `scripts/deploy.sh`** | ✅ implementado (Fase 3D.1) | Paso 7/7 invoca `smoke-prod.sh` post-health. Fail → exit 1 y backup preservado. Rollback automático solo con `SMOKE_ROLLBACK_ON_FAIL=1`. `SKIP_SMOKE=1` para escape hatch. |
 | Smoke prod con auth | ❌ pendiente | Requiere usuario smoke dedicado o autorización para usar admin |
 | Wire-up automático con `--with-auth` en `deploy.sh` | ❌ pendiente | Espera resolución del item anterior |
 | CI scheduled smoke (uptime check vía GitHub Actions) | ❌ pendiente | Posible mejora cuando varios tenants estén activos |
@@ -61,8 +61,8 @@ multi-tenant y deja ventanas ciegas.
 ## Criterio de cierre
 
 - [x] **Wire-up automático básico en `scripts/deploy.sh`** (Fase 3D.1).
-  Sin auth — solo smoke read-only. Fail dispara rollback simétrico al
-  de health-fail.
+  Sin auth — solo smoke read-only. Fail marca deploy fallido y preserva
+  backup. Rollback automático queda opt-in con `SMOKE_ROLLBACK_ON_FAIL=1`.
 - [ ] Decidir si `scripts/deploy.sh` debe invocar también
   `smoke-prod.sh --with-auth` (variante extendida). Pros: cubre flujo
   de login mobile y dashboard authed. Contras: requiere exponer
@@ -76,7 +76,8 @@ multi-tenant y deja ventanas ciegas.
   admin antes de cerrar el ticket de deploy.
 - [x] Primera ejecución básica contra prod real registrada como evidencia.
 - [ ] Primera ejecución de `deploy.sh` con wire-up activo contra prod
-  registrada (smoke OK) o un fallo capturado y rollback exitoso.
+  registrada (smoke OK, o fallo capturado con backup preservado; rollback
+  solo si se ejecuta explícitamente con `SMOKE_ROLLBACK_ON_FAIL=1`).
 - [ ] Primera ejecución con auth contra prod real registrada como evidencia.
 - [ ] (Opcional) Cron en VPS o GitHub Actions scheduled cada 30 min
   contra los tenants productivos.

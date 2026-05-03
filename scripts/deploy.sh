@@ -5,7 +5,9 @@
 #
 #  Flujo: local build → validación → rsync → docker compose → health check
 #         → smoke prod básico (DR-07 · Fase 3D.1)
-#  En caso de fallo (health o smoke): rollback automático al build anterior
+#  En caso de fallo de health: rollback automático al build anterior.
+#  En caso de fallo de smoke: exit 1 y backup preservado; rollback solo
+#  con SMOKE_ROLLBACK_ON_FAIL=1.
 # =============================================================================
 
 set -euo pipefail
@@ -41,6 +43,12 @@ SMOKE_SCRIPT="${SCRIPT_DIR}/smoke-prod.sh"
 # situación donde el operador valida manualmente). NO usar en deploys
 # normales — la red de seguridad existe por algo.
 SKIP_SMOKE="${SKIP_SMOKE:-0}"
+# Por defecto, un smoke externo fallido NO hace rollback automático:
+# puede fallar por DNS/red local de la máquina admin aunque el VPS esté
+# healthy. El deploy queda fallido (exit 1) y los backups se preservan
+# para rollback manual. Si Pierre quiere rollback automático también
+# para smoke, ejecutar con SMOKE_ROLLBACK_ON_FAIL=1.
+SMOKE_ROLLBACK_ON_FAIL="${SMOKE_ROLLBACK_ON_FAIL:-0}"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 log()     { echo -e "${CYAN}[$(date '+%H:%M:%S')]${NC} $*" | tee -a "$LOG_FILE"; }
@@ -433,9 +441,10 @@ if [[ "$SKIP_SMOKE" == "1" ]]; then
 elif [[ ! -x "$SMOKE_SCRIPT" ]]; then
   # Estado anómalo: el script debería estar versionado y +x. Si falta o
   # no es ejecutable, no podemos verificar. Tratamos como fail del deploy
-  # — es preferible rollback que asumir OK ciegamente.
+  # y preservamos backup para rollback manual si corresponde.
   error "$SMOKE_SCRIPT no existe o no es ejecutable"
-  do_rollback_and_exit "smoke-prod.sh ausente o sin permiso de ejecución"
+  warn "Deploy marcado como fallido. Backup preservado para rollback manual."
+  exit 1
 else
   log "Ejecutando ${SMOKE_SCRIPT##*/} https://${DOMAIN}"
   # NO --with-auth en este wire-up: requiere credenciales smoke dedicadas
@@ -445,7 +454,13 @@ else
   # propagan al operador para diagnóstico.
   if ! "$SMOKE_SCRIPT" "https://${DOMAIN}"; then
     error "DEPLOY FALLÓ — Smoke prod básico encontró regresiones"
-    do_rollback_and_exit "smoke-prod.sh exit != 0 contra https://${DOMAIN}"
+    if [[ "$SMOKE_ROLLBACK_ON_FAIL" == "1" ]]; then
+      do_rollback_and_exit "smoke-prod.sh exit != 0 contra https://${DOMAIN}"
+    fi
+    warn "Rollback automático NO ejecutado para smoke-fail."
+    warn "Razón: el smoke usa la red/DNS de la máquina admin y puede fallar por causas externas al VPS."
+    warn "Backup preservado: si confirmas regresión real, ejecuta rollback manual o reintenta con SMOKE_ROLLBACK_ON_FAIL=1."
+    exit 1
   fi
   success "Smoke prod OK"
 fi
