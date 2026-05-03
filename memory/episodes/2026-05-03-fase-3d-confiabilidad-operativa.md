@@ -1,0 +1,124 @@
+---
+title: Episodio — Fase 3D confiabilidad operativa
+date: 2026-05-03
+status: in-progress
+phase: 3D
+tags:
+  - episode
+  - operacion
+  - smoke
+  - backup
+  - monitoreo
+  - sla
+---
+
+# Episodio — Fase 3D confiabilidad operativa
+
+## Objetivo
+
+Cerrar lo que NO requiere credenciales externas para que DyPos CL sea
+vendible sin depender de memoria humana entre deploys. Pierre no
+quiere features comerciales nuevas hasta que la base operativa esté.
+
+## Verificado en código (esta fase)
+
+| Item | Evidencia |
+|---|---|
+| `scripts/smoke-prod.sh` (DR-07) — read-only, opcional `--with-auth` | Script bash 232 líneas, syntax OK (`bash -n`), exit 0 con dev local + seed admin (PASS=11 / FAIL=0), exit 1 con creds malas (PASS=6 / FAIL=2 verificado) |
+| Refactor `LAST_BODY` global para evitar pérdida de PASS/FAIL en subshells | Bug detectado en primer smoke (PASS=5 vs esperado 6); fix verificado en re-smoke (PASS=6) |
+| `docs/operations/runbook-smoke-prod.md` (DR-07) | Checklist completo: parte A automatizada, parte B manual UI (login admin/cajero, gate cambio password, comprobante público, mobile, reportes), parte C frecuencia recomendada por trigger, parte D troubleshooting, parte E plantilla de reporte |
+| `docs/operations/runbook-backup-restore.md` (DR-10) | Cubre: estado actual, backup pre-deploy automático, activación off-site con criterio de cierre, restore desde local, restore desde off-site, test mensual, disaster recovery completo |
+| `memory/open-loops/dr-01-branch-protection.md` (actualizado) | Sección "Verificación de estado al 2026-05-03": pushes recientes confirman status `advisory not enforced` (warning sin bloqueo). Criterio de cierre ahora exige push de prueba rechazado |
+| `memory/open-loops/dr-06-monitoreo-externo.md` (creado) | Tabla de artefactos, criterio de cierre con checklist 9 ítems, validación end-to-end (`docker stop pos-web` + esperar email) |
+| `memory/open-loops/dr-07-smoke-prod-automatizado.md` (creado) | Estado real diferenciado: script `read-only` ✅, runbook ✅, wire-up automático en `deploy.sh` ❌, smoke contra prod real ❌, CI scheduled ❌ |
+| `memory/open-loops/dr-10-backup-offsite.md` (creado) | Tabla con 14 ítems estado: 7 implementados, 7 pendientes Pierre |
+
+## Documentado pero NO ejecutado
+
+- `scripts/backup-offsite.sh` — existe desde Fase 2A. NO ha subido
+  jamás un dump real porque las env vars `OFFSITE_BACKUP_*` no están
+  seteadas en ningún tenant. Comportamiento correcto del script:
+  exit 3 con mensaje claro si faltan.
+- Wire-up del smoke al final de `scripts/deploy.sh` — discutido en
+  el open-loop pero no implementado. Espera decisión Pierre sobre
+  exponer credenciales smoke (creds dedicadas vs admin del seed).
+- UptimeRobot — instrucciones UI listas en
+  `docs/operations/external-setup-checklist.md` §5; ningún monitor
+  creado.
+
+## Pendiente externo Pierre (no doable por agente)
+
+| ID | Acción | Tiempo estimado | Bloqueante para |
+|---|---|---|---|
+| DR-01 | Activar branch protection enforced en GitHub Settings | 5 min | Trabajo en equipo seguro |
+| DR-06 | Crear cuenta UptimeRobot + monitor + validar alerta | 10 min/tenant | SLA contractual con clientes B2B |
+| DR-07 | Decidir wire-up automático en `deploy.sh` (sí/no) | 5 min decisión + 30 min impl si sí | Smoke confiable post-deploy |
+| DR-10 | Provider + bucket + key + cron + restore test | 1 hora/tenant | Disaster recovery real |
+
+## Decisiones técnicas tomadas en esta fase
+
+1. **Smoke `read-only`, sin "venta de prueba"**. El brief original
+   mencionaba "crear venta + eliminar" pero ensucia AuditLog prod
+   en cada deploy. Sustituido por `GET /api/v1/productos` que
+   ejercita la cadena Server Action → Prisma → Postgres sin
+   escribir. Trade-off aceptado: cobertura ligeramente menor a
+   cambio de no contaminar prod.
+2. **Credenciales smoke solo via env, NO via CLI**. `--password=...`
+   queda visible en `ps aux` → leak. El script falla rápido si se
+   pasa `--with-auth` sin las env vars.
+3. **Sin deps duras**: el script usa solo bash + curl. `python3` es
+   opcional para mejor JSON escaping; fallback funcional sin él.
+   Esto permite correrlo desde cualquier máquina admin (incluido
+   un VPS limpio).
+4. **Open-loops separados por DR-NN**, no batch. Cada uno tiene
+   dueño explícito (todos Pierre), criterio de cierre propio,
+   evidencia esperada. Anti-duplicación con
+   `docs/architecture/decision-log.md` (referencia, no copia).
+
+## Gates de la fase
+
+- `bash -n scripts/smoke-prod.sh` → syntax OK.
+- Smoke local sin auth (dev server localhost:3000) → PASS=6 / FAIL=0.
+- Smoke local con auth (admin del seed) → PASS=11 / FAIL=0.
+- Smoke local con creds inválidas → exit 1 / FAIL=2.
+- `git fetch origin && git status -sb` → working tree limpio,
+  sincronizado.
+
+## Pendientes después de esta fase
+
+- Pierre acción externa (4 open-loops abiertos arriba).
+- Si Pierre autoriza wire-up: agregar invocación a
+  `scripts/deploy.sh` después del health check, con `set +e` para no
+  romper deploys cuando el smoke con auth falla por creds rotadas.
+- Update `docs/architecture/decision-log.md` para reflejar que DR-07
+  está parcialmente cerrado por implementación (script + runbook) y
+  el resto pasa a `memory/open-loops/`.
+
+## NO tocado deliberadamente en esta fase
+
+- Cloudflare DNS / SSL.
+- GitHub Settings (branch protection).
+- UptimeRobot u otro provider de monitoreo.
+- Provider de backups (S3 / B2 / Wasabi / R2).
+- Mobile (`apps/mobile/*`).
+- Producto web Server Actions / UI.
+
+Pierre dijo explícitamente "no avances con features comerciales
+todavía".
+
+## Smoke browser real
+
+NO realizado en esta fase contra prod (`https://dy-pos.zgamersa.com`).
+Pierre aún no autorizó deploy ni smoke contra ambiente productivo.
+La validación local con dev server cubre la lógica del script.
+Cuando se autorice, ejecutar:
+
+```
+./scripts/smoke-prod.sh https://dy-pos.zgamersa.com
+SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
+  ./scripts/smoke-prod.sh https://dy-pos.zgamersa.com --with-auth
+```
+
+…y registrar resultado en este episodio o en
+`memory/episodes/YYYY-MM-DD-smoke-prod-<tenant>.md`.
+

@@ -133,7 +133,34 @@ enforced. Una regresión que pasa los hooks locales pero no la
 CI llega a prod si nadie mira el resultado del workflow antes
 de deployar.
 
+## Verificación de estado al 2026-05-03 (Fase 3D)
+
+Sigo observando, en cada push reciente a `main`, este mensaje del
+remoto:
+
+```
+remote: - Required status check "web (type-check + lint + test + build)" is expected.
+```
+
+…**y el push se completa de todos modos**. Eso confirma que la
+regla está en modo **advisory, no enforced**. Específicamente:
+
+- Falta `Do not allow bypassing the above settings`.
+- O el bypass list incluye al usuario que pushea (típicamente Pierre,
+  pero también agentes con token).
+- O los status checks están listados como "expected" en lugar de
+  "required".
+
+No es regresión: ya era así antes de Fase 3D. Pero confirmo que la
+acción de Pierre sigue siendo necesaria. Esta verificación cuenta
+como evidencia objetiva del open-loop activo.
+
 ## Cierre
 
 _Pendiente — agregar bloque cuando Pierre aplique la
-configuración con captura de Settings → Branches → rule activa._
+configuración. Para cerrar, demostrar:
+1. Captura de Settings → Branches → rule de `main` con todas las
+   casillas activadas.
+2. Push directo a `main` desde una rama temporal: comando exacto
+   ejecutado y mensaje de rechazo (`! [remote rejected] (protected
+   branch hook declined)`)._
