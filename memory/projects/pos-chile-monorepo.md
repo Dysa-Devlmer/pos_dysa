@@ -2506,6 +2506,104 @@ solo antes de commitear.
 
 ---
 
+## Sesión 2026-05-03 · Cierre producción Fase 3C.2
+
+**Contexto:** Fase 3C.2 (contraseña temporal obligatoria + actividad
+real desde AuditLog) estaba en `needs-verification`: código verde, pero
+faltaba deploy por `scripts/deploy.sh`, migración en prod y smoke real.
+Codex ejecutó el cierre operativo completo.
+
+### Snapshot inicial
+
+- `git fetch`: OK.
+- `git log origin/main..HEAD --oneline`: vacío.
+- `git status -sb`: `## main...origin/main`.
+
+### Deploy y migración
+
+1. **Pre-check prod**:
+   - VPS con `pos-web`, `pos-postgres`, `pos-pgadmin` healthy.
+   - `/api/health` 200 con DB connected y version `2.0.0`.
+   - El código `54132be` ya estaba en `/opt/pos-chile`, pero la columna
+     `usuarios.must_change_password` no existía. Deploy anterior
+     incompleto.
+2. **Limpieza de Docker build cache**:
+   - `docker system df` mostraba 30.35 GB en build cache.
+   - `docker builder prune -af` liberó 30.35 GB.
+   - Nota:
+     `memory/problems/2026-05-03-docker-build-cache-disk-pressure.md`.
+3. **Deploy 1 (`54132be`)**:
+   - `./scripts/deploy.sh` ejecutado.
+   - Backup app: `/opt/pos-chile.backup_20260502_235622`.
+   - Backup DB:
+     `/var/backups/dypos-cl-db/pre-deploy-20260503-000232.sql.gz`.
+   - `prisma migrate deploy` aplicó
+     `20260502010000_user_must_change_password`.
+   - Health OK.
+   - Verificación DB: `usuarios.must_change_password` existe,
+     `boolean NOT NULL DEFAULT false`.
+
+### Incidente `PII_LOG_SALT`
+
+Smoke API inicial devolvió 500 porque `pos-web` no tenía
+`PII_LOG_SALT` en su entorno runtime. La variable existía en
+`.env.docker`, pero `docker-compose.yml` no la inyectaba en el servicio
+`web`.
+
+Fix aplicado:
+
+- `a2872af` — `fix(infra): inyecta PII_LOG_SALT en web container`.
+- `docker-compose.yml` ahora exige:
+  `PII_LOG_SALT: ${PII_LOG_SALT:?PII_LOG_SALT requerido en producción}`.
+- Verificación segura dentro del contenedor: `PII_LOG_SALT` está seteada
+  sin imprimir el valor.
+- Nota: `memory/problems/2026-05-03-pii-log-salt-container-env.md`.
+
+### Deploy 2 (`a2872af`)
+
+- Push completado; GitHub volvió a emitir warning de branch protection
+  advisory. DR-01 sigue abierto.
+- `./scripts/deploy.sh` ejecutado.
+- Backup app: `/opt/pos-chile.backup_20260503_000718`.
+- Backup DB:
+  `/var/backups/dypos-cl-db/pre-deploy-20260503-001200.sql.gz`.
+- Migraciones: no pending.
+- Health OK.
+
+### Smoke prod real
+
+- Usuario temporal creado en prod:
+  `smoke-temp-3c2-20260503@example.cl`, `must_change_password=true`.
+- API mobile:
+  `POST /api/v1/auth/login` devuelve HTTP 403 con mensaje esperado:
+  "Debes cambiar tu contraseña temporal en el panel web antes de usar la
+  app móvil." Sin token.
+- Browser prod:
+  1. Login con usuario temporal.
+  2. Redirect automático a `/cambiar-password`.
+  3. Temporal incorrecta muestra error.
+  4. Temporal correcta + nueva contraseña redirige al dashboard.
+  5. Visita manual posterior a `/cambiar-password` redirige a `/perfil`
+     porque el flag ya quedó false.
+- Limpieza: usuario temporal eliminado de prod (`DELETE 1`) y verificado
+  (`count=0`).
+
+### Estado
+
+✅ Fase 3C.2 cerrada en producción.
+✅ Migration real aplicada.
+✅ Smoke API mobile verificado.
+✅ Smoke browser prod verificado.
+✅ Usuario temporal eliminado.
+🟠 DR-01 sigue abierto: GitHub permite bypass con warning.
+
+### Commits
+
+- `54132be` — feature Fase 3C.2 ya en main antes del cierre operativo.
+- `a2872af` — `fix(infra): inyecta PII_LOG_SALT en web container`.
+
+---
+
 ## Sesión 2026-05-01 · Fase 2C.1 — Consistencia visual completa cerrada
 
 **Contexto:** seguimiento natural de 2C. Codex aprobó cerrar la
