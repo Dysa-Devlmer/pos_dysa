@@ -28,8 +28,9 @@ multi-tenant y deja ventanas ciegas.
 | Validación local con dev server | ✅ verificado | 6/6 sin auth, 11/11 con auth contra seed admin. Exit 1 con creds malas (verificado) |
 | Smoke prod básico real | ✅ verificado | `./scripts/smoke-prod.sh https://dy-pos.zgamersa.com` → PASS=6 / FAIL=0 el 2026-05-03 |
 | Runbook smoke ejecutable (script + checklist UI) | ✅ implementado | `docs/operations/runbook-smoke-prod.md` |
-| Wire-up al final de `scripts/deploy.sh` | ❌ pendiente | El script existe pero NO se invoca automáticamente post-deploy |
+| **Wire-up automático en `scripts/deploy.sh`** | ✅ implementado (Fase 3D.1) | Paso 7/7 invoca `smoke-prod.sh` post-health. Fail → `do_rollback_and_exit` (mismo path que health-fail). `SKIP_SMOKE=1` para escape hatch. 4 ramas verificadas en dry-run local: SKIP, script ausente, smoke fail, smoke OK. |
 | Smoke prod con auth | ❌ pendiente | Requiere usuario smoke dedicado o autorización para usar admin |
+| Wire-up automático con `--with-auth` en `deploy.sh` | ❌ pendiente | Espera resolución del item anterior |
 | CI scheduled smoke (uptime check vía GitHub Actions) | ❌ pendiente | Posible mejora cuando varios tenants estén activos |
 
 ## Por qué prioridad media
@@ -59,19 +60,23 @@ multi-tenant y deja ventanas ciegas.
 
 ## Criterio de cierre
 
-- [ ] Decidir si `scripts/deploy.sh` debe invocar `smoke-prod.sh
-  --with-auth` automáticamente al final, antes de declarar el deploy
-  exitoso. Pros: cierre del loop sin acción humana. Contras: requiere
-  exponer credenciales smoke al script (`.env.docker` con
-  `SMOKE_ADMIN_*`).
-- [ ] Si SÍ wire-up automático: agregar las creds smoke al
-  `.env.docker` de cada tenant y un step al final de `deploy.sh` que
-  corra el script y haga `exit 1` si falla.
-- [ ] Si NO wire-up automático: documentar en
+- [x] **Wire-up automático básico en `scripts/deploy.sh`** (Fase 3D.1).
+  Sin auth — solo smoke read-only. Fail dispara rollback simétrico al
+  de health-fail.
+- [ ] Decidir si `scripts/deploy.sh` debe invocar también
+  `smoke-prod.sh --with-auth` (variante extendida). Pros: cubre flujo
+  de login mobile y dashboard authed. Contras: requiere exponer
+  credenciales smoke al script (`.env.docker` con `SMOKE_ADMIN_*`).
+- [ ] Si SÍ wire-up con auth: agregar las creds smoke al
+  `.env.docker` de cada tenant y extender el paso 7/7 de `deploy.sh`
+  con `--with-auth`.
+- [ ] Si NO wire-up con auth: documentar en
   `docs/architecture/deploy-ops.md` que post-deploy es OBLIGATORIO
   correr `./scripts/smoke-prod.sh --with-auth` desde la máquina
   admin antes de cerrar el ticket de deploy.
 - [x] Primera ejecución básica contra prod real registrada como evidencia.
+- [ ] Primera ejecución de `deploy.sh` con wire-up activo contra prod
+  registrada (smoke OK) o un fallo capturado y rollback exitoso.
 - [ ] Primera ejecución con auth contra prod real registrada como evidencia.
 - [ ] (Opcional) Cron en VPS o GitHub Actions scheduled cada 30 min
   contra los tenants productivos.

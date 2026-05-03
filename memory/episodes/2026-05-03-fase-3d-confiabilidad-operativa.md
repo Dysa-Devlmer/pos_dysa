@@ -98,12 +98,79 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 ## Pendientes después de esta fase
 
 - Pierre acción externa (4 open-loops abiertos arriba).
-- Si Pierre autoriza wire-up: agregar invocación a
-  `scripts/deploy.sh` después del health check, con `set +e` para no
-  romper deploys cuando el smoke con auth falla por creds rotadas.
+- ~~Wire-up `scripts/deploy.sh`~~ → cerrado en Fase 3D.1, ver sección
+  abajo.
 - Update `docs/architecture/decision-log.md` para reflejar que DR-07
-  está parcialmente cerrado por implementación (script + runbook) y
-  el resto pasa a `memory/open-loops/`.
+  está parcialmente cerrado por implementación (script + runbook +
+  wire-up básico) y el resto pasa a `memory/open-loops/`.
+
+---
+
+## Fase 3D.1 — Wire-up del smoke en `deploy.sh` (2026-05-03)
+
+### Cambios en `scripts/deploy.sh`
+
+1. **Refactor**: el bloque rollback inline (≈20 líneas que aparecía
+   solo en el path de health-fail) se extrajo a la función
+   `do_rollback_and_exit "razón"`. Ahora se invoca desde:
+   - Health check fail (comportamiento previo, mismo efecto).
+   - Smoke prod fail (nuevo).
+   - Smoke script ausente o no ejecutable (nuevo, defensivo).
+2. **Nueva fase 7/7 "Smoke Prod (read-only)"** después del health
+   check (paso 6/7 antes era 6/6). Renumeración de headers
+   `1/6..6/6` → `1/7..6/7` + `5a-bis/7`, `5b/7` para coherencia
+   visual.
+3. **Invocación**: `"$SMOKE_SCRIPT" "https://${DOMAIN}"` sin
+   `--with-auth`. Cubre `/api/health` (con keyword), `/login`,
+   `/privacidad`, gate `/perfil`. Stderr del script (mensajes
+   `[OK]`/`[FAIL]`) se propagan al operador.
+4. **Escape hatch**: `SKIP_SMOKE=1 ./scripts/deploy.sh` salta el
+   smoke con warning. Para casos puntuales (debugging, deploys
+   docs-only). NO recomendado en flujos normales.
+5. **Cleanup de backups movido**: ahora ocurre SOLO después de smoke
+   OK. Eso preserva la red de seguridad mientras la verificación
+   está en curso (antes se limpiaba justo después del health).
+
+### Decisiones del diseño 3D.1
+
+- **Sin `--with-auth`**: el brief explícito de Pierre prohíbe agregar
+  `SMOKE_ADMIN_*` por ahora. Smoke básico cubre regresiones de ruta
+  pública sin credenciales.
+- **Rollback simétrico al health-fail**: si una ruta pública se
+  rompe entre deploys, es regresión real. El rollback es la respuesta
+  correcta — mismo comportamiento que si el container ni siquiera
+  arrancó.
+- **Refactor mínimo**: extraje solo `do_rollback_and_exit`.
+  Estructura de fases preservada. Sin tocar rsync, ni ssh_run, ni
+  prisma migrate. Exit codes y `set -euo pipefail` intactos.
+
+### Verificado en local-safe (NO en prod)
+
+- `bash -n scripts/deploy.sh` → syntax OK.
+- Path resolution: `SCRIPT_DIR` con `BASH_SOURCE[0]` resuelve a
+  `<repo>/scripts`. `SMOKE_SCRIPT` apunta correctamente al script
+  ejecutable.
+- 4 ramas del bloque smoke ejecutadas como dry-run aislado:
+  | Rama | Configuración | Esperado | Resultado |
+  |---|---|---|---|
+  | 1. SKIP | `SKIP_SMOKE=1` | warn + continuar (exit 0) | ✅ exit 0 |
+  | 2. ausente | `SMOKE_SCRIPT=/nonexistent/...` | error + rollback (exit 1) | ✅ exit 1 |
+  | 3. fail-net | URL inválida `http://nonexistent.invalid` | smoke fail + rollback (exit 1) | ✅ exit 1 |
+  | 4. ok-dev | dev server `http://localhost:3000` | success (exit 0) | ✅ exit 0 |
+
+### NO ejecutado contra prod
+
+`./scripts/deploy.sh` con el wire-up activo no se invocó contra
+`https://dy-pos.zgamersa.com`. Pierre debe autorizar la primera
+ejecución y registrar evidencia (smoke OK o rollback exitoso) en
+`memory/episodes/YYYY-MM-DD-deploy-wire-up-3d1.md` o similar.
+
+Mientras tanto, el smoke ejecutable manualmente sigue siendo el
+mismo binario probado:
+
+```bash
+./scripts/smoke-prod.sh https://dy-pos.zgamersa.com
+```
 
 ## NO tocado deliberadamente en esta fase
 

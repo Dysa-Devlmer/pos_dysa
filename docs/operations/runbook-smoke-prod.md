@@ -13,6 +13,12 @@
 Esto lo corre cualquier agente o Pierre desde su máquina. Read-only,
 no ensucia AuditLog, no muta datos.
 
+> **Fase 3D.1 (2026-05-03)**: la variante `A.1 — Smoke básico (sin
+> credenciales)` se invoca **automáticamente** al final de
+> `scripts/deploy.sh` como paso 7/7. Si falla, dispara el mismo
+> rollback que un health check fallido. Más detalles abajo en la
+> nota de **Parte A.1**.
+
 ### A.1 — Smoke básico (sin credenciales)
 
 ```bash
@@ -32,6 +38,29 @@ después de provisión nueva.
 
 **Evidencia 2026-05-03**: ejecutado contra
 `https://dy-pos.zgamersa.com` con resultado PASS=6 / FAIL=0.
+
+### Wire-up automático en `scripts/deploy.sh` (Fase 3D.1)
+
+Desde Fase 3D.1, `deploy.sh` invoca `smoke-prod.sh` automáticamente
+después del health check (paso 7/7). Comportamiento:
+
+- Si `smoke-prod.sh` retorna exit 0 → deploy se considera exitoso,
+  se limpian backups antiguos (conservando últimos 3).
+- Si `smoke-prod.sh` retorna exit ≠ 0 → mismo rollback que
+  health-fail (`do_rollback_and_exit`): containers down, restaurar
+  backup más reciente, reiniciar, exit 1.
+- Si el script no existe o no es ejecutable → rollback (estado
+  anómalo, no asumir OK).
+- `SKIP_SMOKE=1 ./scripts/deploy.sh` permite saltar el smoke en
+  casos puntuales (debugging, deploys docs-only). NO recomendado
+  en flujos normales.
+
+NO se ejecuta `--with-auth` automáticamente: requiere credenciales
+SMOKE_ADMIN_*. Pendiente decisión Pierre — ver
+`memory/open-loops/dr-07-smoke-prod-automatizado.md`.
+
+Para correr el smoke con auth tras un deploy, hacerlo manualmente
+desde la máquina admin con las credenciales en env (ver A.2).
 
 ### A.2 — Smoke con auth (recomendado tras cada deploy)
 

@@ -4,7 +4,8 @@
 #  VPS: 64.176.21.229 · Ubuntu 24.04 LTS
 #
 #  Flujo: local build → validación → rsync → docker compose → health check
-#  En caso de fallo: rollback automático al build anterior
+#         → smoke prod básico (DR-07 · Fase 3D.1)
+#  En caso de fallo (health o smoke): rollback automático al build anterior
 # =============================================================================
 
 set -euo pipefail
@@ -31,6 +32,16 @@ HEALTH_RETRIES=12        # 12 x 10s = 2 minutos esperando
 LOG_FILE="deploy.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+# Path al script de smoke prod (Fase 3D.1 · DR-07 wire-up básico).
+# Vive junto a este script en la carpeta scripts/. Se invoca desde la
+# máquina admin contra https://$DOMAIN — NO desde el VPS.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SMOKE_SCRIPT="${SCRIPT_DIR}/smoke-prod.sh"
+# SKIP_SMOKE=1 permite saltar el smoke (debugging, deploys de docs-only,
+# situación donde el operador valida manualmente). NO usar en deploys
+# normales — la red de seguridad existe por algo.
+SKIP_SMOKE="${SKIP_SMOKE:-0}"
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 log()     { echo -e "${CYAN}[$(date '+%H:%M:%S')]${NC} $*" | tee -a "$LOG_FILE"; }
 success() { echo -e "${GREEN}✓${NC} $*" | tee -a "$LOG_FILE"; }
@@ -44,6 +55,41 @@ ssh_run() {
   # Sin esto, los `read` interactivos del script reciben EOF y set -e aborta.
   ssh -n -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
       -o ConnectTimeout=10 "${VPS_USER}@${VPS_HOST}" "$@"
+}
+
+# do_rollback_and_exit "razón humana": detiene containers, restaura el backup
+# más reciente y sale con código 1. Usado por los paths de fail del health
+# check (Fase 1) y del smoke prod (Fase 3D.1). Refactorizado para no
+# duplicar el bloque entre ambos.
+do_rollback_and_exit() {
+  local reason="$1"
+  echo ""
+  warn "Iniciando ROLLBACK al backup anterior... (causa: ${reason})"
+  ssh_run "
+    set -e
+    cd /opt
+
+    # Detener containers fallidos
+    docker compose -f ${VPS_DIR}/docker-compose.yml --env-file ${VPS_DIR}/.env.docker \
+      down 2>/dev/null || true
+
+    # Restaurar backup
+    LATEST_BACKUP=\$(ls -dt ${VPS_DIR}.backup_* 2>/dev/null | head -1)
+    if [ -n \"\$LATEST_BACKUP\" ]; then
+      rm -rf ${VPS_DIR}
+      cp -r \"\$LATEST_BACKUP\" ${VPS_DIR}
+      cd ${VPS_DIR}
+      docker compose --env-file .env.docker up -d
+      echo 'Rollback completado desde: '\$LATEST_BACKUP
+    else
+      echo 'No hay backup disponible para rollback'
+    fi
+  "
+
+  warn "Rollback ejecutado. Revisa los logs con:"
+  echo "  ssh root@${VPS_HOST} 'docker compose -f ${VPS_DIR}/docker-compose.yml logs --tail=50'"
+
+  exit 1
 }
 
 # ─── Banner ───────────────────────────────────────────────────────────────────
@@ -64,7 +110,7 @@ echo -e "  ${CYAN}${TIMESTAMP}${NC}"
 echo ""
 
 # ─── 1. Pre-flight checks ─────────────────────────────────────────────────────
-header "1/6 · Pre-flight Checks"
+header "1/7 · Pre-flight Checks"
 
 # Docker local
 if ! docker info &>/dev/null; then
@@ -119,7 +165,7 @@ fi
 success "Docker activo en VPS"
 
 # ─── 2. Build local ───────────────────────────────────────────────────────────
-header "2/6 · Build Local"
+header "2/7 · Build Local"
 
 echo -e "¿Correr build local antes de deployar? ${CYAN}[s/N]${NC} "
 read -r RUN_BUILD
@@ -137,7 +183,7 @@ else
 fi
 
 # ─── 3. Confirmación ─────────────────────────────────────────────────────────
-header "3/6 · Confirmación"
+header "3/7 · Confirmación"
 
 echo -e "  ${BOLD}Destino:${NC}   ${VPS_USER}@${VPS_HOST}:${VPS_DIR}"
 echo -e "  ${BOLD}Env file:${NC}  ${ENV_FILE}"
@@ -151,7 +197,7 @@ if [[ "$CONFIRM" != "deploy" ]]; then
 fi
 
 # ─── 4. Backup en VPS ────────────────────────────────────────────────────────
-header "4/6 · Backup + Transferencia"
+header "4/7 · Backup + Transferencia"
 
 BACKUP_TAG=$(date '+%Y%m%d_%H%M%S')
 
@@ -214,7 +260,7 @@ scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
 success "Archivos transferidos"
 
 # ─── 5. Deploy en VPS ────────────────────────────────────────────────────────
-header "5/6 · Docker Compose en VPS"
+header "5/7 · Docker Compose en VPS"
 
 log "Iniciando docker compose up --build en VPS..."
 ssh_run "
@@ -256,7 +302,7 @@ success "Docker compose ejecutado en VPS"
 #
 # Path del backup se imprime en logs explícitamente para trazabilidad
 # (Codex requirement).
-header "5a-bis/6 · Backup BD prod (pre-migrations)"
+header "5a-bis/7 · Backup BD prod (pre-migrations)"
 
 DB_BACKUP_TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
 DB_BACKUP_PATH="/var/backups/dypos-cl-db/pre-deploy-${DB_BACKUP_TIMESTAMP}.sql.gz"
@@ -301,7 +347,7 @@ log "    < <(zcat $DB_BACKUP_PATH)"
 #
 # Las migrations son idempotentes (IF NOT EXISTS / DO $$ EXCEPTION) — es
 # seguro re-correrlas. Si no hay pendientes, prisma reporta "Already in sync".
-header "5b/6 · Prisma migrate deploy"
+header "5b/7 · Prisma migrate deploy"
 
 log "Empaquetando migrations locales..."
 PRISMA_TARBALL="/tmp/pos-prisma-$(date +%s).tar.gz"
@@ -350,7 +396,7 @@ ssh_run "
 success "Migrations aplicadas en BD de prod"
 
 # ─── 6. Health check ─────────────────────────────────────────────────────────
-header "6/6 · Health Check"
+header "6/7 · Health Check"
 
 log "Esperando que la app esté disponible en ${HEALTH_URL}..."
 ATTEMPT=0
@@ -371,52 +417,54 @@ done
 
 echo ""
 
-if [[ "$APP_UP" == "true" ]]; then
-  echo ""
-  echo -e "${GREEN}${BOLD}"
-  echo "  ╔══════════════════════════════════════╗"
-  echo "  ║   ✅ DEPLOY EXITOSO                  ║"
-  echo "  ╠══════════════════════════════════════╣"
-  echo -e "  ║   App: https://${DOMAIN}  ║"
-  echo -e "  ║   pgAdmin: http://${VPS_HOST}:5050        ║"
-  echo "  ╚══════════════════════════════════════╝"
-  echo -e "${NC}"
-
-  log "Deploy completado en ${TIMESTAMP}"
-
-  # Limpiar backups antiguos (conservar los últimos 3)
-  ssh_run "
-    ls -dt ${VPS_DIR}.backup_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
-  "
-else
+if [[ "$APP_UP" != "true" ]]; then
   echo ""
   error "DEPLOY FALLÓ — Health check no pasó después de $((HEALTH_RETRIES * 10))s"
-  echo ""
-
-  warn "Iniciando ROLLBACK al backup anterior..."
-  ssh_run "
-    set -e
-    cd /opt
-
-    # Detener containers fallidos
-    docker compose -f ${VPS_DIR}/docker-compose.yml --env-file ${VPS_DIR}/.env.docker \
-      down 2>/dev/null || true
-
-    # Restaurar backup
-    LATEST_BACKUP=\$(ls -dt ${VPS_DIR}.backup_* 2>/dev/null | head -1)
-    if [ -n \"\$LATEST_BACKUP\" ]; then
-      rm -rf ${VPS_DIR}
-      cp -r \"\$LATEST_BACKUP\" ${VPS_DIR}
-      cd ${VPS_DIR}
-      docker compose --env-file .env.docker up -d
-      echo 'Rollback completado desde: '\$LATEST_BACKUP
-    else
-      echo 'No hay backup disponible para rollback'
-    fi
-  "
-
-  warn "Rollback ejecutado. Revisa los logs con:"
-  echo "  ssh root@${VPS_HOST} 'docker compose -f ${VPS_DIR}/docker-compose.yml logs --tail=50'"
-
-  exit 1
+  do_rollback_and_exit "Health check (/api/health) no respondió 200"
 fi
+
+success "Health check OK · ${HEALTH_URL}"
+
+# ─── 7. Smoke prod básico (Fase 3D.1 · DR-07) ────────────────────────────────
+header "7/7 · Smoke Prod (read-only)"
+
+if [[ "$SKIP_SMOKE" == "1" ]]; then
+  warn "SKIP_SMOKE=1 → omitiendo smoke prod (NO recomendado para deploys reales)"
+elif [[ ! -x "$SMOKE_SCRIPT" ]]; then
+  # Estado anómalo: el script debería estar versionado y +x. Si falta o
+  # no es ejecutable, no podemos verificar. Tratamos como fail del deploy
+  # — es preferible rollback que asumir OK ciegamente.
+  error "$SMOKE_SCRIPT no existe o no es ejecutable"
+  do_rollback_and_exit "smoke-prod.sh ausente o sin permiso de ejecución"
+else
+  log "Ejecutando ${SMOKE_SCRIPT##*/} https://${DOMAIN}"
+  # NO --with-auth en este wire-up: requiere credenciales smoke dedicadas
+  # que aún no están aprobadas (ver memory/open-loops/dr-07-...).
+  # Read-only: cubre /api/health (con keyword), /login, /privacidad,
+  # gate /perfil sin sesión. Stderr del script (mensajes [OK]/[FAIL]) se
+  # propagan al operador para diagnóstico.
+  if ! "$SMOKE_SCRIPT" "https://${DOMAIN}"; then
+    error "DEPLOY FALLÓ — Smoke prod básico encontró regresiones"
+    do_rollback_and_exit "smoke-prod.sh exit != 0 contra https://${DOMAIN}"
+  fi
+  success "Smoke prod OK"
+fi
+
+# ─── Cierre del deploy ───────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}${BOLD}"
+echo "  ╔══════════════════════════════════════╗"
+echo "  ║   ✅ DEPLOY EXITOSO                  ║"
+echo "  ╠══════════════════════════════════════╣"
+echo -e "  ║   App: https://${DOMAIN}  ║"
+echo -e "  ║   pgAdmin: http://${VPS_HOST}:5050        ║"
+echo "  ╚══════════════════════════════════════╝"
+echo -e "${NC}"
+
+log "Deploy completado en ${TIMESTAMP}"
+
+# Limpiar backups antiguos SOLO después de smoke OK — conserva la red
+# de seguridad mientras la verificación está en curso.
+ssh_run "
+  ls -dt ${VPS_DIR}.backup_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
+"
