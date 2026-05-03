@@ -26,9 +26,10 @@ multi-tenant y deja ventanas ciegas.
 |---|---|---|
 | `scripts/smoke-prod.sh` read-only | ✅ implementado (Fase 3D) | Cubre `/api/health`, `/login`, `/privacidad`, gate `/perfil`, `--with-auth` con `/api/v1/auth/login` + `/api/v1/dashboard` + `/api/v1/productos` + sanity 401 |
 | Validación local con dev server | ✅ verificado | 6/6 sin auth, 11/11 con auth contra seed admin. Exit 1 con creds malas (verificado) |
+| Smoke prod básico real | ✅ verificado | `./scripts/smoke-prod.sh https://dy-pos.zgamersa.com` → PASS=6 / FAIL=0 el 2026-05-03 |
 | Runbook smoke ejecutable (script + checklist UI) | ✅ implementado | `docs/operations/runbook-smoke-prod.md` |
 | Wire-up al final de `scripts/deploy.sh` | ❌ pendiente | El script existe pero NO se invoca automáticamente post-deploy |
-| Smoke contra prod real | ❌ pendiente | Esperando autorización Pierre y credenciales tenant |
+| Smoke prod con auth | ❌ pendiente | Requiere usuario smoke dedicado o autorización para usar admin |
 | CI scheduled smoke (uptime check vía GitHub Actions) | ❌ pendiente | Posible mejora cuando varios tenants estén activos |
 
 ## Por qué prioridad media
@@ -70,7 +71,8 @@ multi-tenant y deja ventanas ciegas.
   `docs/architecture/deploy-ops.md` que post-deploy es OBLIGATORIO
   correr `./scripts/smoke-prod.sh --with-auth` desde la máquina
   admin antes de cerrar el ticket de deploy.
-- [ ] Primera ejecución contra prod real registrada como evidencia.
+- [x] Primera ejecución básica contra prod real registrada como evidencia.
+- [ ] Primera ejecución con auth contra prod real registrada como evidencia.
 - [ ] (Opcional) Cron en VPS o GitHub Actions scheduled cada 30 min
   contra los tenants productivos.
 

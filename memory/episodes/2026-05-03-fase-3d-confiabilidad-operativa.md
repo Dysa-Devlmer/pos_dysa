@@ -1,7 +1,7 @@
 ---
 title: Episodio — Fase 3D confiabilidad operativa
 date: 2026-05-03
-status: in-progress
+status: active
 phase: 3D
 tags:
   - episode
@@ -24,8 +24,9 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 
 | Item | Evidencia |
 |---|---|
-| `scripts/smoke-prod.sh` (DR-07) — read-only, opcional `--with-auth` | Script bash 232 líneas, syntax OK (`bash -n`), exit 0 con dev local + seed admin (PASS=11 / FAIL=0), exit 1 con creds malas (PASS=6 / FAIL=2 verificado) |
+| `scripts/smoke-prod.sh` (DR-07) — read-only, opcional `--with-auth` | Script bash, syntax OK (`bash -n`), exit 0 con dev local + seed admin (PASS=11 / FAIL=0), exit 1 con creds malas (PASS=6 / FAIL=2 verificado), smoke prod básico real PASS=6 / FAIL=0 |
 | Refactor `LAST_BODY` global para evitar pérdida de PASS/FAIL en subshells | Bug detectado en primer smoke (PASS=5 vs esperado 6); fix verificado en re-smoke (PASS=6) |
+| Patch Codex post-verificación | Fallo DNS/`curl` reportaba `HTTP 000000` por `curl ... || echo 000`; corregido a `HTTP 000` con `if ! code="$(curl ...)"`. `bash -n` OK, fail path verificado contra dominio inválido, smoke prod PASS=6 / FAIL=0 |
 | `docs/operations/runbook-smoke-prod.md` (DR-07) | Checklist completo: parte A automatizada, parte B manual UI (login admin/cajero, gate cambio password, comprobante público, mobile, reportes), parte C frecuencia recomendada por trigger, parte D troubleshooting, parte E plantilla de reporte |
 | `docs/operations/runbook-backup-restore.md` (DR-10) | Cubre: estado actual, backup pre-deploy automático, activación off-site con criterio de cierre, restore desde local, restore desde off-site, test mensual, disaster recovery completo |
 | `memory/open-loops/dr-01-branch-protection.md` (actualizado) | Sección "Verificación de estado al 2026-05-03": pushes recientes confirman status `advisory not enforced` (warning sin bloqueo). Criterio de cierre ahora exige push de prueba rechazado |
@@ -35,6 +36,12 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 
 ## Documentado pero NO ejecutado
 
+- Smoke prod básico real (`https://dy-pos.zgamersa.com`) — ejecutado
+  por Codex el 2026-05-03 después del commit de Worktree:
+  PASS=6 / FAIL=0. Cubre `/api/health`, `/login`, `/privacidad` y
+  gate `/perfil` sin sesión.
+- Smoke prod con auth (`--with-auth`) — NO ejecutado porque requiere
+  credenciales smoke dedicadas o autorización explícita para usar admin.
 - `scripts/backup-offsite.sh` — existe desde Fase 2A. NO ha subido
   jamás un dump real porque las env vars `OFFSITE_BACKUP_*` no están
   seteadas en ningún tenant. Comportamiento correcto del script:
@@ -81,6 +88,10 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 - Smoke local sin auth (dev server localhost:3000) → PASS=6 / FAIL=0.
 - Smoke local con auth (admin del seed) → PASS=11 / FAIL=0.
 - Smoke local con creds inválidas → exit 1 / FAIL=2.
+- Smoke prod básico real (sin auth) contra
+  `https://dy-pos.zgamersa.com` → PASS=6 / FAIL=0.
+- Fail path de red (`https://nonexistent.invalid`) → exit 1 con
+  `HTTP 000`, no `HTTP 000000`.
 - `git fetch origin && git status -sb` → working tree limpio,
   sincronizado.
 
@@ -106,19 +117,22 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 Pierre dijo explícitamente "no avances con features comerciales
 todavía".
 
-## Smoke browser real
+## Smoke prod real
 
-NO realizado en esta fase contra prod (`https://dy-pos.zgamersa.com`).
-Pierre aún no autorizó deploy ni smoke contra ambiente productivo.
-La validación local con dev server cubre la lógica del script.
-Cuando se autorice, ejecutar:
+Smoke automatizado básico realizado por Codex contra producción:
+
+```bash
+./scripts/smoke-prod.sh https://dy-pos.zgamersa.com
+# PASS=6 · FAIL=0
+```
+
+Queda pendiente el smoke con auth porque requiere usuario/credenciales
+smoke dedicadas o autorización explícita para usar una cuenta admin:
 
 ```
-./scripts/smoke-prod.sh https://dy-pos.zgamersa.com
 SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
   ./scripts/smoke-prod.sh https://dy-pos.zgamersa.com --with-auth
 ```
 
-…y registrar resultado en este episodio o en
+…y registrar resultado en este episodio o en una nota específica
 `memory/episodes/YYYY-MM-DD-smoke-prod-<tenant>.md`.
-

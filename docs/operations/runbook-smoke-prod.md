@@ -30,6 +30,9 @@ Exit code 0 = todo OK. Exit code 1 = al menos un check falló.
 **Cuándo usar**: monitoreo simple, CI post-deploy, primer chequeo
 después de provisión nueva.
 
+**Evidencia 2026-05-03**: ejecutado contra
+`https://dy-pos.zgamersa.com` con resultado PASS=6 / FAIL=0.
+
 ### A.2 — Smoke con auth (recomendado tras cada deploy)
 
 Setea credenciales del tenant en variables de ambiente y agrega

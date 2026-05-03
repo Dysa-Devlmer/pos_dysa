@@ -93,7 +93,9 @@ curl_check() {
   local label="$1" url="$2" expected="$3"
   LAST_BODY="$TMP_DIR/$RANDOM.body"
   local code
-  code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 "$url" || echo '000')"
+  if ! code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 "$url")"; then
+    code='000'
+  fi
   if [[ "$code" == "$expected" ]]; then
     ok "$label → HTTP $code"
   else
@@ -106,9 +108,11 @@ curl_post_json() {
   local label="$1" url="$2" json="$3" expected="$4"
   LAST_BODY="$TMP_DIR/$RANDOM.body"
   local code
-  code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 \
+  if ! code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 \
     -H 'Content-Type: application/json' \
-    -X POST -d "$json" "$url" || echo '000')"
+    -X POST -d "$json" "$url")"; then
+    code='000'
+  fi
   if [[ "$code" == "$expected" ]]; then
     ok "$label → HTTP $code"
   else
@@ -121,8 +125,10 @@ curl_bearer() {
   local label="$1" url="$2" jwt="$3" expected="$4"
   LAST_BODY="$TMP_DIR/$RANDOM.body"
   local code
-  code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 \
-    -H "Authorization: Bearer $jwt" "$url" || echo '000')"
+  if ! code="$(curl -sS -o "$LAST_BODY" -w '%{http_code}' --max-time 15 \
+    -H "Authorization: Bearer $jwt" "$url")"; then
+    code='000'
+  fi
   if [[ "$code" == "$expected" ]]; then
     ok "$label → HTTP $code"
   else
@@ -160,7 +166,9 @@ curl_check 'GET /privacidad' "$BASE_URL/privacidad" 200
 # Estos endpoints NO deben servir contenido sin login. curl no sigue el
 # redirect (sin -L) → vemos 307/302/303. Cualquier 200 acá sería leak.
 
-REDIRECT_BODY="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$BASE_URL/perfil" || echo '000')"
+if ! REDIRECT_BODY="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$BASE_URL/perfil")"; then
+  REDIRECT_BODY='000'
+fi
 case "$REDIRECT_BODY" in
   302|303|307|308) ok "GET /perfil sin sesión → HTTP $REDIRECT_BODY (gate OK)" ;;
   *) fail "GET /perfil sin sesión → HTTP $REDIRECT_BODY (debería redirigir)" ;;
@@ -208,8 +216,10 @@ if [[ $WITH_AUTH -eq 1 ]]; then
         "$BASE_URL/api/v1/productos" "$JWT" 200
 
       # Sanity: header malformado → 401.
-      BAD_AUTH="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 \
-        -H 'Authorization: NotBearer xxx' "$BASE_URL/api/v1/dashboard" || echo '000')"
+      if ! BAD_AUTH="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 \
+        -H 'Authorization: NotBearer xxx' "$BASE_URL/api/v1/dashboard")"; then
+        BAD_AUTH='000'
+      fi
       if [[ "$BAD_AUTH" == '401' ]]; then
         ok 'auth header inválido → HTTP 401 (correcto)'
       else
