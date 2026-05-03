@@ -48,6 +48,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-1}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      PII_LOG_SALT: ${PII_LOG_SALT:?PII_LOG_SALT requerido en producción}
       NODE_ENV: production
       TZ: America/Santiago
     ports:
