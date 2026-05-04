@@ -328,3 +328,42 @@ Codex ejecutó los dos checks que sí estaban a nuestro alcance:
      PASS=9 / WARN=0 / FAIL=0 / INFO=11.
    - Estado: VPS listo para activar DR-10 cuando Pierre cree provider,
      bucket, key y agregue `OFFSITE_BACKUP_*` en `.env.docker`.
+
+---
+
+## Fase 3D.3 — Checklist go-live primer tenant (2026-05-03)
+
+### Objetivo
+
+Crear una puerta de salida operativa para dejar de discutir piezas
+sueltas y poder decidir si un tenant esta listo para operar con un
+cliente real. La intencion no es duplicar runbooks, sino consolidar
+producto + mobile + deploy + DR-* + onboarding en un solo tablero.
+
+### Implementado
+
+| Archivo | Cambio |
+|---|---|
+| `docs/operations/tenant-go-live-checklist.md` | Nuevo checklist de readiness por tenant: datos comerciales, producto web, mobile, operacion DR-01/06/07/10, deploy/smoke, datos iniciales, capacitacion, GO/NO-GO y evidencia final. |
+| `docs/README.md` | Mapa actualizado para que Pierre/reviewer encuentre el checklist desde el indice principal. |
+
+### Decisiones del documento
+
+1. **No prometer "100 % listo" sin evidencia.** El checklist separa
+   `[x] verificado`, `[ ] pendiente`, `[n/a] no aplica` y `[defer]`
+   diferido.
+2. **DR-01/06/10 no se esconden.** El sistema core puede operar, pero
+   cliente con SLA serio requiere monitoreo externo y backup off-site
+   cerrados por Pierre.
+3. **E-boleta SII, impresora termica, cajon de dinero, WhatsApp
+   Business API, iOS y multi-sucursal quedan fuera del go-live salvo
+   que se hayan vendido explicitamente.**
+4. **Go/No-Go escrito.** El documento define condiciones que bloquean
+   venta real: login roto, caja/stock mal, comprobante publico con PII,
+   deploy sin smoke, migracion pendiente o SLA vendido sin DR-06/DR-10.
+
+### Estado
+
+Documento operativo creado. No se ejecuta deploy ni se toca producto.
+Siguiente paso logico: usarlo con el primer tenant real y llenar la
+seccion de evidencia al cierre.

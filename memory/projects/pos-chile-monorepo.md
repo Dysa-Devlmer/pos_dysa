@@ -2801,3 +2801,47 @@ patch oportunista del último residuo visible del patrón viejo:
 🟢 Próxima fase: **2D Mobile + Sentry** (cuando Pierre tenga ventana
    con device) o **3A** features comerciales (CSV import productos
    primero — desbloquea onboarding de cliente con catálogo grande).
+
+---
+
+## Sesión 2026-05-03 · Fase 3D.3 — Checklist go-live primer tenant
+
+**Contexto:** Pierre pidió dejar el proyecto "100 % funcional" para
+no seguir girando en los mismos pendientes. Codex decidió cerrar la
+fase operativa con un artefacto de salida comercial-operativa, no con
+otro feature: un checklist único para decidir si un tenant puede
+operar con cliente real.
+
+### Entregable
+
+- `docs/operations/tenant-go-live-checklist.md` — checklist de
+  readiness por tenant antes de venta real.
+- `docs/README.md` actualizado para enlazar el checklist desde el mapa
+  principal.
+- `memory/episodes/2026-05-03-fase-3d-confiabilidad-operativa.md`
+  actualizado con Fase 3D.3.
+
+### Qué consolida
+
+- Producto web: login, caja, venta, stock, devolución, comprobante,
+  reportes, CSV.
+- Mobile: APK, login cajero, sync, Sentry, manifest.
+- Operación: DR-01, DR-06, DR-07, DR-10 con estados reales.
+- Deploy: gates, `scripts/deploy.sh`, health, smoke automático y
+  smoke manual.
+- Onboarding: admin, cajeros, caja, categorías, productos, primer
+  turno, check-in Día 7.
+- GO/NO-GO: criterios explícitos para habilitar o bloquear venta real.
+
+### Decisión importante
+
+No se declara "100 % listo" por sensación. El checklist obliga a
+distinguir:
+
+- código implementado;
+- verificación local/prod;
+- pendiente externo Pierre;
+- diferido no bloqueante.
+
+Esto aplica G-DOCS-VS-CODE y G-COWORK-STAGING-CHECK a la salida
+comercial del tenant.

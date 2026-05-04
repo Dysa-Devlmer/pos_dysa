@@ -33,6 +33,9 @@ docs/
 │   └── audit-2026-04-28.md   # Audit Codex/CLI 2026-04-27 (disparó Fase 0)
 │
 ├── operations/               # Runbooks operacionales y checklists externos
+│   ├── tenant-go-live-checklist.md  # Readiness por tenant antes de venta real
+│   ├── runbook-smoke-prod.md        # Smoke automatizado + smoke UI manual
+│   ├── runbook-backup-restore.md    # Backup / restore / disaster recovery
 │   └── external-setup-checklist.md  # Pasos que solo Pierre ejecuta (Fase 2A)
 │
 ├── design/                   # Capturas UX y prototipos
@@ -73,6 +76,8 @@ docs/
 - Estado del producto: `memory/projects/pos-chile-monorepo.md`.
 - Decisiones que requieren tu input: `docs/architecture/decision-log.md`
   (sección `DECISION_REQUIRED`).
+- Checklist para habilitar un cliente real:
+  `docs/operations/tenant-go-live-checklist.md`.
 - Cómo deployar: `docs/architecture/deploy-ops.md`.
 - Cómo onboardar un cliente: `docs/architecture/tenant-provisioning.md`.
 
@@ -96,4 +101,4 @@ docs/
 
 ---
 
-_Última revisión del índice: 2026-05-01 — Fase 3B (manuales producto)._
+_Última revisión del índice: 2026-05-03 — Fase 3D.3 (go-live tenant)._
