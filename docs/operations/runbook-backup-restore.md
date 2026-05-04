@@ -106,6 +106,12 @@ de §3 (provider + bucket + key + cron).
 > Exit code 0 = listo para activar. 1 = bloqueante, resolver primero.
 > Validado en local con mock VPS feliz: PASS=15 / FAIL=0. Validado
 > con endpoint inalcanzable: detectó FAIL conectividad correctamente.
+>
+> Evidencia real 2026-05-03: Codex ejecutó el precheck contra el VPS.
+> Instaló AWS CLI v2 oficial porque Ubuntu 24.04/mirror no tenía
+> candidato `awscli` por apt. Rerun final:
+> PASS=9 / WARN=0 / FAIL=0 / INFO=11. Queda pendiente sólo provider,
+> bucket, key, vars `OFFSITE_BACKUP_*`, cron y restore-test.
 
 NO sube nada hasta que Pierre complete:
 

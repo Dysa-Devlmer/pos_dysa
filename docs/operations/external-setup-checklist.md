@@ -165,6 +165,10 @@ Esperado para configurar el monitor con confianza:
 - Latencia `total` < 5 s (margen contra el timeout 30 s de UptimeRobot).
 - Keyword `"status":"ok"` y `"database":"connected"` presentes.
 
+Evidencia real 2026-05-03: Codex ejecutó 10 muestras contra
+`https://dy-pos.zgamersa.com/api/health`: 10/10 HTTP 200, 10/10
+keywords OK, latencia total entre 0.152s y 0.602s.
+
 Si alguna corrida sale 5xx o > 10 s antes de configurar, investigar
 PRIMERO — un monitor activo sobre un endpoint flaky genera alertas
 falsas que minan la confianza en el SLA.

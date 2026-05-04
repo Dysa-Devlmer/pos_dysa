@@ -100,3 +100,16 @@ SLA roto sin posibilidad de demostrar fault tolerance.
 
 _Pendiente — agregar bloque cuando Pierre configure el provider y
 valide la primera alerta._
+
+## Evidencia 2026-05-03 — precheck Codex
+
+Codex ejecutó 10 muestras read-only contra
+`https://dy-pos.zgamersa.com/api/health`:
+
+- 10/10 HTTP 200.
+- 10/10 keyword `"status":"ok"` presente.
+- 10/10 keyword `"database":"connected"` presente.
+- Latencias `time_total`: 0.152s a 0.602s.
+
+Esto valida que el endpoint está listo para UptimeRobot. Falta crear el
+monitor externo y probar alerta real con caída controlada.

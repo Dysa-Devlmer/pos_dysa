@@ -302,3 +302,29 @@ SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
 - Producto web/mobile.
 - DB schema o data.
 - Provider externo (Cloudflare, GitHub, UptimeRobot, Backblaze, etc.).
+
+### Verificación real Codex post-3D.2
+
+Codex ejecutó los dos checks que sí estaban a nuestro alcance:
+
+1. **DR-06 pre-UptimeRobot contra producción**
+   - 10 requests a `https://dy-pos.zgamersa.com/api/health`.
+   - 10/10 HTTP 200.
+   - 10/10 keyword `"status":"ok"`.
+   - 10/10 keyword `"database":"connected"`.
+   - Latencia `time_total`: 0.152s a 0.602s.
+
+2. **DR-10 precheck real contra VPS**
+   - El script todavía no estaba desplegado en
+     `/opt/pos-chile/scripts/` porque Fase 3D.2 no había pasado por
+     deploy; se ejecutó por SSH streaming (`bash -s`) sin copiar
+     archivos ni modificar la app.
+   - Primer resultado: FAIL único por `awscli` no instalado.
+   - `apt-get install awscli` no tenía candidato en Ubuntu 24.04/mirror.
+   - Codex instaló AWS CLI v2 oficial en `/usr/local/bin/aws`.
+   - Versión verificada:
+     `aws-cli/2.34.41 Python/3.14.4 Linux/6.8.0-101-generic exe/x86_64.ubuntu.24`.
+   - Rerun del precheck real:
+     PASS=9 / WARN=0 / FAIL=0 / INFO=11.
+   - Estado: VPS listo para activar DR-10 cuando Pierre cree provider,
+     bucket, key y agregue `OFFSITE_BACKUP_*` en `.env.docker`.

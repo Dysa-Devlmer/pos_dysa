@@ -43,7 +43,7 @@ No hay copia diaria off-site (S3-compatible). Eso bloquea:
 | Bucket creado con encryption SSE | ❌ pendiente | — |
 | Application Key con scope write-only | ❌ pendiente | — |
 | Variables `OFFSITE_BACKUP_*` en `.env.docker` del tenant | ❌ pendiente | — |
-| awscli instalado en VPS prod | ❌ pendiente | `apt-get install -y awscli` |
+| awscli instalado en VPS prod | ✅ verificado | AWS CLI v2 oficial: `aws-cli/2.34.41` |
 | Cron diario activo | ❌ pendiente | `0 3 * * *` |
 | Lifecycle policy del bucket (retención 30 días) | ❌ pendiente | — |
 | Test de restore mensual ejercitado | ❌ pendiente | runbook §6 |
@@ -66,7 +66,7 @@ No hay copia diaria off-site (S3-compatible). Eso bloquea:
 - [ ] Application Key creada con scope `write-only` al bucket.
   Credenciales guardadas en password manager Pierre, NUNCA en git.
 - [ ] Lifecycle policy: retención 30 días, version suspended.
-- [ ] `apt-get install -y awscli` en el VPS prod.
+- [x] AWS CLI instalado en el VPS prod.
 - [ ] `OFFSITE_BACKUP_*` en `$APP_DIR/.env.docker` (chmod 600 root).
 - [ ] Primera ejecución manual del script en VPS:
   `/opt/pos-chile/scripts/backup-offsite.sh` → exit 0 con mensaje
@@ -120,3 +120,34 @@ ruta de recuperación.
 
 _Pendiente — agregar bloque cuando Pierre complete provider + bucket
 + key + cron + primer restore test._
+
+## Evidencia 2026-05-03 — precheck real Codex
+
+Codex ejecutó `scripts/backup-offsite-precheck.sh` contra el VPS real en
+modo streaming por SSH. No subió archivos ni leyó secretos.
+
+Primer resultado:
+
+- FAIL único: `awscli` no instalado.
+- OK: APP_DIR, `backup-offsite.sh`, backup dir, dumps locales,
+  `.env.docker` permisos 600.
+- INFO esperados: variables `OFFSITE_BACKUP_*` faltantes, cron aún no
+  creado.
+
+Acción aplicada por Codex:
+
+- `apt-get install awscli` no tenía candidato en Ubuntu 24.04/mirror.
+- Instalado AWS CLI v2 oficial en `/usr/local/bin/aws`.
+- Versión verificada:
+  `aws-cli/2.34.41 Python/3.14.4 Linux/6.8.0-101-generic exe/x86_64.ubuntu.24`.
+
+Rerun:
+
+- PASS=9.
+- WARN=0.
+- FAIL=0.
+- INFO=11.
+
+Estado actual: entorno VPS listo. Falta Pierre: provider/bucket/key,
+agregar `OFFSITE_BACKUP_*` en `.env.docker`, crear cron y ejecutar
+restore-test.
