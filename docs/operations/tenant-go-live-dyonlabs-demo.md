@@ -336,10 +336,11 @@ de cliente comercial — es ambiente propio.
 | Password temporal entregada por canal seguro | [n/a] | Pierre custodia |
 | Cajeros iniciales creados | [n/a] | Demo no requiere |
 | Caja inicial creada | [ ] | Pendiente smoke 5.4 |
-| Categorías iniciales creadas | [x] | seed local incluye "Almacén" |
-| Productos cargados/importados | [x] | seed con `DEMO-7800001..5` |
+| Categorías iniciales creadas | [ ] | Pendiente smoke 5.4/5.5 o verificación UI prod. (Seed local incluye "Almacén" pero NO es evidencia del tenant prod.) |
+| Productos cargados/importados | [ ] | Pendiente smoke 5.4/5.5 o verificación UI prod. (Seed local crea `DEMO-7800001..5` pero NO es evidencia del tenant prod.) |
 | Clientes frecuentes cargados si aplica | [n/a] | — |
-| APK entregada/instalada | [x] | Release pública en `apk-dypos.zgamersa.com` |
+| APK publicada | [x] | Release pública en `apk-dypos.zgamersa.com` (verificado en Fase 2A — DNS + SSL + nginx + manifest) |
+| APK instalada/probada en device | [ ] | Pendiente smoke 5.9 con device real |
 
 ---
 
@@ -354,10 +355,16 @@ nueva del checklist cuando se capte primer cliente pagante real.
 
 ### Go (demo interna)
 
-- [x] Producto core verificado en código: login, password temporal,
-  caja, venta, stock, devolución, comprobante, reportes (gates verde,
-  smoke automatizado verde).
-- [x] Deploy + smoke prod automatizado OK (2 deploys reales 2026-05-03).
+- [x] Producto core verificado **en código y gates locales**: login,
+  password temporal, caja, venta, stock, devolución, comprobante,
+  reportes — type-check, lint, tests y build verde. **NO equivale a
+  smoke UI con sesión real en prod**, eso vive en sección 5.
+- [x] Deploy + smoke prod **automatizado** (read-only) OK
+  (2 deploys reales 2026-05-03 con paso 7/7 PASS=6 / FAIL=0).
+  Cubre `/api/health`, `/login`, `/privacidad`, gate `/perfil`. **NO
+  cubre** flujos UI con sesión.
+- [ ] Smoke manual UI prod (sección 5) — pendiente ejecución por
+  Pierre en browser.
 - [x] Riesgos abiertos aceptados explícitamente por Pierre (DR-01,
   DR-06, DR-10) como "demo interna sin SLA".
 
