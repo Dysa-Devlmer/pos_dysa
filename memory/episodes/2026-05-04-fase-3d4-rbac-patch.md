@@ -1,7 +1,7 @@
 ---
 title: Episodio — Fase 3D.4 patch RBAC urgente
 date: 2026-05-04
-status: in-progress
+status: resolved
 phase: 3D.4
 tags:
   - episode
@@ -93,18 +93,92 @@ error de permiso. Documentado en problem note.
 Manual mobile actualizado para reflejar la limitación temporal:
 "durante esta versión, devoluciones se hacen desde panel web ADMIN".
 
-## Pendiente
+## Validación browser local — 2026-05-04 (Pierre + Codex/Playwright MCP)
 
-- Update manual web (`docs/product/manual-web.md`) post-patch para
-  consolidar el lenguaje "ADMIN-only" donde corresponde.
-- Update manual mobile (`docs/product/manual-mobile.md`) sobre
-  devoluciones temporal.
-- Update checklist demo (`tenant-go-live-dyonlabs-demo.md`) sección
-  5.2 con el resultado correcto del sidebar CAJERO esperado.
-- Ajustar el checklist plantilla base para que la próxima auditoría
-  no caiga en el mismo error de espec del cajero.
-- Crear ADR esqueleto `docs/adr/003-rbac-roles-permisos.md` (Fase 3D.5).
-- Commit + push + deploy + retomar smoke 5.x desde el principio.
+Después de los gates verde, Pierre mandó smoke browser end-to-end con
+sesión web nativa NextAuth (no JWT mobile). Codex usó Playwright MCP
+oficial Microsoft para automatización; Pierre validó manual en
+paralelo. Ambos reportes coincidieron.
+
+### Setup
+
+- Server: `pnpm --filter web dev` en localhost:3000.
+- Repo: hash `299edc1`, working tree clean post-smoke (verificado).
+- Browser: Chromium incógnito vía Playwright MCP.
+
+### Resultados
+
+| Fase | Verificación | Resultado |
+|---|---|---|
+| 1-2 | ADMIN login form + abrir `/productos`, `/categorias`, `/devoluciones` | ✅ los 3 retornan 200 con title correcto |
+| 3 | Logout via `/api/auth/signout` → cookies limpiadas → `/login` | ✅ |
+| 4-5 | Sidebar CAJERO: 8 items visibles (Dashboard, Caja, Movimientos, Ventas, Clientes, Alertas, Reportes, Mi Perfil) | ✅ |
+| 4-5 | Sidebar CAJERO: 7 items ocultos (Productos, Categorías, Devoluciones, Usuarios, Cajas, Mobile APK, API Docs) | ✅ |
+| 6 | CAJERO escribe `/productos` manual | ✅ redirect → `/?error=admin_required` |
+| 6 | CAJERO escribe `/categorias` manual | ✅ redirect → `/?error=admin_required` |
+| 6 | CAJERO escribe `/devoluciones` manual | ✅ redirect → `/?error=admin_required` |
+| 6 | CAJERO escribe `/devoluciones/nueva?ventaId=1` manual | ✅ redirect → `/?error=admin_required` |
+
+### Evidencia archivada (fuera del repo)
+
+`/tmp/smoke-3d4-evidencia/`:
+- `smoke-3d4-cajero-sidebar.png` (130KB)
+- `smoke-3d4-cajero-blocked.png` (130KB)
+
+### Observaciones menores no bloqueantes
+
+Codex registró 3 hallazgos cosméticos / UX que NO afectan RBAC:
+
+1. **Sidebar "Alertas1"**: el badge de count se renderiza pegado al
+   texto sin espacio (accessible name concatenado). Visualmente OK por
+   estilo del badge. Mejora UX, no bug RBAC.
+2. **Bloqueo silencioso**: el redirect a `/?error=admin_required` deja
+   la query en URL pero no hay toast/banner UI mostrando "No tenés
+   permisos" al cajero. Mejora UX deseable. **El bloqueo de seguridad
+   está, falta el feedback visual.**
+3. **`/perfil` sin botón "Cerrar sesión" visible**: Codex tuvo que ir a
+   `/api/auth/signout` directo. Puede estar en el dropdown del avatar
+   superior derecho — no exploró. Verificar en próxima sesión UI; si
+   no existe, agregar.
+
+## Lección operativa documentada
+
+**G-WEB-RBAC-REDIRECT-CHECK** — cómo validar redirects server-side de
+Next.js desde herramientas automatizadas:
+
+- `playwright.goto(url, { waitUntil: 'commit' })` + `page.url()` da
+  **falso negativo**: captura la URL al primer byte de respuesta,
+  ANTES de que `redirect()` server-side complete. La URL que ve es
+  `/productos` (la solicitada), no `/?error=admin_required` (la
+  resultante).
+- `curl -L --max-redirs 0` también puede fallar porque NextAuth/Next
+  streaming response embebe el redirect en el body.
+- **Patrón correcto**: `playwright.goto(url)` con default
+  `waitUntil: 'load'` + `evaluate(() => location.href)` post-render.
+  Captura el estado real post-redirect.
+
+Mi propio smoke con curl `--max-redirs 0` cayó en el mismo falso
+negativo y por eso reporté antes "page guards no funcionan en dev".
+Eran funcionales — el método de validación estaba mal.
+
+## Estado al cierre
+
+✅ **Fase 3D.4 PASA**:
+
+- Server Actions productos/categorías/devoluciones: `requireAdmin`
+  efectivo. Tests Vitest 14/14 verde.
+- API REST `POST /api/v1/devoluciones`: `requireAdmin(session)`
+  efectivo (smoke local 403 verificado).
+- Page-level guards: redirect `?error=admin_required` confirmado
+  con browser real para CAJERO en las 4 rutas.
+- Sidebar `adminOnly`: confirmado con DOM enumeration cajero (8/8
+  items correctos visibles, 7/7 ocultos).
+- Manual mobile actualizado (devoluciones temporal solo web ADMIN).
+- Checklist demo sección 5.2 actualizado con spec correcto.
+- ADR-003 esqueleto creado para Fase 3D.5.
+
+🟢 **Listo para deploy a `dy-pos.zgamersa.com`** vía
+`scripts/deploy.sh` cuando Pierre dé GO explícito.
 
 ## Riesgos del deploy
 
@@ -112,5 +186,6 @@ Manual mobile actualizado para reflejar la limitación temporal:
   recibirá 403. **Esperado y aceptado por Pierre** durante el patch.
 - Cajero web que tenía bookmark a `/productos`, `/categorias` o
   `/devoluciones` será redirigido a `/?error=admin_required`. UX
-  esperado, no es regresión.
+  esperado, no es regresión. Posible mejora UX: toast de error al
+  redirect (anotado en observaciones menores arriba).
 - 14 tests nuevos en suite web, todos verde — no introducen flakiness.
