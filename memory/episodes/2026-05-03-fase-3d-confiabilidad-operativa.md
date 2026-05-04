@@ -243,5 +243,17 @@ SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
   - `pnpm --filter web type-check` ✅ (rerun después del build; el
     primer intento falló porque corrió en paralelo con `next build` y
     `.next/types` estaba regenerándose).
-- Falta verificar en un próximo Docker build/deploy que el warning
-  `@next/eslint-plugin-next` desaparece.
+- Segundo deploy real ejecutado con `f87fb10`:
+  - backup app: `/opt/pos-chile.backup_20260503_213806`;
+  - backup DB:
+    `/var/backups/dypos-cl-db/pre-deploy-20260503-214359.sql.gz`;
+  - `prisma migrate deploy`: no pending migrations;
+  - health OK;
+  - smoke paso 7/7 PASS=6 / FAIL=0;
+  - verificación final de contenedores: `pos-web` y `pos-postgres`
+    healthy;
+  - smoke manual final PASS=6 / FAIL=0.
+- Resultado: el warning Docker
+  `Cannot find module '@next/eslint-plugin-next'` desapareció.
+  Quedan sólo warnings conocidos de Sentry/OpenTelemetry, `jose` Edge
+  Runtime y Upstash sin env en build stage.

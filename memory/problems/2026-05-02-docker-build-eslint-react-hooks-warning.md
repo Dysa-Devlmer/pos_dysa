@@ -1,7 +1,7 @@
 ---
 title: Problema — Docker build advierte que eslint-plugin-react-hooks no resuelve
 date: 2026-05-02
-status: needs-verification
+status: resolved
 severity: medium
 tags:
   - docker
@@ -113,8 +113,14 @@ Verificación local:
 - `pnpm --filter web build` ✅
 - `pnpm --filter web type-check` ✅
 
-Pendiente:
+Verificación Docker/prod:
 
-- Verificar en el próximo Docker build/deploy que el warning
-  `@next/eslint-plugin-next` desaparece. Hasta eso, este problem sigue
-  en `needs-verification`.
+- Segundo deploy real ejecutado con `f87fb10`.
+- Docker build ya NO emitió:
+  - `Cannot find module 'eslint-plugin-react-hooks'`;
+  - `Cannot find module '@next/eslint-plugin-next'`.
+- Deploy completó con health OK y smoke paso 7/7 PASS=6 / FAIL=0.
+- Contenedores finales: `pos-web` y `pos-postgres` healthy.
+
+Estado: **resolved**. Si aparece otro plugin faltante en Docker, crear
+un problema nuevo o reabrir este con el nombre exacto del plugin.
