@@ -44,6 +44,7 @@ Eso impide ofrecer SLA serio a clientes B2B.
 | Endpoint `/api/health` que responde JSON estable | ✅ implementado | `apps/web/app/api/health/route.ts` |
 | Cobertura del path por smoke automatizado | ✅ implementado (Fase 3D) | `scripts/smoke-prod.sh` (verifica body keyword) |
 | Procedimiento UI exacto para crear monitor | ✅ documentado | `docs/operations/external-setup-checklist.md` §5 |
+| Pre-check de latencia + status + keyword (10 muestras) | ✅ documentado (Fase 3D.2) | one-liner curl en `external-setup-checklist.md` §5.0. NO requiere script aparte — sirve para validar antes de pegar el monitor. |
 | Provider elegido | ❌ pendiente | — |
 | Cuenta creada en provider | ❌ pendiente | — |
 | Monitor activo apuntando a prod | ❌ pendiente | — |

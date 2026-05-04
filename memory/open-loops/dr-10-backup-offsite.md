@@ -38,6 +38,7 @@ No hay copia diaria off-site (S3-compatible). Eso bloquea:
 | SHA256 + metadata en upload | ✅ implementado | en el script |
 | Runbook restore (local + off-site + DR) | ✅ implementado (Fase 3D) | `docs/operations/runbook-backup-restore.md` |
 | Procedimiento UI de setup external | ✅ documentado | `docs/operations/external-setup-checklist.md` §6 |
+| Precheck pre-credenciales (Fase 3D.2) | ✅ implementado | `scripts/backup-offsite-precheck.sh` — read-only, sin credenciales. Verifica tooling, paths, perms .env.docker, formato de vars, conectividad outbound, cron entry. Exit 0 = listo / 1 = bloqueante. |
 | Provider elegido | ❌ pendiente | — |
 | Bucket creado con encryption SSE | ❌ pendiente | — |
 | Application Key con scope write-only | ❌ pendiente | — |

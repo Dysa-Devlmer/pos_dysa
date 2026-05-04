@@ -257,3 +257,48 @@ SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
   `Cannot find module '@next/eslint-plugin-next'` desapareció.
   Quedan sólo warnings conocidos de Sentry/OpenTelemetry, `jose` Edge
   Runtime y Upstash sin env en build stage.
+
+---
+
+## Fase 3D.2 — Preparación DR-06/DR-10 sin credenciales (2026-05-04)
+
+### Decisiones del scope
+
+1. **NO crear `health-self-check.sh` aislado para DR-06**.
+   `smoke-prod.sh` ya cubre exactamente lo que UptimeRobot
+   inspecciona (status 200 + keyword `"status":"ok"` + keyword
+   `"database":"connected"`). Crear un script duplicado sería más
+   superficie de mantenimiento sin valor proporcional.
+2. **SÍ crear `backup-offsite-precheck.sh` para DR-10**. El script
+   principal asume tooling/paths/perms que Pierre no descubre hasta
+   intentar correr el cron. Le ahorra ciclos de "fail por X → fix".
+
+### Implementado en código
+
+| Item | Archivo | Verificación |
+|---|---|---|
+| Mini-script curl (10 muestras) pre-UptimeRobot | `docs/operations/external-setup-checklist.md` §5.0 | one-liner pega-y-corre, valida status + latencia + 2 keywords |
+| `scripts/backup-offsite-precheck.sh` | nuevo, 7 secciones de checks | `bash -n` OK; PASS=3/FAIL=3 en local (esperado, no es VPS); PASS=15/FAIL=0 en mock VPS feliz; PASS=12/WARN=1/FAIL=1 con endpoint inalcanzable (detectó conectividad rota correctamente); detecta vars con formato malo (provider inválido, bucket uppercase, endpoint con protocolo) |
+| Bug `HTTP 000` con conectividad caída | mismo patrón que `221d59f` aplicó a smoke; reaplicado al precheck con `if ! HTTP_CODE=...` para no concatenar `||echo 000` | verificado contra `nonexistent.invalid.example` — reporta `HTTP 000` no `HTTP 000000` |
+| Update `runbook-backup-restore.md` §3 | bloque info al inicio que invoca el precheck | leído |
+| Update `external-setup-checklist.md` §5.0 + §6 | snippet curl + referencia al precheck DR-10 | leído |
+| Update `dr-06-monitoreo-externo.md` | fila nueva en tabla de artefactos | leído |
+| Update `dr-10-backup-offsite.md` | fila nueva en tabla de artefactos | leído |
+
+### Distinción verificado / documentado / pendiente Pierre
+
+| Categoría | Item | Detalle |
+|---|---|---|
+| ✅ Verificado en código | `backup-offsite-precheck.sh` syntax, 4 escenarios (local sin VPS, mock VPS OK, vars malformadas, endpoint inalcanzable) | logs en este episodio |
+| 📄 Documentado pero NO ejecutado contra VPS real | el precheck no se corrió contra el VPS prod (`64.176.21.229`) | requiere SSH a prod, fuera de scope esta fase. Esperado: PASS≥3 + INFO en las 6 vars OFFSITE_BACKUP_* (vars sin setear) |
+| 📄 Documentado pero NO ejecutado contra prod | mini-script curl §5.0 pre-UptimeRobot | requiere correr 10 muestras contra `https://dy-pos.zgamersa.com/api/health` desde la máquina admin. NO se hizo en esta fase porque Pierre no autorizó nuevas requests post-deploy |
+| ⏳ Pendiente externo Pierre | DR-06: cuenta UptimeRobot + monitor + alerta validada | sigue en `dr-06-monitoreo-externo.md` |
+| ⏳ Pendiente externo Pierre | DR-10: provider + bucket + key + cron + restore mensual | sigue en `dr-10-backup-offsite.md` |
+| ⏳ Pendiente externo Pierre | DR-01: branch protection enforced | sigue advisory; cada push lo confirma |
+
+### NO tocado deliberadamente en esta fase
+
+- `scripts/deploy.sh` (Pierre dijo "no tocar más salvo autorización").
+- Producto web/mobile.
+- DB schema o data.
+- Provider externo (Cloudflare, GitHub, UptimeRobot, Backblaze, etc.).

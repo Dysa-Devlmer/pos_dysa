@@ -140,6 +140,39 @@ git push origin --delete test-protection 2>/dev/null
 **Provider:** UptimeRobot (free tier — 50 monitors, intervalo mínimo 5min).
 Alternativa: BetterStack (free 10 monitors, status page incluida).
 
+### 5.0 — Pre-check antes de configurar (Fase 3D.2)
+
+Antes de crear el monitor, valida que el endpoint cumple lo que
+UptimeRobot va a chequear. 10 muestras secuenciales para ver
+status + latencia + presencia del keyword:
+
+```bash
+URL='https://dy-pos.zgamersa.com/api/health'
+for i in $(seq 1 10); do
+  curl -sS -o /tmp/health.body -w 'HTTP %{http_code}  ttfb=%{time_starttransfer}s  total=%{time_total}s\n' \
+    --max-time 30 "$URL"
+done
+echo '--- last body ---'
+cat /tmp/health.body
+echo
+grep -q '"status":"ok"' /tmp/health.body && echo 'keyword OK' || echo 'keyword FAIL'
+grep -q '"database":"connected"' /tmp/health.body && echo 'database OK' || echo 'database FAIL'
+rm /tmp/health.body
+```
+
+Esperado para configurar el monitor con confianza:
+- 10/10 retornan `HTTP 200`.
+- Latencia `total` < 5 s (margen contra el timeout 30 s de UptimeRobot).
+- Keyword `"status":"ok"` y `"database":"connected"` presentes.
+
+Si alguna corrida sale 5xx o > 10 s antes de configurar, investigar
+PRIMERO — un monitor activo sobre un endpoint flaky genera alertas
+falsas que minan la confianza en el SLA.
+
+`scripts/smoke-prod.sh https://dy-pos.zgamersa.com` también
+valida estos puntos como parte de su check 1, dando el mismo
+resultado.
+
 **Pasos UptimeRobot:**
 
 1. Login en https://uptimerobot.com (crear cuenta si no existe).
@@ -209,6 +242,19 @@ ssh root@<IP_VPS> 'docker start pos-web'
 S3-compatible.
 
 **Una vez decidido el provider:**
+
+> ℹ️ **Antes de pegar credenciales en `.env.docker`, correr el
+> precheck de DR-10** desde el VPS para descartar bloqueantes de
+> entorno (awscli ausente, paths faltantes, perms .env, conectividad
+> al endpoint). Es read-only y sin credenciales:
+>
+> ```bash
+> ssh root@<IP_VPS> '/opt/pos-chile/scripts/backup-offsite-precheck.sh'
+> ```
+>
+> Salida esperada con tooling listo + vars sin setear: PASS≥3 +
+> INFO en las 6 vars OFFSITE_BACKUP_*. FAIL = resolver primero
+> antes de configurar credenciales.
 
 1. Pierre crea bucket dedicado (`dypos-cl-backups-<tenant>`).
 2. Pierre genera Application Key con scope **solo write** al bucket.

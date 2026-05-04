@@ -82,7 +82,32 @@ gunzip -c /var/backups/dypos-cl-db/pre-deploy-LATEST.sql.gz | wc -c
 
 `scripts/backup-offsite.sh` existe como **template** (165 líneas).
 Falla rápido con código 3 si las variables `OFFSITE_BACKUP_*` no están
-en `.env.docker`. NO sube nada hasta que Pierre complete:
+en `.env.docker`. NO sube nada hasta que Pierre complete los pasos
+de §3 (provider + bucket + key + cron).
+
+> ℹ️ **Antes de configurar credenciales**, correr el precheck
+> agregado en Fase 3D.2:
+>
+> ```bash
+> ssh root@<IP_VPS> '/opt/pos-chile/scripts/backup-offsite-precheck.sh'
+> ```
+>
+> Es read-only, sin credenciales. Verifica:
+>
+> - awscli + sha256sum + gzip instalados.
+> - APP_DIR + scripts/backup-offsite.sh + BACKUP_DIR existen.
+> - .env.docker existe con perms restringidos (idealmente 600).
+> - Las 6 vars `OFFSITE_BACKUP_*` (formato + presencia, sin
+>   imprimir secretos).
+> - Conectividad outbound al endpoint S3 (HTTP 403 sin auth =
+>   red OK).
+> - Cron entry presente (o sugerencia de cron si falta).
+>
+> Exit code 0 = listo para activar. 1 = bloqueante, resolver primero.
+> Validado en local con mock VPS feliz: PASS=15 / FAIL=0. Validado
+> con endpoint inalcanzable: detectó FAIL conectividad correctamente.
+
+NO sube nada hasta que Pierre complete:
 
 1. **Elegir provider** (Backblaze B2 recomendado por costo / latencia
    Chile, alternativas: Wasabi, S3, R2).
