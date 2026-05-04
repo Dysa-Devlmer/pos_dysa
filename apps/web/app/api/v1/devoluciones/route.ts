@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generatePublicToken } from "@/lib/public-token";
 import {
   requireAuth,
+  requireAdmin,
   requireRateLimit,
   jsonOk,
   jsonError,
@@ -93,6 +94,12 @@ export async function POST(request: Request) {
   if (limited) return limited;
   const { session, error } = await requireAuth(request);
   if (error) return error;
+  // Patch RBAC Fase 3D.4 — devoluciones ADMIN-only por decisión CEO.
+  // Impacto temporal mobile: los cajeros NO podrán crear devoluciones
+  // desde la app hasta que llegue Fase 3D.5 con el rol MANAGER y
+  // permisos granulares. Documentado en memory/problems/ y manual mobile.
+  const denied = requireAdmin(session);
+  if (denied) return denied;
 
   let body: unknown;
   try {

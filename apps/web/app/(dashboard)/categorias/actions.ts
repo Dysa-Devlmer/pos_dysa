@@ -26,10 +26,23 @@ export type ActionResult<T = null> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-async function requireSession() {
+/**
+ * Patch RBAC Fase 3D.4 — gestión de categorías ADMIN-only en server.
+ *
+ * Mismo razonamiento que `productos/actions.ts`: el `requireSession`
+ * anterior dejaba que CAJERO/VENDEDOR crearan, editaran o eliminaran
+ * categorías. Ahora exigimos `rol === "ADMIN"` server-side, y el sidebar
+ * marca el item con `adminOnly: true` para que el cajero ni siquiera
+ * lo vea. Cuando llegue Fase 3D.5, esto se reemplaza por
+ * `requirePermission(Permiso.CATEGORIAS_GESTIONAR)`.
+ */
+async function requireAdmin() {
   const session = await auth();
   if (!session?.user) {
     throw new Error("No autenticado");
+  }
+  if (session.user.rol !== "ADMIN") {
+    throw new Error("Permiso denegado: solo ADMIN puede gestionar categorías");
   }
   return session;
 }
@@ -38,7 +51,7 @@ export async function crearCategoria(
   input: CategoriaInput,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
     const data = categoriaSchema.parse(input);
 
     const existe = await prisma.categoria.findUnique({
@@ -74,7 +87,7 @@ export async function actualizarCategoria(
   input: CategoriaInput,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
     const data = categoriaSchema.parse(input);
 
     const otra = await prisma.categoria.findFirst({
@@ -109,7 +122,7 @@ export async function actualizarCategoria(
 
 export async function eliminarCategoria(id: number): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
 
     const productos = await prisma.producto.count({
       where: { categoriaId: id },

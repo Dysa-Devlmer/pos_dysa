@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { formatCLP } from "@/lib/utils";
+import { auth } from "@/auth";
 
 import { DevolucionesList, type DevolucionRow } from "./devoluciones-list";
 import { RangoFechasFiltro } from "./rango-fechas";
@@ -23,6 +25,13 @@ export default async function DevolucionesPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
+  // Patch RBAC Fase 3D.4 — devoluciones ADMIN-only por decisión CEO.
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (session.user.rol !== "ADMIN") {
+    redirect("/?error=admin_required");
+  }
+
   const sp = await searchParams;
   const desde = parseFecha(sp.desde);
   const rawHasta = parseFecha(sp.hasta);

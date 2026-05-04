@@ -33,9 +33,26 @@ export type ActionResult<T = null> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-async function requireSession() {
+/**
+ * Patch RBAC Fase 3D.4 — devoluciones ADMIN-only por decisión CEO.
+ *
+ * Hallazgo H2: el manual web declara devoluciones como ADMIN, pero
+ * server-side solo había `requireSession`. Decisión Pierre 2026-05-04:
+ * durante el patch, devoluciones quedan ADMIN-only en TODOS los
+ * surfaces (web + API REST + mobile que consume `/api/v1/devoluciones`).
+ *
+ * Cuando llegue Fase 3D.5 con MANAGER, este chequeo se relaja a
+ * `requirePermission(Permiso.DEVOLUCIONES_CREAR)` — MANAGER tendrá
+ * el permiso por default, ADMIN también, CAJERO/VENDEDOR pueden
+ * recibirlo como override granular si la política del tenant lo
+ * permite.
+ */
+async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
+  if (session.user.rol !== "ADMIN") {
+    throw new Error("Permiso denegado: solo ADMIN puede gestionar devoluciones");
+  }
   return session;
 }
 
@@ -47,7 +64,7 @@ export async function crearDevolucion(
   input: CrearDevolucionInput,
 ): Promise<ActionResult<{ id: number; esTotal: boolean; publicToken: string }>> {
   try {
-    const session = await requireSession();
+    const session = await requireAdmin();
     const usuarioId = Number(session.user.id);
     const data = crearDevolucionSchema.parse(input);
 
@@ -254,7 +271,7 @@ export async function listarDevoluciones({
   desde,
   hasta,
 }: ListarDevolucionesParams = {}) {
-  await requireSession();
+  await requireAdmin();
   return prisma.devolucion.findMany({
     where: {
       ...(desde || hasta
@@ -285,7 +302,7 @@ export async function listarDevoluciones({
 }
 
 export async function obtenerDevolucion(id: number) {
-  await requireSession();
+  await requireAdmin();
   return prisma.devolucion.findUnique({
     where: { id },
     include: {

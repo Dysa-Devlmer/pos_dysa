@@ -42,14 +42,34 @@ export const navGroups: NavGroup[] = [
         icon: ArrowLeftRight,
       },
       { href: "/ventas", label: "Ventas", icon: ShoppingCart },
-      { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw },
+      // Patch RBAC Fase 3D.4 — Devoluciones ADMIN-only.
+      // Server (`devoluciones/actions.ts` + `/api/v1/devoluciones`)
+      // también lo enforza; el flag acá solo oculta el item del sidebar.
+      {
+        href: "/devoluciones",
+        label: "Devoluciones",
+        icon: RotateCcw,
+        adminOnly: true,
+      },
     ],
   },
   {
     label: "Catálogo",
     items: [
-      { href: "/categorias", label: "Categorías", icon: FolderTree },
-      { href: "/productos", label: "Productos", icon: Package },
+      // Patch RBAC Fase 3D.4 — Categorías y Productos ADMIN-only.
+      // Server-side: `categorias/actions.ts` + `productos/actions.ts`.
+      {
+        href: "/categorias",
+        label: "Categorías",
+        icon: FolderTree,
+        adminOnly: true,
+      },
+      {
+        href: "/productos",
+        label: "Productos",
+        icon: Package,
+        adminOnly: true,
+      },
       { href: "/clientes", label: "Clientes", icon: Users },
       {
         href: "/alertas",

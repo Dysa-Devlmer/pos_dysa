@@ -203,20 +203,21 @@ Si se cae el internet:
 
 ---
 
-## 8. Ver y devolver tus ventas
+## 8. Ver tus ventas (y devoluciones)
 
 **Tab Ventas** → lista de tus ventas del turno actual.
 
 - Tocar una venta abre el detalle: productos, total, método de
   pago, hora.
-- Si tenés permiso, botón **"Devolver"**:
-  - **Devolución total** anula la venta completa.
-  - **Devolución parcial** te deja marcar cuántas unidades de cada
-    producto devolver.
 
-> 💡 Las devoluciones quedan registradas para siempre. Si te
-> equivocaste, hablá con el ADMIN — solo desde el panel web se
-> puede revisar el AuditLog.
+> ⚠️ **Devoluciones desde la app móvil están temporalmente
+> deshabilitadas (Fase 3D.4 · 2026-05-04).** Por política de
+> autorización, durante esta versión solo un usuario ADMIN puede
+> crear devoluciones, y solo desde el **panel web**. Si un cliente
+> pide devolución, llamá al ADMIN para que la registre desde su
+> computador. Cuando llegue la versión con el rol MANAGER + permisos
+> granulares, el cajero/vendedor podrá tener permiso de devolución
+> según política del negocio.
 
 ---
 

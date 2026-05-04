@@ -6,6 +6,7 @@ import { prisma } from "@repo/db";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
+import { auth } from "@/auth";
 
 import {
   DevolucionForm,
@@ -20,6 +21,13 @@ export default async function NuevaDevolucionPage({
 }: {
   searchParams: Promise<{ ventaId?: string }>;
 }) {
+  // Patch RBAC Fase 3D.4 — crear devolución es ADMIN-only.
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (session.user.rol !== "ADMIN") {
+    redirect("/?error=admin_required");
+  }
+
   const sp = await searchParams;
   const ventaIdNum = Number(sp.ventaId);
   if (!Number.isFinite(ventaIdNum) || ventaIdNum <= 0) {

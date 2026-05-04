@@ -183,10 +183,26 @@ Esperado:
 1. Logout (avatar arriba derecha → "Cerrar sesión").
 2. Navegador incógnito → `/login` con cajero.
 
-Esperado:
+Esperado (post Patch RBAC Fase 3D.4):
+
 - Redirect a `/`.
-- Sidebar SIN: Productos, Categorías, Usuarios, Mobile Releases.
-  (Cajero solo ve operación, no configuración.)
+- Sidebar **SÍ muestra**: Inicio/Dashboard, Caja, Movimientos, Ventas
+  (lectura), Clientes, Alertas, Reportes, Mi Perfil.
+- Sidebar **NO muestra** (gateado por `adminOnly: true`):
+  - Productos
+  - Categorías
+  - Devoluciones
+  - Usuarios
+  - Cajas (administración de turnos, distinto de "Caja" POS)
+  - Mobile APK
+  - API Docs
+- **Acceso directo por URL** a las páginas admin-only redirige a
+  `/?error=admin_required`. Probarlo escribiendo `/productos` en la
+  barra del browser con sesión cajero — debe redirigir.
+
+Pre-requisito de configuración: el cajero de prueba debe tener
+`mustChangePassword=false` (si no, se cubre primero el gate de 5.3
+y después se vuelve a 5.2 con el cajero ya con password permanente).
 
 - [ ] OK · evidencia: ___________
 

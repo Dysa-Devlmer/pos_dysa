@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +9,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
+import { auth } from "@/auth";
 import { ProductosTable, type ProductoRow } from "./productos-table";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,15 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Productos" };
 
 export default async function ProductosPage() {
+  // Patch RBAC Fase 3D.4 — productos es ADMIN-only. Aunque el sidebar
+  // marca el item con `adminOnly`, alguien podría llegar acá por URL
+  // directa. Bloqueamos en page-level y redirigimos a home con flag.
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (session.user.rol !== "ADMIN") {
+    redirect("/?error=admin_required");
+  }
+
   const [productos, categorias] = await Promise.all([
     prisma.producto.findMany({
       orderBy: { nombre: "asc" },

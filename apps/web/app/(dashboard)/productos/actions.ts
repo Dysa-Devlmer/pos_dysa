@@ -41,9 +41,24 @@ export type ActionResult<T = null> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-async function requireSession() {
+/**
+ * Patch RBAC Fase 3D.4 — todas las mutaciones de productos requieren ADMIN.
+ *
+ * Antes existía `requireSession()` que solo verificaba sesión presente, lo
+ * que permitía a un CAJERO o VENDEDOR mutar el catálogo (privilege
+ * escalation lateral, hallazgo H1). Ahora se exige `rol === "ADMIN"` en
+ * server, independiente de lo que muestre el sidebar.
+ *
+ * Cuando llegue Fase 3D.5 (RBAC profesional), este helper se reemplaza
+ * por `requirePermission(Permiso.CATALOGO_EDITAR)` y el chequeo deja de
+ * ser por rol fijo.
+ */
+async function requireAdmin() {
   const session = await auth();
   if (!session?.user) throw new Error("No autenticado");
+  if (session.user.rol !== "ADMIN") {
+    throw new Error("Permiso denegado: solo ADMIN puede modificar productos");
+  }
   return session;
 }
 
@@ -51,7 +66,7 @@ export async function crearProducto(
   input: ProductoInput,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
     const data = productoSchema.parse(input);
 
     const existe = await prisma.producto.findUnique({
@@ -101,7 +116,7 @@ export async function actualizarProducto(
   input: ProductoInput,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
     const data = productoSchema.parse(input);
 
     const otro = await prisma.producto.findFirst({
@@ -153,7 +168,7 @@ export async function actualizarProducto(
 
 export async function eliminarProducto(id: number): Promise<ActionResult> {
   try {
-    await requireSession();
+    await requireAdmin();
 
     const detalles = await prisma.detalleVenta.count({
       where: { productoId: id },
