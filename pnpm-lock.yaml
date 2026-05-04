@@ -296,6 +296,9 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3.3.5
         version: 3.3.5
+      '@next/eslint-plugin-next':
+        specifier: 15.5.15
+        version: 15.5.15
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config

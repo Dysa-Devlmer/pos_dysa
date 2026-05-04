@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@next/eslint-plugin-next": "15.5.15",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.2.0",
     "@tailwindcss/typography": "^0.5.19",

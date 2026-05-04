@@ -82,3 +82,39 @@ Si se repite:
 
 Un build Docker de `apps/web` no emite el warning de plugin faltante y el
 gate local `lint/build` sigue verde.
+
+## Actualización 2026-05-03 — warning migró a `@next/eslint-plugin-next`
+
+Durante el deploy real de Fase 3D.1, el warning original de
+`eslint-plugin-react-hooks` ya no apareció. En su lugar, Docker build
+mostró:
+
+```text
+ESLint: Failed to load plugin '@next/next' declared in
+eslint-config-next/core-web-vitals...
+Cannot find module '@next/eslint-plugin-next'
+```
+
+El build continuó y producción quedó healthy con smoke post-deploy
+PASS=6 / FAIL=0, pero la señal sigue siendo la misma: ESLint dentro del
+contenedor queda parcialmente degradado si el plugin sólo llega como
+dependencia transitiva.
+
+Patch aplicado por Codex:
+
+- `apps/web/package.json` declara `@next/eslint-plugin-next@15.5.15`
+  como devDependency directa.
+- `pnpm-lock.yaml` actualiza el importer de `apps/web`.
+
+Verificación local:
+
+- `pnpm --filter web lint` ✅
+- `pnpm --filter web test` → 265/265 ✅
+- `pnpm --filter web build` ✅
+- `pnpm --filter web type-check` ✅
+
+Pendiente:
+
+- Verificar en el próximo Docker build/deploy que el warning
+  `@next/eslint-plugin-next` desaparece. Hasta eso, este problem sigue
+  en `needs-verification`.

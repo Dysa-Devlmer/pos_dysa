@@ -75,9 +75,11 @@ multi-tenant y deja ventanas ciegas.
   correr `./scripts/smoke-prod.sh --with-auth` desde la máquina
   admin antes de cerrar el ticket de deploy.
 - [x] Primera ejecución básica contra prod real registrada como evidencia.
-- [ ] Primera ejecución de `deploy.sh` con wire-up activo contra prod
-  registrada (smoke OK, o fallo capturado con backup preservado; rollback
-  solo si se ejecuta explícitamente con `SMOKE_ROLLBACK_ON_FAIL=1`).
+- [x] Primera ejecución de `deploy.sh` con wire-up activo contra prod
+  registrada. Resultado 2026-05-03 21:26 CLT: deploy OK, health OK,
+  smoke paso 7/7 PASS=6 / FAIL=0, backup app
+  `/opt/pos-chile.backup_20260503_212623`, backup DB
+  `/var/backups/dypos-cl-db/pre-deploy-20260503-213104.sql.gz`.
 - [ ] Primera ejecución con auth contra prod real registrada como evidencia.
 - [ ] (Opcional) Cron en VPS o GitHub Actions scheduled cada 30 min
   contra los tenants productivos.

@@ -166,12 +166,25 @@ quiere features comerciales nuevas hasta que la base operativa esté.
 
 ### NO ejecutado contra prod
 
-`./scripts/deploy.sh` con el wire-up activo no se invocó contra
-`https://dy-pos.zgamersa.com`. Pierre debe autorizar la primera
-ejecución y registrar evidencia: smoke OK, o fallo capturado con backup
-preservado. Rollback automático solo si se usa
-`SMOKE_ROLLBACK_ON_FAIL=1`. Registrar en
-`memory/episodes/YYYY-MM-DD-deploy-wire-up-3d1.md` o similar.
+`./scripts/deploy.sh` con el wire-up activo fue ejecutado contra
+`https://dy-pos.zgamersa.com` por Codex el 2026-05-03 21:26 CLT.
+
+Resultado:
+
+- Build local omitido (`N`), deploy confirmado escribiendo `deploy`.
+- Backup app: `/opt/pos-chile.backup_20260503_212623`.
+- Backup DB pre-migrations:
+  `/var/backups/dypos-cl-db/pre-deploy-20260503-213104.sql.gz`.
+- `prisma migrate deploy`: 8 migrations found, no pending migrations.
+- Health check: OK.
+- Paso 7/7 `Smoke Prod (read-only)`: PASS=6 / FAIL=0.
+- Deploy completado con `Smoke prod OK`.
+- Verificación final posterior:
+  - contenedores `pos-web`, `pos-postgres`, `pos-pgadmin` up;
+  - `pos-web` y `pos-postgres` healthy;
+  - smoke manual final PASS=6 / FAIL=0.
+
+La primera ejecución real del wire-up quedó validada sin rollback.
 
 Mientras tanto, el smoke ejecutable manualmente sigue siendo el
 mismo binario probado:
@@ -211,3 +224,24 @@ SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... \
 
 …y registrar resultado en este episodio o en una nota específica
 `memory/episodes/YYYY-MM-DD-smoke-prod-<tenant>.md`.
+
+## Observaciones del deploy 3D.1
+
+- El build Docker sigue mostrando warnings esperados de Sentry /
+  OpenTelemetry (`Critical dependency` y Edge Runtime con `jose`). No
+  bloquearon compile ni runtime.
+- Apareció un nuevo warning de ESLint dentro de Docker:
+  `Cannot find module '@next/eslint-plugin-next'`. Es el mismo patrón
+  que `eslint-plugin-react-hooks`: local lint pasa, pero Docker build
+  no resuelve el plugin transitive. Codex aplicó patch local agregando
+  `@next/eslint-plugin-next@15.5.15` como devDependency directa de
+  `apps/web`.
+- Patch local verificado:
+  - `pnpm --filter web lint` ✅
+  - `pnpm --filter web test` → 265/265 ✅
+  - `pnpm --filter web build` ✅
+  - `pnpm --filter web type-check` ✅ (rerun después del build; el
+    primer intento falló porque corrió en paralelo con `next build` y
+    `.next/types` estaba regenerándose).
+- Falta verificar en un próximo Docker build/deploy que el warning
+  `@next/eslint-plugin-next` desaparece.
